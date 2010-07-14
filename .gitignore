@@ -1,0 +1,8 @@
+Makefile
+Makefile.old
+pm_to_blib
+blib
+.DS_Store
+scripts/.DS_Store
+lib/.DS_Store
+t/.DS_Store

@@ -1,0 +1,6 @@
+Revision history for Perl extension what.
+
+0.01  Tue Jul 13 23:47:06 2010
+	- original version; created by h2xs 1.23 with options
+		-X -n what
+
