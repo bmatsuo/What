@@ -9,6 +9,12 @@ WriteMakefile(
         Getopt::Euclid  => 0,
         Readonly        => 0,
     }, # e.g., Module::Name => 1.1
+    EXE_FILES           => [qw{
+        scripts/album-scaffold 
+        scripts/album-organize
+        scripts/mp3segregate
+        scripts/convert-art
+    }],
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (
        ABSTRACT_FROM  => 'lib/What.pm', # retrieve abstract from module

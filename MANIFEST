@@ -4,3 +4,7 @@ MANIFEST
 README
 t/What.t
 lib/What.pm
+scripts/album-scaffold
+scripts/album-organize
+scripts/mp3segregate
+scripts/convert-art

@@ -3,6 +3,7 @@ package What;
 use 5.008009;
 use strict;
 use warnings;
+use Carp;
 
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
@@ -23,10 +24,11 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
-	
+	read_config
+    write_config
 );
 
-our $VERSION = '0.01';
+our $VERSION = '0.0_2';
 
 my %default_config = (
     # Don't actually put your announce url in this file. Use ~/.whatrc.
@@ -45,7 +47,7 @@ sub read_config {
     my $config_path = shift;
     
     open my $config_fh, '<', $config_path
-        or croak("Can't open config file $config_path\n")
+        or croak("Can't open config file $config_path\n");
 
     my %config;
 
@@ -54,7 +56,7 @@ sub read_config {
     while (my $line = <$config_fh>) {
         $line_count += 1;
         next if $line =~ m/\A [#]/xms;
-        next if $line =~ m/\A \s* \n? \z/xms
+        next if $line =~ m/\A \s* \n? \z/xms;
         chomp $line;
         my ($key, $value) = split '=>', $line, 2;
 
@@ -88,7 +90,7 @@ sub read_config {
 # Returns: 
 #   Nothing.
 sub write_config {
-    my $handle = shift;
+    my $path = shift;
     my %config = @_;
 
     open my $config_fh, '>', $path
