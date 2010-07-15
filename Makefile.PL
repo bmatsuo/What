@@ -9,6 +9,7 @@ WriteMakefile(
         Getopt::Euclid  => 0,
         Readonly        => 0,
         Term::ReadLine  => 0,
+        Data::Dumper    => 0,
     }, # e.g., Module::Name => 1.1
     EXE_FILES           => [qw{
         scripts/album-scaffold 
