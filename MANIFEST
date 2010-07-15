@@ -9,3 +9,4 @@ scripts/album-scaffold
 scripts/album-organize
 scripts/segregate-mp3
 scripts/convert-art
+scripts/convert-flac-release

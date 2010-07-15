@@ -15,6 +15,7 @@ WriteMakefile(
         scripts/album-organize
         scripts/segregate-mp3
         scripts/convert-art
+        scripts/convert-flac-release
     }],
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (
