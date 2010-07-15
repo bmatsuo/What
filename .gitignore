@@ -2,6 +2,7 @@ Makefile
 Makefile.old
 pm_to_blib
 blib
+dist
 .DS_Store
 scripts/.DS_Store
 lib/.DS_Store
