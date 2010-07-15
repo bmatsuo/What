@@ -10,6 +10,9 @@ use warnings;
 # include CPAN modules
 use Readonly;
 use Term::ReadLine;
+
+our $VERSION = '0.0_3';
+
 use Class::InsideOut qw{:std};#:std = id private public readonly register
 
 # include any private modules

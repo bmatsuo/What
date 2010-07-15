@@ -26,7 +26,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
 
-our $VERSION = '0.0_2';
+our $VERSION = '0.0_3';
 
 # Preloaded methods go here.
 
