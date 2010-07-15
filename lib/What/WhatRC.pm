@@ -53,10 +53,11 @@ my $dumper = Data::Dumper->new([\%default_whatrc],['WhatCDConfig']);
 # Returns: 
 sub new { 
    my $class = shift;
-   my %args = (%default_whatrc,@_);
+   my %args = @_;
+   %args = (%default_whatrc, %args);
    my $self = {};
    for my $setting (keys %default_whatrc) {
-        $self->{$setting} = $default_whatrc{$setting};
+        $self->{$setting} = $args{$setting};
    }
    bless $self, $class;
    return $self;
