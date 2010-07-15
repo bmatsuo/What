@@ -19,7 +19,7 @@ use Audio::FLAC::Header;
 use Readonly;
 
 # Include private modules.
-use What;
+use What::WhatRC;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -60,11 +60,11 @@ sub main{
     for my $format (@desired_formats) { $converted_to{$format} = {} }
     my %dest_for;
 
-    my %whatrc = read_config("$ENV{'HOME'}/.whatrc");
+    my $whatrc = read_whatrc("$ENV{'HOME'}/.whatrc");
 
     my $release_root_name = release_root_name(%release_info);
 
-    my $release_path = "$whatrc{'rips'}/$release_root_name";
+    my $release_path = "$whatrc->{'rips'}/$release_root_name";
     
     $release_path =~ s/\A ~/$ENV{'HOME'}/xms;
 

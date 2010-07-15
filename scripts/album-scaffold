@@ -17,7 +17,7 @@ use Getopt::Euclid qw{ :vars<opt_> };
 use Readonly;
 
 # Include private modules.
-use What;
+use What::WhatRC;
 
 our $VERSION = '0.0_1';
 
@@ -46,7 +46,7 @@ my $exitcode = 0;
 ########################################################################
 
 # Read whatrc file
-my %whatrc = read_config("$HOME/.whatrc");
+my $whatrc = read_whatrc("$HOME/.whatrc");
 
 ########################################################################
 # MAIN FUNCTION
@@ -58,7 +58,7 @@ sub main{
         = map {$opt{$_}} qw{--artist --year --album};
 
     # my $dest = $opt{'<dest>'};
-    my $dest = $whatrc{'rips'};
+    my $dest = $whatrc->{'rips'};
     $dest =~ s/\A ~/$HOME/xms;
 
     my @album = ($artist);
