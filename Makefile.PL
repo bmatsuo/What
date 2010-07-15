@@ -12,7 +12,7 @@ WriteMakefile(
     EXE_FILES           => [qw{
         scripts/album-scaffold 
         scripts/album-organize
-        scripts/mp3segregate
+        scripts/segregate-mp3
         scripts/convert-art
     }],
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005

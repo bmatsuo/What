@@ -108,6 +108,18 @@ The image to be converted. More than one image can be specified.
 
 =over
 
+=item --artist [=] <artist> | -a <artist>
+
+Release artist.
+
+=item --release [=] <title> | -r <title>
+
+Release title.
+
+=item --year [=] <year> | -y <year>
+
+Release year.
+
 =item --output-dir <dest> | -o <dest>
 
 Specify directory in which to output converted images. 
