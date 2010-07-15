@@ -1,6 +1,20 @@
 #!/usr/bin/env perl
 package What::Prompt;
 
+# Use perldoc to read documentation
+
+# include some core modules
+use strict;
+use warnings;
+
+# include CPAN modules
+use Readonly;
+use Term::ReadLine;
+use Class::InsideOut qw{:std};#:std = id private public readonly register
+
+# include any private modules
+use What;
+
 use Exception::Class (
     'ValueException',
     'ArgumentException',
@@ -14,36 +28,34 @@ use Exception::Class (
     },
     'PromptEOFException' => {
         isa => 'PromptException',
-        fiends  => [qw{resp}],
+        fields  => [qw{resp}],
         description => 
             'Thrown if unexpected EOFs are read. Has a partial response.',
     },
 );
 
-# Use perldoc or option --man to read documentation
-
-# include some core modules
-use strict;
-use warnings;
-
-# include CPAN modules
-use Readonly;
-# :std = id private public readonly register
-use Class::InsideOut qw{ :std };
-
-# include any private modules
-use What;
 
 ############
 # Attributes
 ############
 
-private text        => my %text_of;
+public text         => my %text_of, {
+    set_hook => 
+        sub { m/\S/ or die("can't use blank prompt text.") },
+};
 public is_multiline => my %multiline_input_for;
-private terminator  => my %terminator_of;
-private validator   => my %validator_of;
+public terminator  => my %terminator_of, {
+    set_hook => sub { 
+        (not /\t|\r|\n/ and /^\S(?:.*\S)?$/) 
+            or die("can't have any of '\\t','\\r','\\n',"
+                ."or start/end in whitespace")},
+};
+public validator   => my %validator_of, {
+    set_hook => sub {"CODE" eq ref $_[0] or die('not given code.')}};
+private term        => my %readline_of;
 
-my $def_validator = sub {return 1};
+my $prompt_count = 0;
+my $def_validator = \&{sub {return 1}};
 my $def_attr_ref = {
     text            => "Please enter input:",
     is_multiline    => 0,
@@ -114,26 +126,47 @@ sub new {
         ValueException->throw(error=>$msg);
     }
 
+    my $term;
+    eval { $term = Term::ReadLine->new("Prompt $prompt_count") };
+
+    if (!$@ eq q{}) {
+        PromptException(error=>"Failed to create terminal $@")
+    }
+
     my $self = register($class);
+    $prompt_count += 1;
 
     $text_of{id $self} = $text;
     $multiline_input_for{id $self} = $is_multiline;
     $terminator_of{id $self} = $terminator;
     $validator_of{id $self} = $validator;
+    $readline_of{id $self} = $term;
 
     return $self;
 }
 
-# Subroutine: $prompt->_retry_prompt($previous_response)
+# Subroutine: $prompt->reset_validator()
+# Type: INSTANCE METHOD
+# Purpose: 
+#   Reset the validator to one that accepts all input.
+# Returns: 
+#   Nothing
+sub reset_validator {
+    my $self = shift;
+    $self->validator(sub {1});
+    return;
+}
+
+# Subroutine: $prompt->_retry_prompt_user($previous_response)
 # Type: INTERNAL UTILITY
 # Purpose: 
 #   Attempt to reissue the same prompt due to a misunderstoop response.
 # Returns: 
 #   The reissued prompt's user response
-sub _retry_prompt {
+sub _retry_prompt_user {
     my $self = shift;
     my $resp = shift;
-    print "I couldn't understand '$resp'.\n";
+    print "I couldn't understand '$resp'.$/";
     return $self->prompt_user();
 }
 
@@ -149,27 +182,35 @@ sub prompt_user {
     my $input_is_multiline = $multiline_input_for{id $self};
     my $terminator = $terminator_of{id $self};
     my $is_valid = $validator_of{id $self};
+    my $term = $readline_of{id $self};
     my $resp = "";
 
     my $terminate_help 
         = join q{}, 
             qq{(stop input with a line "$terminator<Enter>")}, ;
 
-    print $text;
-    print $terminate_help if $input_is_multiline;
+    my $prompt_text 
+        = $text.($input_is_multiline ? "$/$terminate_help$/" : q{});
+
+    my $line_count = 0;
 
     # Read user response.
     my $rline;
-    while ($rline = <STDIN>) {
-        # Make a chomped copy of the line.
-        my $chomp_line = $rline;
-        $chomp_line =~ s/\r?\n?\z//xms;
+    while (1) {
+        $rline = $term->readline($prompt_text);
+        last if !defined $rline;
+
+        $prompt_text = "" if $input_is_multiline;
 
         # Break if we see the terminator line in multiline input.
-        last if $input_is_multiline and $chomp_line eq $terminator;
+        last if $input_is_multiline and $rline eq $terminator;
 
         # Append the line (with trailing newline) to the response.
         $resp .= $rline;
+
+        last if !$input_is_multiline;
+
+        $resp .= $/;
     }
 
     if (!defined $rline) {
@@ -178,13 +219,10 @@ sub prompt_user {
             error=>'unexpected EOF', resp => $resp);
     }
 
-    # Check that input is valid.
-    if ($is_valid->($resp)) {
-        return $resp
-    }
+    return $resp if (&{$is_valid}($resp));
 
-    # The validator couldn't understand the response. Retry.
-    return $self->_retry_prompt_user();
+    # Retry if the response isn't valid
+    return $self->_retry_prompt_user($resp);
 }
 
 __END__
@@ -196,34 +234,41 @@ Prompt.pm
 
 =head1 VERSION
 
-Version 0.0_2
+Version 0.0_3
 Originally created on 07/14/10 18:38:01
+
+=head1 ABSTRACT
+
+    use What::Prompt;
+    
+    # Check if a number is an integer.
+    sub is_int { 
+        return $_[0] =~ m/^-?\d+\n?$/;
+    }
+    
+    # Create a prompt to ask for a number.
+    my $p = What::Prompt->new( 
+        {     
+            text => "Enter a number:", 
+            validator => \&is_int, 
+        }
+    );   
+    
+    # Execute multiple prompts.
+    my $x = $p->prompt_user();
+    my $y = $p->prompt_user();
+    
+    # Do some intense computations...
+    my $prod = $x * $y; 
+    
+    # Print the result for the user.
+    print "The two numbers' product is $prod.\n";
 
 =head1 DESCRIPTION
 
 This Module contains the What::Prompt class of object. It can handle
 prompting the user through STDOUT and reading a response via STDIN. It
 can also handle automatic retrying of invalid responses.
-
-=head1 EXAMPLES
-
-    use What::Prompt;
-
-    # Check if a number is an integer.
-    sub is_int { return $_[0] =~ m/^-?\d+$/ }
-
-    # Create a prompt asking the user for a number.
-    my $p = What::Prompt->new({
-        text => "Enter a number:", 
-        validator => is_int ,});
-
-    # Execute multiple prompts.
-    my $x = $p->prompt_user();
-    my $y = $p->prompt_user();
-    my $prod = $x * $y;
-
-    # Print the product of the numbers read from the user.
-    print "The first number times the second is $prod.\n";
 
 =head1 AUTHOR
 
