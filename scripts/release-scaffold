@@ -1,0 +1,190 @@
+#!/usr/bin/env perl
+
+# Use perldoc or option --man to read documentation
+
+########################################################################
+# MODULES
+########################################################################
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+use Readonly;
+
+# Include private modules.
+use What::WhatRC;
+
+our $VERSION = '0.0_1';
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+Readonly my $prog_incantation  => $0;
+Readonly my $prog_dir          => dirname($0);
+Readonly my $prog_name         => basename($0);
+my $usr_home = '~';
+$usr_home =~ s! \A ~ ( [^/]* ) ! 
+    $1 ? (getpwnam($1))[7] 
+    : ( $ENV{HOME} || $ENV{LOGDIR} || (getpwuid($>))[7]) !exms;
+Readonly my $HOME => $usr_home;
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+# Read whatrc file
+my $whatrc = read_whatrc("$HOME/.whatrc");
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my ($artist, $year, $title) 
+        = map {$opt{$_}} qw{--artist --year --title};
+
+    # my $dest = $opt{'<dest>'};
+    my $dest = $whatrc->{'rip_dir'};
+    $dest =~ s/\A ~/$HOME/xms;
+
+    my @release = ($artist);
+    push @release, $year if defined $year;
+    push @release, $title;
+
+    my $root_string = join " - ", @release;
+    my $artist_path = "$dest/$artist";
+    my $root_path = "$artist_path/$root_string";
+    my $flac_dir_path = "$root_path/$root_string [FLAC]";
+
+    my @mkartist = ('mkdir', $artist_path);
+    my @mkroot = ('mkdir', $root_path);
+    my @mkflac = ('mkdir', $flac_dir_path);
+
+    # Don't check exit code because failure is tolerable
+    subsystem(@mkartist) == 0
+        or croak("Couldn't make artist directory $artist_path")
+            if !-d $artist_path;
+
+    subsystem(@mkroot) == 0
+        or croak("Couldn't make root directory $root_path");
+
+    subsystem(@mkflac) == 0
+        or croak("Couldn't make FLAC directory $flac_dir_path");
+
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+sub subsystem {
+    if ($opt{'--verbose'} or $opt{'--dry-run'}) {
+        print "@_\n"
+    }
+    if (not $opt{'--dry-run'}) {
+        return system @_;
+    }
+    return 0;
+}
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+album-scaffold
+-- short description
+
+=head1 VERSION
+
+Version 0.0_1
+Originally created on 07/07/10 23:48:39
+
+=head1 USAGE
+
+album-scaffold [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --artist [=] <artist>
+
+Album artist
+
+for Euclid:
+    artist.type: string, -z artist
+    artist.default: 'artist'
+
+=item --title [=] <title>
+
+Album name
+
+for Euclid:
+    title.type: string, -z album
+    title.default: 'album'
+
+=item --year [=] <year>
+
+Album release year
+
+=for Euclid:
+    year.type: /[0-9]{4}/
+
+=item --dry-run
+
+Don't actually make changes to the filesystem. 
+Just print the steps being taken by album-scaffold.
+
+=item --verbose
+
+Print out the steps being taken by album-scaffold before they are
+executed.
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHOR & COPYRIGHT 
+
+©Bryan Matsuo (bryan.matsuo@gmail.com)
+

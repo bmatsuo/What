@@ -24,9 +24,18 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
+    tracker_url
 );
 
 our $VERSION = '0.0_3';
+
+my $tracker_url = "http://tracker.what.cd:34000";
+
+# Subroutine: tracker_url()
+# Type: INTERFACE SUB
+# Purpose: Access to the 'readonly' what.cd tracker URL.
+# Returns: A string copy of the url.
+sub tracker_url { my $url = $tracker_url; return $url; }
 
 # Preloaded methods go here.
 

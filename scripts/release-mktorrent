@@ -1,0 +1,216 @@
+#!/usr/bin/env perl
+
+# Use perldoc or option --man to read documentation
+
+########################################################################
+# MODULES
+########################################################################
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+use Readonly;
+
+# Include private modules.
+use What::Subsystem;
+use What::WhatRC;
+use What::Release;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+Readonly my $prog_incantation  => $0;
+Readonly my $prog_dir          => dirname($0);
+Readonly my $prog_name         => basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my $release = What::Release->new(
+        artist => $opt{'--artist'},
+        title => $opt{'--title'},
+        year => $opt{'--year'},);
+
+    my $subsystem = What::Subsystem->new(
+        dryrun=>$opt{'--dry-run'},
+        verbose=>$opt{'--verbose'});
+
+    my %want_format = (
+        'V0'    => $opt{'--V0'},
+        'V2'    => $opt{'--V2'},
+        '320'   => $opt{'--320'},
+        'FLAC'  => $opt{'--FLAC'},
+    );
+
+    my $whatrc = read_whatrc("~/.whatrc");
+
+    my $announce = $whatrc->announce();
+
+    for my $format (keys %want_format) {
+        next if not $want_format{$format};
+
+        my $format_dir 
+            = $release->format_dir($whatrc->{rip_dir}, $format);
+
+        my @mktorrent_cmd = mktorrent_command(
+            announce    => $announce,
+            source_dir  => $format_dir,);
+
+        $subsystem->exec(@mktorrent_cmd) == 0
+            or croak("Couldn't create torrent file.");
+    }
+
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+# Subroutine: mktorrent_options(
+#   announce => $url,
+#   source_dir => $src_path)
+# Type: INTERNAL UTILITY
+# Purpose: Construct a list of options for mktorrent.
+# Returns: A list of options.
+sub mktorrent_options {
+    my %arg = @_;
+    my ($url, $src_path) = ($arg{announce}, $arg{source_dir});
+
+    # Remove a trailing '/' from the directory being used.
+    $src_path =~ s!(.)/\z!$1!xms;
+
+    my $torrent_path = "$src_path.torrent";
+
+    my @options = ('-p', '-a', $url, '-o', $torrent_path);
+
+    return @options;
+}
+
+# Subroutine: 
+#   mktorrent_command(
+#       announce => $url,
+#       source_dir => $src_path,)
+# Type: INTERFACE SUB
+# Purpose: Construct a system command that will create a 
+# Returns: A list representation of the system command.
+sub mktorrent_command {
+    my %arg = @_;
+
+    croak("Announce URL is not specified.")
+        if not $arg{announce};
+    croak("Torrent source is not specified.")
+        if not $arg{source_dir};
+
+    my @options = mktorrent_options(%arg);
+
+    my @cmd = ('mktorrent', @options, $arg{source_dir});
+
+    return @cmd;
+}
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+mktorrent-release
+-- short description
+
+=head1 VERSION
+
+Version 0.0_1
+Originally created on 07/16/10 03:41:08
+
+=head1 USAGE
+
+mktorrent-release [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=item --artist <artist>
+
+Release artist.
+
+=item --title <title>
+
+Release title.
+
+=item --year <year>
+
+Release year.
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --v0 | --V0
+
+Make torrent for V0 bitrate MP3s.
+
+=item --v2 | --V2
+
+Make torrent for V2 bitrate MP3s.
+
+=item --320
+
+Make torrent for 320kbps CBR MP3s.
+
+=item --flac | --FLAC
+
+Make torrent for FLAC files.
+
+=item --dry-run
+
+=item --verbose
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHOR & COPYRIGHT 
+
+©Bryan Matsuo (bryan.matsuo@gmail.com)
+

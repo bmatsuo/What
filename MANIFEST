@@ -8,8 +8,8 @@ t/What-WhatRC.t
 lib/What.pm
 lib/What/Prompt.pm
 lib/What/WhatRC.pm
-scripts/album-scaffold
-scripts/album-organize
-scripts/segregate-mp3
-scripts/convert-art
-scripts/convert-flac-release
+lib/What/Release.pm
+scripts/release-scaffold
+scripts/release-art-convert
+scripts/release-flac-convert
+scripts/release-mktorrent

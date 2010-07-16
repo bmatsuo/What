@@ -11,12 +11,11 @@ WriteMakefile(
         Term::ReadLine  => 0,
         Data::Dumper    => 0,
     }, # e.g., Module::Name => 1.1
-    EXE_FILES           => [qw{
-        scripts/album-scaffold 
-        scripts/album-organize
-        scripts/segregate-mp3
-        scripts/convert-art
-        scripts/convert-flac-release
+    EXE_FILES   => [qw{
+        scripts/release-scaffold 
+        scripts/release-art-convert
+        scripts/release-flac-convert
+        scripts/release-mktorrent
     }],
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (

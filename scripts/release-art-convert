@@ -1,0 +1,191 @@
+#!/usr/bin/env perl
+
+# Use perldoc or option --man to read documentation
+
+########################################################################
+# MODULES
+########################################################################
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+use Readonly;
+
+# Include private modules.
+use What;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+Readonly my $prog_incantation  => $0;
+Readonly my $prog_dir          => dirname($0);
+Readonly my $prog_name         => basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my @images = @{$opt{'<source-image>'}};
+    my $dest = $opt{'--output-dir'};
+    my $new_size = $opt{'--size'};
+    my $new_format = $opt{'--format'};
+    $dest 
+        =~ s! \A ~ ( [^/]* ) ! 
+            $1 ? (getpwnam($1))[7] 
+            : ( $ENV{HOME} || $ENV{LOGDIR} || (getpwuid($>))[7]) !exms;
+
+    for my $raw_image (@images) {
+        my $output_file = basename($raw_image);
+        $output_file =~ s/\. .+ \z/.$new_format/xms;
+        my $output_path = "$dest/$output_file";
+        my @convert_cmd 
+            = ('convert', $raw_image, '-resize', $new_size, $output_path);
+        system (@convert_cmd) == 0
+            or croak("Couldn't convert $raw_image.\n$?\n");
+    }
+
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+convert-art
+-- short description
+
+=head1 VERSION
+
+Version 0.0_2
+Originally created on 07/13/10 23:48:53
+
+=head1 USAGE
+
+convert-art [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=item <source-image>
+
+The image to be converted. More than one image can be specified.
+
+=for Euclid:
+    source-image.type: readable
+    repeatable
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --artist [=] <artist> | -a <artist>
+
+Release artist.
+
+=item --release [=] <title> | -r <title>
+
+Release title.
+
+=item --year [=] <year> | -y <year>
+
+Release year.
+
+=item --output-dir <dest> | -o <dest>
+
+Specify directory in which to output converted images. 
+(Default: '~/Downloads')
+
+=for Euclid:
+    dest.default: '~/Downloads'
+    dest.type: writable, -d dest
+
+=item --size [=] <size>
+
+Specify converted image size in pixels.
+(Default: '500x500')
+
+=for Euclid:
+    size.default: '500x500'
+    size.type: /\d+x\d+/
+
+=item --format [=] <format> | -f <format>
+
+Specify output format.
+(Default: 'jpg')
+
+=for Euclid:
+    format.default: 'jpg'
+    format.type: /.+/
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+Easily convert cover art from high-resolution TIFF images to other
+formats of a smaller size. Ideally, this converted image is then used for
+either attaching to mp3 files or uploading to a host like imageshack.
+
+=head1 EXAMPLES
+
+The following command,
+
+    > convert-art '~/Music/Rips/M.I.A. - 2010 - Maya[FLAC]/Front.tiff'
+
+produces ~/Downloads/Front.jpg which is a 500x500 pixel jpeg image.
+The command,
+
+    > convert-art --size 400x400 --format png --output-dir . \
+        '~/Music/Rips/M.I.A. - 2010 - Maya[FLAC]/Front.tiff'
+
+produces a 400x400 pixel PNG image ./Front.png
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHOR & COPYRIGHT 
+
+©Bryan Matsuo (bryan.matsuo@gmail.com)
+
