@@ -5,8 +5,16 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 1;
+use Test::More tests => 2;
 BEGIN { use_ok('What::Release') };
+
+my $release = What::Release->new(
+    artist => "Lady Gaga", title => "The Fame Monster", year => "2009");
+
+my $release_dir = $release->dir("/home/bryan");
+
+ok( $release_dir 
+    eq '/home/bryan/Lady Gaga/Lady Gaga - 2009 - The Fame Monster')
 
 #########################
 
