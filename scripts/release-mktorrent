@@ -46,7 +46,10 @@ my $exitcode = 0;
 
 # main() - main program execution 
 sub main{
+    my $whatrc = read_whatrc("~/.whatrc");
+
     my $release = What::Release->new(
+        rip_root => $whatrc->{rip_dir},
         artist => $opt{'--artist'},
         title => $opt{'--title'},
         year => $opt{'--year'},);
@@ -61,8 +64,6 @@ sub main{
         '320'   => $opt{'--320'},
         'FLAC'  => $opt{'--FLAC'},
     );
-
-    my $whatrc = read_whatrc("~/.whatrc");
 
     my $announce = $whatrc->announce();
 

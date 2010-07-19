@@ -4,10 +4,102 @@ what version 0.00_04
 ABSTRACT
 
 The goal of the What package is to be the ultimate package of command-
-line tools for What users. This is not a package of tools for seedboxes. 
+line tools for What users. I stress the word users.
+
+This is not a package of tools for seedboxes. 
 
 The package currently centers around creating releases. Depending on user
 feedback, more libraries and more programs will be added.
+
+RIP DIRECTORY STRUCTURE
+
+The library and program suite are set up to enforce a certain directory
+structure. 
+
+There is a root directory where all rips are places (henceforth called 
+'the rip root'). Subdirectories of the rip root are named by artists.
+
+Contained in each artist directory is one directory for each unique
+release (i.e. album, single, ...) that has been ripped.
+
+In each release directory, there is one folder for each format of the
+release (FLAC, 320kbps, V0, V2, ...). Torrents for each format will also
+reside in the release directory. Then the torrent's directory is the same
+as the directory the torrent should downloaded to.
+
+For releases with multiple discs, the library should soon support placing
+files for each disc in seperate directories labeled 'CDX' for disc number
+X.
+
+Images should be placed in the top level of a format's directory, 
+regardless of whether or not there are multiple discs in the release.
+Log and CUE files should always be in the same directory as the same
+music they describe.
+
+Here is an example of the directory structure needed.
+
+rip_root
+|---Pop Star
+|   `---Pop Star - 2010 - New Album
+|       `---Pop Star - 2010 - New Album [FLAC]
+|           |---Front.tiff
+|           |---Back.tiff
+|           |---Disc1.tiff
+|           |---Disc2.tiff
+|           |---CD1
+|           |   |---01 A love song.flac
+|           |   |---02 A sad song.flac
+|           |   |   ...
+|           |   |---New Album - CD1.log
+|           |   `---New Album - CD1.cue
+|           `---CD2
+|               |---01 A love song (remix).flac
+|               |---02 A Dance song.flac
+|               |   ...
+|               |---New Album - CD2.log
+|               `---New Album - CD2.cue
+`---Indie Duo
+    `---Indie Duo - 2009 - Fixies EP
+        |---Indie Duo - 2009 - Fixies EP [FLAC]
+        |   |---01 Fixies.flac
+        |   |---02 Fixies (Messenger Bag Remix).flac
+        |   |---03 Fixed Gears in Space.flac
+        |   |---Fixies.log
+        |   `---Fixies.cue
+        `---Indie Duo - 2009 - Fixies EP [V0]
+            |---01 Fixies.mp3
+            |---02 Fixies (Messenger Bag Remix).mp3
+            |---03 Fixed Gears in Space.flac
+            `---Fixies.log
+                Fixies.cue
+                   
+RIP/UPLOAD WORKFLOW
+
+First, before you rip a CD, run 
+    release-scaffold \
+        --artist <artist> --year <year> --title <title> \
+        [--num-discs <num-discs>]
+to create the paths to the necessary music directories.
+
+Then rip the album to FLAC and scan the artwork as TIFF image(s).
+
+If you want, you can run
+    release-ok --artist <artist> --year <year> --title <title>
+to check that you have included things like log files and CUE files in
+the flac release directory. This will help make sure that your uploads 
+aren't trumped by others that are more complete.
+
+Then run 
+    release-flac-convert \
+        --artist <artist> --year <year> --title <title> \
+        [--v0] [--v2] [--320]
+to create other desired formats.
+
+Finally run
+    release-mktorrent \
+        --artist <artist> --year <year> --title <title> \
+        [--flac] [--v0] [--v2] [--320]
+to create torrents for each desired format.
 
 INSTALLATION
 

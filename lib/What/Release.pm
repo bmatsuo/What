@@ -5,6 +5,9 @@ use strict;
 use warnings;
 use Carp;
 
+use File::Glob 'bsd_glob';
+use What::Utils;
+
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
 
@@ -29,14 +32,17 @@ our @EXPORT = qw(
 our $VERSION = '0.0_1';
 
 my %def_arg = ( 
+    rip_root => "",
     artist  => "",
     title   => "",
     year    => "",
+    discs   => 1,
     label   => "",
     desc    => "",);
 
 # Subroutine: 
 #   What::Release->new(
+#       rip_root=> $rip_root,
 #       artist  => $artist,
 #       title   => $title,
 #       year    => $year,
@@ -52,6 +58,13 @@ sub new {
     my $class = shift;
     my %arg = @_;
     %arg = (%def_arg, %arg);
+
+    my $rip_root = $arg{rip_root};
+
+    my @rip_root = bsd_glob(glob_safe($rip_root)."/");
+
+    croak("'rip_root' field must be a path to an existing directory.")
+        if !@rip_root;
 
     croak("'artist' field must be a non-empty string")
         if $arg{artist} =~ m/\A\z/xms;
@@ -79,6 +92,23 @@ sub name {
     return $name;
 }
 
+# Subroutine: $release->artist_dir($rip_dir)
+# Type: INSTANCE METHOD
+# Purpose: 
+#   Compute the release's root directory, given the rip root directory.
+# Returns: A path to the release's root directory.
+sub artist_dir {
+    my $self = shift;
+
+    my $rip_root = shift;
+
+    my $name = $self->name();
+
+    my $artist_dir = "$rip_root/$self->{artist}";
+
+    return $artist_dir;
+}
+
 # Subroutine: $release->dir($rip_dir)
 # Type: INSTANCE METHOD
 # Purpose: 
@@ -91,7 +121,9 @@ sub dir {
 
     my $name = $self->name();
 
-    my $release_root = "$rip_root/$self->{artist}/$name";
+    my $artist_dir = $self->artist_dir($rip_root);
+
+    my $release_root = "$artist_dir/$name";
 
     return $release_root;
 }
@@ -106,13 +138,34 @@ sub format_dir {
 
     my $rip_root = shift;
 
-    my $format = shift;
+    my $format = uc shift;
 
     my $release_name = $self->name();
     my $release_root = $self->dir($rip_root);
 
     my $format_dir = "$release_root/$release_name [$format]";
 
+    return $format_dir;
+}
+
+# Subroutine: $release->format_disc_dirs($rip_dir, $format);
+# Type: INSTANCE METHOD
+# Purpose: Find all disc directories in a rip directory.
+# Returns: 
+#   A list of disc directories (containing music) for a given format.
+sub format_disc_dirs {
+    my $self = shift;
+    my ($rip_dir, $format) = @_;
+
+    my $format_dir = $self->format_dir($rip_dir, $format);
+
+    my @disc_dirs = bsd_glob(glob_safe($format_dir)."/CD*/");
+
+    # Remove trailing / from directories.
+    map {chop $_} @disc_dirs;
+
+    return @disc_dirs if (@disc_dirs);
+    
     return $format_dir;
 }
 

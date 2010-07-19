@@ -4,6 +4,7 @@ use 5.008009;
 use strict;
 use warnings;
 use Carp;
+use File::Glob 'bsd_glob';
 
 use Data::Dumper;
 
@@ -236,11 +237,12 @@ sub read_whatrc {
 # Returns: A path with '~' replaced by user's home directory.
 sub safe_path {
     my $path = shift;
-    $path =~ s! \A ~ ([^/]+)? !
-        $1  ? [getpwnam($1)]->[7]
-            : ($ENV{HOME} || $ENV{LOGDIR} || [getpwuid($>)]->[7])
-    !exms;
-    return $path;
+
+    $path =~ s/(\[|\]|[{}*?])/\\$1/xms;
+
+    my $safe = $path =~ m/~/ ? bsd_glob($path) : $path;
+
+    return $safe;
 }
 
 # Preloaded methods go here.

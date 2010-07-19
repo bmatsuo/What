@@ -18,6 +18,7 @@ use Readonly;
 
 # Include private modules.
 use What::WhatRC;
+use What::Release;
 
 our $VERSION = '0.0_1';
 
@@ -29,11 +30,6 @@ our $VERSION = '0.0_1';
 Readonly my $prog_incantation  => $0;
 Readonly my $prog_dir          => dirname($0);
 Readonly my $prog_name         => basename($0);
-my $usr_home = '~';
-$usr_home =~ s! \A ~ ( [^/]* ) ! 
-    $1 ? (getpwnam($1))[7] 
-    : ( $ENV{HOME} || $ENV{LOGDIR} || (getpwuid($>))[7]) !exms;
-Readonly my $HOME => $usr_home;
 
 # Command-line option hash.
 my %opt = %ARGV;
@@ -46,7 +42,7 @@ my $exitcode = 0;
 ########################################################################
 
 # Read whatrc file
-my $whatrc = read_whatrc("$HOME/.whatrc");
+my $whatrc = read_whatrc("~/.whatrc");
 
 ########################################################################
 # MAIN FUNCTION
@@ -56,19 +52,20 @@ my $whatrc = read_whatrc("$HOME/.whatrc");
 sub main{
     my ($artist, $year, $title) 
         = map {$opt{$_}} qw{--artist --year --title};
+    my $num_discs = $opt{"--num-discs"};
 
-    # my $dest = $opt{'<dest>'};
-    my $dest = $whatrc->{'rip_dir'};
-    $dest =~ s/\A ~/$HOME/xms;
+    my $release = What::Release->new(
+        rip_root => $whatrc->{rip_dir},
+        artist => $opt{'--artist'},
+        title => $opt{'--title'},
+        year => $opt{'--year'},
+        discs => $opt{'--num-discs'});
 
-    my @release = ($artist);
-    push @release, $year if defined $year;
-    push @release, $title;
+    my $rip_root = $whatrc->{'rip_dir'};
 
-    my $root_string = join " - ", @release;
-    my $artist_path = "$dest/$artist";
-    my $root_path = "$artist_path/$root_string";
-    my $flac_dir_path = "$root_path/$root_string [FLAC]";
+    my $artist_path = $release->artist_dir($rip_root);
+    my $root_path = $release->dir($rip_root);
+    my $flac_dir_path = $release->format_dir($rip_root, 'flac');
 
     my @mkartist = ('mkdir', $artist_path);
     my @mkroot = ('mkdir', $root_path);
@@ -84,6 +81,15 @@ sub main{
 
     subsystem(@mkflac) == 0
         or croak("Couldn't make FLAC directory $flac_dir_path");
+
+    if ($num_discs > 1) {
+        for my $disc (1 .. $num_discs) {
+            my $disc_dir = "$flac_dir_path/CD$disc";
+            my @mkdisc = ('mkdir', $disc_dir);
+            subsystem(@mkdisc) == 0
+                or croak("Couldn't make CD$disc directory.");
+        }
+    }
 
     exit($exitcode);
 }
@@ -153,6 +159,14 @@ Album release year
 
 =for Euclid:
     year.type: /[0-9]{4}/
+
+=item --num-discs [=] <discs>
+
+Number of discs in release.
+
+=for Euclid:
+    discs.type: +integer
+    discs.default: 1
 
 =item --dry-run
 

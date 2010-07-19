@@ -20,6 +20,7 @@ use Readonly;
 
 use Exception::Class (
     'PrerequisiteError', 
+    'BitrateError',
     'SystemCallError' => {alias=>'syserr'},);
 
 # Include private modules.
@@ -182,6 +183,31 @@ sub main{
 ########################################################################
 # SUPPORTING SUBROUTINES
 ########################################################################
+
+# Subroutine: lame-description($bitrate)
+# Type: INTERFACE SUB
+# Purpose: Generate a description of the conversion process.
+# Returns: A string description of how the MP3 files were created.
+sub lame-description {
+    my $bitrate = shift;
+
+    my $lame_version = `lame --version | head 1`;
+
+    # Remove URL and newline from lame version text
+    $lame_version =~ s/ \s? [(] .* [)] \n? \z //xms;
+
+    my @opts = lame_bitrate_options($bitrate);
+
+    if (@opts == 0) {
+        BitrateError->throw(error=>"Unrecognized bitrate $bitrate");
+    }
+
+    my $desc = join "\n",
+        "Reencoded from FLAC (via WAVE decode) using $lame_version.",
+        "LAME options: @opts", q{};
+
+    return $desc;
+}
 
 # Subroutine: subsystem(@cmd)
 # Type: INTERFACE SUB

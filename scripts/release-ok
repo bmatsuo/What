@@ -1,0 +1,205 @@
+#!/usr/bin/env perl
+
+# Use perldoc or option --man to read documentation
+
+########################################################################
+# MODULES
+########################################################################
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use File::Glob 'bsd_glob';
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+use Readonly;
+
+# Include private modules.
+use What::Release;
+use What::WhatRC;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+Readonly my $prog_incantation  => $0;
+Readonly my $prog_dir          => dirname($0);
+Readonly my $prog_name         => basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my ($artist, $year, $title)
+        = map {$opt{$_}} qw{--artist --year --title};
+
+    my $whatrc = read_whatrc("~/.whatrc");
+
+    my $release = What::Release->new(
+        rip_root => $whatrc->{rip_dir},
+        artist => $opt{'--artist'},
+        year  => $opt{'--year'},
+        title => $opt{'--title'},);
+
+    my $flac_dir = $release->format_dir($whatrc->{rip_dir},'FLAC');
+
+    $flac_dir =~ s/(\[ | \] | [{}*?])/\\$1/xms;
+
+    my @release_files = bsd_glob("$flac_dir/*");
+
+    if (!@release_files) {
+        print {\*STDERR} "No release files found in $flac_dir.\n";
+        exit(1);
+    }
+
+    my @flac_files;
+    my @images;
+    my $log_file;
+    my $cue_file;
+
+    for my $file (@release_files) {
+
+        # Extract the file's extension
+        my $ext = $file =~ m/ \. ([^.]+) \z/xms ? lc $1 : "";
+
+        if ($ext eq 'flac') { push @flac_files, $file }
+        elsif ($ext eq 'tiff') { push @images, $file }
+        elsif ($ext eq 'log') { $log_file = $file }
+        elsif ($ext eq 'cue') { $cue_file = $file }
+        elsif ($ext eq '') {
+            print {\*STDERR} 
+                "warning: file with no extension $file found.\n";
+        }
+        else {
+            print {\*STDERR} 
+                "warning: File with unexpected type $ext found; $file\n";
+        }
+    }
+
+    if (!@flac_files) {
+        print {\*STDERR}
+            "No FLAC audio files found in flac directory.\n";
+        $exitcode = 1;
+    }
+
+    if (!@images){
+        print {\*STDERR}
+            "No TIFF images found in flac directory.\n";
+        $exitcode = 1;
+    }
+
+    if (!defined $log_file) {
+        print {\*STDERR}
+            "No log file found in flac directory.\n";
+        $exitcode = 1;
+    }
+
+    if (!defined $cue_file) {
+        print {\*STDERR}
+            "No CUE file found in flac directory.\n";
+        $exitcode = 1;
+    }
+
+    if (not $exitcode && $opt{'--verbose'}) {
+        print {\*STDERR}
+            "Looks like the release is complete.\n";
+    }
+
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+# Subroutine: release_dir_is_complete($dir)
+# Type: INTERFACE SUB
+# Purpose: Check that all desired files are in a release directory.
+# Returns: 
+sub release_dir_is_complete {
+    return;
+}
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+release-ok
+-- short description
+
+=head1 VERSION
+
+Version 0.0_1
+Originally created on 07/18/10 23:19:19
+
+=head1 USAGE
+
+release-ok [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=item --artist <artist>
+
+=item --title <title>
+
+=item --year <year>
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --verbose
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+Check that a flac release directory contains everything that it should.
+
+TODO:
+
+Check the flac for 100%
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHOR & COPYRIGHT 
+
+©Bryan Matsuo (bryan.matsuo@gmail.com)
+
