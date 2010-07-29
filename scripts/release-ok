@@ -40,6 +40,8 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
+my $illegal_chars = qr{([/?:])}xms;
+
 ########################################################################
 # MAIN FUNCTION
 ########################################################################
@@ -48,6 +50,18 @@ my $exitcode = 0;
 sub main{
     my ($artist, $year, $title)
         = map {$opt{$_}} qw{--artist --year --title};
+
+    if ($artist =~ $illegal_chars) {
+        print {\*STDERR} 
+            "Illegal character $1 in artist '$artist'.\n";
+        $exitcode = 1;
+    }
+
+    if ($artist =~ $title) {
+        print {\*STDERR} 
+            "Illegal character $1 in title '$artist'.\n";
+        $exitcode = 1;
+    }
 
     my $whatrc = read_whatrc("~/.whatrc");
 
@@ -74,6 +88,14 @@ sub main{
     my $cue_file;
 
     for my $file (@release_files) {
+
+        my $name = basename($file);
+
+        if ($name =~ $illegal_chars) {
+            print {\*STDERR} 
+                "Illegal character $1 in filename '$name'.\n";
+            $exitcode = 1;
+        }
 
         # Extract the file's extension
         my $ext = $file =~ m/ \. ([^.]+) \z/xms ? lc $1 : "";
@@ -116,7 +138,7 @@ sub main{
         $exitcode = 1;
     }
 
-    if (not $exitcode && $opt{'--verbose'}) {
+    if (!$exitcode || $opt{'--verbose'}) {
         print {\*STDERR}
             "Looks like the release is complete.\n";
     }

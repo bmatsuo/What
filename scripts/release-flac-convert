@@ -17,6 +17,7 @@ use Carp;
 use Getopt::Euclid qw{ :vars<opt_> };
 use Audio::FLAC::Header;
 use Readonly;
+use MP3::Tag;
 
 use Exception::Class (
     'PrerequisiteError', 
@@ -25,6 +26,7 @@ use Exception::Class (
 
 # Include private modules.
 use What::WhatRC;
+use What::Release;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -57,6 +59,12 @@ sub main{
     my %release_info
         = (artist => $artist, title => $title, year => $year);
 
+    my $release = What::Release->new(
+        artist => $opt{'--artist'},
+        title => $opt{'--title'},
+        year => $opt{'--year'},
+    );
+
     my @desired_formats 
         = map {$opt{"--$_"} ? $_ : () } 
             qw{v0 v2 320};
@@ -67,15 +75,20 @@ sub main{
 
     my $whatrc = read_whatrc("$ENV{'HOME'}/.whatrc");
 
-    my $release_root_name = release_root_name(%release_info);
+    my $release_root_name = $release->name();
 
-    my $release_path = "$whatrc->{'rip_dir'}/$artist/$release_root_name";
+    my $release_path = $release->dir($whatrc->{'rip_dir'});
 
     PrerequisiteError->throw(
         error=>"Release root does not exist; $release_path")
             if (!-d $release_path or !-w $release_path);
     
     $release_path =~ s/\A ~/$ENV{'HOME'}/xms;
+
+    my @flac_dirs 
+        = $release->format_disc_dirs($whatrc->{'rip_dir'},'FLAC');
+
+    my $release_is_multidisc = @flac_dirs > 1 ? 1 : 0;
 
     my $flac_dir_name
             = release_root_name(
@@ -84,7 +97,12 @@ sub main{
 
     my $flac_source_dir = "$release_path/$flac_dir_name";
 
-    my %flac_info = flac_files_in($flac_source_dir);
+    #my %flac_info = flac_files_in($flac_source_dir);
+    my %flac_info
+        = (map {flac_files_in($_)} @flac_dirs);
+    my @flac_files = keys %flac_info;
+
+    print "Finding (or creating) format directories...";
 
     for my $format (@desired_formats) {
         my $format_dir_name 
@@ -93,20 +111,45 @@ sub main{
                 audio_format => $format);
         my $format_dest_dir = "$release_path/$format_dir_name";
         if (!-d $format_dest_dir) {
-            print "Creating directory $format_dest_dir\n";
-
             subsystem ('mkdir', $format_dest_dir) == 0
                 or syserr(
                     error=>
                         "Couldn't create directory $format_dest_dir\n$?");
         }
+
+        print "DONE\n";
+
         $dest_for{$format} = $format_dest_dir;
+
+        # Create multiple disc directories if necessary.
+        if ($release_is_multidisc) {
+            print "Finding disc directories for $format...";
+
+            for my $disc_dir (@flac_dirs) {
+                my $disc_name = basename($disc_dir);
+                my $format_disc_dir = "$format_dest_dir/$disc_name";
+                if (!-d $format_disc_dir) {
+                    subsystem ('mkdir', $format_disc_dir) == 0
+                        or syserr(
+                            error=> "Couldn't create disc directory"
+                                ."$format_disc_dir\n$?");
+                 }
+            }
+
+            print "DONE\n";
+        }
     }
 
-    my $temp_wav_dest_dir = $flac_source_dir;
-    
     # Convert each flac file into all desired formats.
-    for my $flac_path (keys %flac_info) {
+    for my $flac_path (
+        sort 
+            {
+                do {basename($a) =~ m/\A (\d+)/xms ? $1 : 0} 
+                    <=> do {basename($b) =~ m/\A (\d+)/xms ? $1 : 0} }
+            @flac_files
+    ) {
+        my $temp_wav_dest_dir = dirname($flac_path);
+
         # Create temporary file for WAVE output.
         my $wav_path = wav_output($flac_path, $temp_wav_dest_dir);
 
@@ -130,7 +173,12 @@ sub main{
         # Convert the decoded WAVE into all desired MP3 formats.
         for my $format (@desired_formats) {
             my $uc_format = uc $format;
-            my $mp3_dest = "$dest_for{$format}/$mp3";
+            my $disc_subdir 
+                = $release_is_multidisc 
+                    ? "/".basename(dirname($flac_path)) : "";
+            my $mp3_dest = "$dest_for{$format}";
+            $mp3_dest .= $disc_subdir;
+            $mp3_dest .= "/$mp3";
             my @lame_cmd = lame_command(
                 wav => $wav_path,
                 mp3 => $mp3_dest,
@@ -141,6 +189,7 @@ sub main{
                 or syserr(
                     error=>
                         "Couldn't convert $flac_path to $mp3_dest\n$?");
+            copy_tags($flac_info{$flac_path}, $mp3_dest);
             print "$uc_format...";
         }
 
@@ -184,11 +233,11 @@ sub main{
 # SUPPORTING SUBROUTINES
 ########################################################################
 
-# Subroutine: lame-description($bitrate)
+# Subroutine: lame_description($bitrate)
 # Type: INTERFACE SUB
 # Purpose: Generate a description of the conversion process.
 # Returns: A string description of how the MP3 files were created.
-sub lame-description {
+sub lame_description {
     my $bitrate = shift;
 
     my $lame_version = `lame --version | head 1`;
@@ -314,29 +363,28 @@ sub lame_tag_options {
 
     my @options = lame_general_tag_options;
 
-    my %tag_option = (
-        ALBUM => '--tl',
-        ARTIST=> '--ta',
-        TITLE => '--tt',
-        DATE => '--ty',
-        GENRE => '--tg',
-        TRACKNUMBER => '--tn',
-        COMMENT => '--tc',
-    );
-
-    for my $tag (keys %flac_tag) {
-        if (defined $tag_option{$tag}) {
-            my @lame_opts_for_tag = ($tag_option{$tag}, $flac_tag{$tag});
-            my $opts_end = scalar @options;
-            push @options, @lame_opts_for_tag;
-            next;
-        }
-        # TODO: Handle these tags seperately
-        #else {
-        #    warn "Tag $tag couldn't be found among the aptions"
-        #}
-    }
-
+    #my %tag_option = (
+    #    ALBUM => '--tl',
+    #    ARTIST=> '--ta',
+    #    TITLE => '--tt',
+    #    DATE => '--ty',
+    #    GENRE => '--tg',
+    #    TRACKNUMBER => '--tn',
+    #    COMMENT => '--tc',
+    #);
+    #
+    #for my $tag (keys %flac_tag) {
+    #    if (defined $tag_option{$tag}) {
+    #        my @lame_opts_for_tag = ($tag_option{$tag}, $flac_tag{$tag});
+    #        my $opts_end = scalar @options;
+    #        push @options, @lame_opts_for_tag;
+    #        next;
+    #    }
+    #    # TODO: Handle these tags seperately
+    #    #else {
+    #    #    warn "Tag $tag couldn't be found among the aptions"
+    #    #}
+    #}
     return @options;
 }
 
@@ -407,7 +455,9 @@ sub release_root_name {
 
 # Subroutine: other_files_in($flac_dir)
 # Type: INTERFACE SUB
-# Purpose: Find non-FLAC files in a given directory.
+# Purpose: 
+#   Find non-FLAC files in a given directory.
+#   Does not report subdirectories.
 # Returns: 
 #   HASH keyed by file paths.
 sub other_files_in {
@@ -421,8 +471,8 @@ sub other_files_in {
     my @other_files;
 
     for my $file (@files) {
-        push @other_files, $file 
-            if $file !~ / \.flac \z/xms;
+        push @other_files, $file
+            if $file !~ / \.flac \z/xms && !-d $file;
     }
 
     return @other_files;
@@ -450,6 +500,101 @@ sub flac_files_in {
     }
 
     return %flac_info;
+}
+
+# Subroutine: copy_tags($flac_info_ref, $mp3)
+# Type: INTERFACE SUB
+# Purpose: 
+#   Make the tags of $mp3 reflect the tags described by an
+#   Audio::FLAC::Header object $flace_info_ref.
+#   Assumes that $mp3 has no tags and does not erase any pre-existing
+#   data.
+# Returns: Nothing
+sub copy_tags {
+    my ($flac_info_ref, $mp3_path) = @_;
+
+    my $mp3 = MP3::Tag->new($mp3_path);
+
+    $mp3->get_tags;
+
+    my %id3v2_tag = (
+        'COMPOSER'    => 'TCOM',
+        'COMPILATION' => 'TCMP',
+        'ALBUM' => 'TALB',
+        'ALBUMARTIST' => 'TPE2',
+        'ARTIST'=> 'TPE1',
+        'TITLE' => 'TIT2',
+        'ISRC' => 'TSRC',
+        'DATE' => 'TDRC',
+        'GENRE' => 'TCON',
+        # HANDLE TRACKNUMBER SPECIALLY,
+        #'TRACKNUMBER' => 'TRCK',
+        #'TRACKTOTAL' => 'TRCK',
+        # HANDLE DISCNUMBER SPECIALLY,
+        #'DISCNUMBER'  => 'TPOS',
+        #'DISCTOTAL'   => 'TPOS',
+        'COMMENT' => 'COMM',
+        # Ignore the vendor tag,
+        #'VENDOR' => 'TENC',
+    );
+
+    my %song_tag = %{$flac_info_ref->{tags}};
+
+    # Set ID3v2 tags;
+    if (exists $mp3->{ID3v2}) {
+        for my $flac_tag (keys %id3v2_tag) {
+            my $tag_val = $song_tag{$flac_tag};
+            if (defined $tag_val) {
+                my $mp3_tag = $id3v2_tag{$flac_tag};
+                $mp3->set_id3v2_frame($mp3_tag, $tag_val);
+            }
+        }
+        my ($t_num, $t_tot) 
+            = ($song_tag{'TRACKNUMBER'}, $song_tag{'TRACKTOTAL'});
+        my ($d_num, $d_tot) 
+            = ($song_tag{'DISCNUMBER'}, $song_tag{'DISCTOTAL'});
+        # Compute track number tag value, if it exists.
+        my $t_val 
+            = defined $t_num && defined $t_tot ?  "$t_num/$t_tot"
+                : defined $t_num ? $t_num
+                : "";
+        # Compute the disc number tag value, if it exists.
+        my $d_val 
+            = defined $d_num && defined $d_tot ?  "$d_num/$d_tot"
+                : defined $d_num ? $d_num
+                : "";
+        $mp3->set_id3v2_frame('TRCK', $t_val) if ($t_val =~ m/.*/xms);
+        $mp3->set_id3v2_frame('TPOS', $d_val) if ($d_val =~ m/.*/xms);
+        $mp3->{ID3v2}->write_tag();
+    }
+
+    # Set ID3v1 tags.
+    if (exists $mp3->{ID3v1}) {
+        if (defined $song_tag{'COMMENT'}) {
+            $mp3->{ID3v1}->comment(utf8::decode($song_tag{'COMMENT'}));
+        }
+        if (defined $song_tag{'TITLE'}) {
+            $mp3->{ID3v1}->title(utf8::decode($song_tag{'TITLE'}));
+        }
+        if (defined $song_tag{'ARTIST'}) {
+            $mp3->{ID3v1}->artist(utf8::decode($song_tag{'ARTIST'}));
+        }
+        if (defined $song_tag{'ALBUM'}) {
+            $mp3->{ID3v1}->album(utf8::decode($song_tag{'ALBUM'}));
+        }
+        if (defined $song_tag{'DATE'}) {
+            $mp3->{ID3v1}->year(utf8::decode($song_tag{'DATE'}));
+        }
+        if (defined $song_tag{'TRACK'}) {
+            $mp3->{ID3v1}->track(utf8::decode($song_tag{'TRACK'}));
+        }
+        # Don't deal with ID3v1 genre crap.
+        #if (defined $song_tag{'GENRE'}) {
+        #    $mp3->{ID3v1}->genre(utf8::decode($song_tag{'GENRE'}));
+        #}
+        $mp3->{ID3v1}->write_tag();
+    }
+    return;
 }
 
 # Finally, kickstart the script
@@ -540,6 +685,8 @@ Convert FLAC files comprising an entire music release.
 =head1 BUGS
 
 =over
+
+Known to not properly transfer foreign language characters in song tags.
 
 =back
 

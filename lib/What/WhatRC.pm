@@ -85,7 +85,7 @@ sub announce {
     my $self = shift;
     my $tracker = tracker_url();
     my $passkey = $self->passkey();
-    my $announce = "$tracker/$passkey";
+    my $announce = "$tracker/$passkey/announce";
     return $announce;
 }
 
