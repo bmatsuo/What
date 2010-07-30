@@ -36,6 +36,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
 	read_whatrc
+    safe_path
 );
 
 our $VERSION = '0.0_4';

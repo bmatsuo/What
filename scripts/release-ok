@@ -97,6 +97,12 @@ sub main{
             $exitcode = 1;
         }
 
+        if ($name =~ m/\A \. .+ \z/xms) {
+            print {\*STDERR}
+                "Hidden file found that should't be in torrent; $name\n";
+            $exitcode = 1;
+        }
+
         # Extract the file's extension
         my $ext = $file =~ m/ \. ([^.]+) \z/xms ? lc $1 : "";
 
