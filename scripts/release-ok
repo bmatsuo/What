@@ -57,9 +57,9 @@ sub main{
         $exitcode = 1;
     }
 
-    if ($artist =~ $title) {
+    if ($title =~ $illegal_chars) {
         print {\*STDERR} 
-            "Illegal character $1 in title '$artist'.\n";
+            "Illegal character $1 in title '$title'.\n";
         $exitcode = 1;
     }
 
@@ -73,19 +73,36 @@ sub main{
 
     my $flac_dir = $release->format_dir($whatrc->{rip_dir},'FLAC');
 
+    if (!-d $flac_dir) {
+        my $dir = $release->dir($whatrc->{rip_dir});
+        if (!-d $dir) {
+            print {\*STDERR} "Can't find release directory $dir.\n";
+        }
+        else {
+            print {\*STDERR} "Can't find FLAC directory $flac_dir.\n";
+        }
+    }
+    elsif ($opt{'--verbose'}) {
+        print {\*STDERR} "FLAC directory found.\n";
+    }
+
     $flac_dir =~ s/(\[ | \] | [{}*?])/\\$1/xms;
 
     my @release_files = bsd_glob("$flac_dir/*");
-
-    if (!@release_files) {
-        print {\*STDERR} "No release files found in $flac_dir.\n";
-        exit(1);
-    }
 
     my @flac_files;
     my @images;
     my $log_file;
     my $cue_file;
+
+    my @hidden_files = map {basename($_)} bsd_glob("$flac_dir/.*");
+
+    shift @hidden_files; shift @hidden_files;
+
+    if (scalar @hidden_files) {
+        print {\*STDERR} "Hidden files found; @hidden_files\n";
+        $exitcode = 1;
+    }
 
     for my $file (@release_files) {
 
@@ -112,7 +129,7 @@ sub main{
         elsif ($ext eq 'cue') { $cue_file = $file }
         elsif ($ext eq '') {
             print {\*STDERR} 
-                "warning: file with no extension $file found.\n";
+                "warning: File with no extension $file found.\n";
         }
         else {
             print {\*STDERR} 
@@ -121,15 +138,19 @@ sub main{
     }
 
     if (!@flac_files) {
-        print {\*STDERR}
-            "No FLAC audio files found in flac directory.\n";
+        print {\*STDERR} "No FLAC files found in FLAC directory.\n";
         $exitcode = 1;
+    }
+    elsif ($opt{'--verbose'}) {
+        print {\*STDERR} scalar(@flac_files)." FLAC files found.\n";
     }
 
     if (!@images){
-        print {\*STDERR}
-            "No TIFF images found in flac directory.\n";
+        print {\*STDERR} "No TIFF images found in FLAC directory.\n";
         $exitcode = 1;
+    }
+    elsif ($opt{'--verbose'}) {
+        print {\*STDERR} scalar(@images)." TIFF images found.\n";
     }
 
     if (!defined $log_file) {
@@ -137,16 +158,28 @@ sub main{
             "No log file found in flac directory.\n";
         $exitcode = 1;
     }
+    elsif ($opt{'--verbose'}) {
+        print {\*STDERR} "Log file found.\n";
+    }
 
     if (!defined $cue_file) {
         print {\*STDERR}
             "No CUE file found in flac directory.\n";
         $exitcode = 1;
     }
+    elsif ($opt{'--verbose'}) {
+        print {\*STDERR} "CUE file found.\n";
+    }
 
-    if (!$exitcode || $opt{'--verbose'}) {
-        print {\*STDERR}
-            "Looks like the release is complete.\n";
+    if ($opt{'--verbose'}) {
+        if (!$exitcode) {
+            print {\*STDERR}
+                "The release is ready to be converted to MP3.\n";
+        }
+        else {
+            print {\*STDERR} 
+                "The release is NOT ready for conversion.\n";
+        }
     }
 
     exit($exitcode);
