@@ -48,6 +48,8 @@ my %default_whatrc = (
     rip_dir => "$ENV{'HOME'}/Music/Rips",
     # Pager used for long documents.
     pager   => '/usr/bin/more',
+    # The directory watched by the bit torrent client for new torrents.
+    watch   => "$ENV{'HOME'}/Downloads",
 );
 
 my @rc_paths = qw{rip_dir pager};
