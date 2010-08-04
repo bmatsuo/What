@@ -65,7 +65,7 @@ sub main{
 
     my $artist_path = $release->artist_dir($rip_root);
     my $root_path = $release->dir($rip_root);
-    my $flac_dir_path = $release->format_dir($rip_root, 'flac');
+    my $flac_dir_path = $release->format_dir($rip_root,'flac');
 
     my @mkartist = ('mkdir', $artist_path);
     my @mkroot = ('mkdir', $root_path);

@@ -48,54 +48,24 @@ my $illegal_chars = qr{([/?:])}xms;
 
 # main() - main program execution 
 sub main{
-    my ($artist, $year, $title)
-        = map {$opt{$_}} qw{--artist --year --title};
-
-    if ($artist =~ $illegal_chars) {
-        print {\*STDERR} 
-            "Illegal character $1 in artist '$artist'.\n";
-        $exitcode = 1;
-    }
-
-    if ($title =~ $illegal_chars) {
-        print {\*STDERR} 
-            "Illegal character $1 in title '$title'.\n";
-        $exitcode = 1;
-    }
-
     my $whatrc = read_whatrc("~/.whatrc");
 
-    my $release = What::Release->new(
-        rip_root => $whatrc->{upload_root},
-        artist => $opt{'--artist'},
-        year  => $opt{'--year'},
-        title => $opt{'--title'},);
+    my $rip_dir = $whatrc->{rip_dir};
 
-    my $flac_dir = $release->format_dir($whatrc->{upload_root},'FLAC');
+    $rip_dir =~ s/(\[ | \] | [{}*?])/\\$1/xms;
 
-    if (!-d $flac_dir) {
-        my $dir = $release->dir($whatrc->{upload_dir});
-        if (!-d $dir) {
-            print {\*STDERR} "Can't find release directory $dir.\n";
-        }
-        else {
-            print {\*STDERR} "Can't find FLAC directory $flac_dir.\n";
-        }
-    }
-    elsif ($opt{'--verbose'}) {
-        print {\*STDERR} "FLAC directory found.\n";
+    if (!-d $rip_dir) {
+        print {\*STDERR} "Can't find rip directory $rip_dir.\n";
     }
 
-    $flac_dir =~ s/(\[ | \] | [{}*?])/\\$1/xms;
-
-    my @release_files = bsd_glob("$flac_dir/*");
+    my @release_files = bsd_glob("$rip_dir/*");
 
     my @flac_files;
     my @images;
     my $log_file;
     my $cue_file;
 
-    my @hidden_files = map {basename($_)} bsd_glob("$flac_dir/.*");
+    my @hidden_files = map {basename($_)} bsd_glob("$rip_dir/.*");
 
     shift @hidden_files; shift @hidden_files;
 
@@ -174,11 +144,11 @@ sub main{
     if ($opt{'--verbose'}) {
         if (!$exitcode) {
             print {\*STDERR}
-                "The release is ready to be converted to MP3.\n";
+                "Release is ready to be moved and converted to MP3.\n";
         }
         else {
             print {\*STDERR} 
-                "The release is NOT ready for conversion.\n";
+                "Release is NOT ready to be moved and converted.\n";
         }
     }
 
@@ -219,12 +189,6 @@ release-ok [options]
 =head1 REQUIRED ARGUMENTS
 
 =over
-
-=item --artist <artist>
-
-=item --title <title>
-
-=item --year <year>
 
 =back
 

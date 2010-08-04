@@ -54,14 +54,15 @@ my %default_whatrc = (
     watch   => "$ENV{'HOME'}/Downloads",
 );
 
-my @rc_paths = qw{rip_dir pager};
+my @rc_paths = qw{rip_dir pager upload_root};
 
 my $dumper = Data::Dumper->new([\%default_whatrc],['WhatCDConfig']);
 
 # Subroutine:
 #   new(
 #       announce => $annource_url,
-#       rip_dir => $rip_root_directory,
+#       rip_dir => $rip_directory,
+#       upload_root => $upload_root_dir,
 #       pager   => $default_terminal_pager,)
 # Type: CLASS METHOD
 # Purpose: 
@@ -164,6 +165,32 @@ sub rip_dir {
         if (!-d $new_rip_dir);
     ValueException->throw(error=>"Directory $new_rip_dir not writable.")
         if (!-w $new_rip_dir);
+}
+
+# Subroutine:   $whatrc->upload_root()
+#               $whatrc->upload_root($new_root_dir)
+# Type: INSTANCE METHOD
+# Purpose: 
+#   Setter/Accessor method for the upload_root field.
+# Returns: 
+#   The configuration upload_root (after setting, when given an argument).
+# Throws:
+#   ValueException if $new_root_dir is not an existing writeable
+#   directory.
+sub upload_dir {
+    my $self = shift;
+    my $new_root_dir = shift;
+    return $self->{upload_root} if !defined $new_root_dir;
+    $new_root_dir = safe_path($new_root_dir);
+    my $is_valid_root_dir = sub {-d $_[0] && -w $_[0]};
+    if ($is_valid_root_dir->($new_root_dir)) {
+        $self->{upload_root} = $new_root_dir;
+        return $self->{upload_root};
+    }
+    ValueException->throw(error=>"No directory $new_root_dir")
+        if (!-d $new_root_dir);
+    ValueException->throw(error=>"Directory $new_root_dir not writable.")
+        if (!-w $new_root_dir);
 }
 
 # Subroutine:   $whatrc->pager()

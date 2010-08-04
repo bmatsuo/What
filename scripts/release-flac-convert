@@ -77,7 +77,7 @@ sub main{
 
     my $release_root_name = $release->name();
 
-    my $release_path = $release->dir($whatrc->{'upload_dir'});
+    my $release_path = $release->dir($whatrc->{upload_root});
 
     PrerequisiteError->throw(
         error=>"Release root does not exist; $release_path")
@@ -86,7 +86,7 @@ sub main{
     $release_path =~ s/\A ~/$ENV{'HOME'}/xms;
 
     my @flac_dirs 
-        = $release->format_disc_dirs($whatrc->{'upload_root'},'FLAC');
+        = $release->format_disc_dirs($whatrc->{upload_root},'FLAC');
 
     my $release_is_multidisc = @flac_dirs > 1 ? 1 : 0;
 

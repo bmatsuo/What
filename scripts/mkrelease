@@ -1,0 +1,201 @@
+#!/usr/bin/env perl
+
+# Use perldoc or option --man to read documentation
+
+########################################################################
+# MODULES
+########################################################################
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use File::Glob 'bsd_glob';
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+use Readonly;
+
+# Include private modules.
+use What;
+use What::WhatRC;
+use What::Release;
+use What::Subsystem;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+Readonly my $prog_incantation  => $0;
+Readonly my $prog_dir          => dirname($0);
+Readonly my $prog_name         => basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+my $illegal_chars = qr{([/?:])}xms;
+my $whatrc = read_whatrc('~/.whatrc');
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my $release = What::Release->new(
+        artist => $opt{'--artist'},
+        title => $opt{'--title'},
+        year => $opt{'--year'},);
+
+    my ($artist, $year, $title)
+        = map {$opt{$_}} qw{--artist --year --title};
+
+    if ($artist =~ $illegal_chars) {
+        print {\*STDERR} 
+            "Illegal character $1 in artist '$artist'.\n";
+        $exitcode = 1;
+    }
+
+    if ($title =~ $illegal_chars) {
+        print {\*STDERR} 
+            "Illegal character $1 in title '$title'.\n";
+        $exitcode = 1;
+    }
+
+    my $rip_dir = $whatrc->{rip_dir};
+
+    my $up_root = $whatrc->{upload_root};
+
+    my $flac_dir = $release->format_dir($up_root, 'FLAC');
+
+    my @release_files = bsd_glob("$rip_dir/*");
+
+    my $subsystem = What::Subsystem->new(
+        dryrun => $opt{'--dry-run'},
+        verbose => $opt{'--verbose'},);
+
+    my @check_release = ('release-ok');
+    my @move_release = ('mv', @release_files, $flac_dir);
+    my @scaffold = ('release-scaffold', 
+        '--artist', $opt{'--artist'},
+        '--title', $opt{'--title'},
+        '--year', $opt{'--year'},);
+    my @convert = ('release-flac-convert', 
+        '--artist', $opt{'--artist'},
+        '--title', $opt{'--title'},
+        '--year', $opt{'--year'},
+        ($opt{'--v0'} ? '--v0' : ()),
+        ($opt{'--v2'} ? '--v2' : ()),
+        ($opt{'--320'} ? '--320' : ()),);
+    my @mktorrent = ('release-mktorrent', 
+        '--artist', $opt{'--artist'},
+        '--title', $opt{'--title'},
+        '--year', $opt{'--year'},
+        ($opt{'--v0'} ? '--v0' : ()),
+        ($opt{'--v2'} ? '--v2' : ()),
+        ($opt{'--320'} ? '--320' : ()),
+        ($opt{'--flac'} ? '--flac' : ()),);
+
+    $subsystem->exec(@check_release) == 0 or die;
+    $subsystem->exec(@scaffold ) == 0 or die;
+    $subsystem->exec(@move_release) == 0 or die;
+    $subsystem->exec(@convert) == 0 or die;
+    $subsystem->exec(@mktorrent ) == 0 or die;
+
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+mkrelease
+-- short description
+
+=head1 VERSION
+
+Version 0.0_1
+Originally created on 08/03/10 22:02:39
+
+=head1 USAGE
+
+mkrelease [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=item --artist <artist>
+
+Release artist.
+
+=item --title <title>
+
+Release title.
+
+=item --year <year>
+
+Release year.
+
+=for Euclid:
+    year.type: /\d{4}/
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --v0 | --V0
+
+=item --v2 | --V2
+
+=item --320
+
+=item --flac | --FLAC
+
+=item --dry-run
+
+=item --verbose
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHOR & COPYRIGHT 
+
+©Bryan Matsuo (bryan.matsuo@gmail.com)
+
