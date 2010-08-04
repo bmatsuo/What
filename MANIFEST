@@ -2,6 +2,8 @@ Changes
 Makefile.PL
 MANIFEST
 README
+INSTALL
+whatrc
 t/What.t
 t/What-Prompt.t
 t/What-WhatRC.t
@@ -16,3 +18,4 @@ scripts/release-art-convert
 scripts/release-flac-convert
 scripts/release-mktorrent
 scripts/release-ok
+scripts/mkrelease

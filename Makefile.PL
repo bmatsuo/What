@@ -19,6 +19,7 @@ WriteMakefile(
         scripts/release-flac-convert
         scripts/release-mktorrent
         scripts/release-ok
+        scripts/mkrelease
     }],
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (

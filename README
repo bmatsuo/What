@@ -1,4 +1,4 @@
-what version 0.00_04
+what version 0.00_05
 =================
 
 ABSTRACT
@@ -11,13 +11,33 @@ This is not a package of tools for seedboxes.
 The package currently centers around creating releases. Depending on user
 feedback, more libraries and more programs will be added.
 
-RIP DIRECTORY STRUCTURE
+CONTENTS
+    Package Defeciencies
+    Upload Directory Structure
+    Workflow
+    Rip Workflow
+    Release Workflow
+    Release (Under the Hood)
+
+PACKAGE DEFECIENCIES
+
+This package can not:
+    Upload torrents to What.CD (probably never coming).
+    OGG/Apple Lossless/AAC coversions.
+    Non-ISO-Latin-1 characters in FLAC tags (I really want this) 
+    Multi-disc rips (recently broken, HIGH on todo list)
+    Check FLAC log rip files (todo).
+    Create album descriptions (todo).
+    Create release descriptions (todo).
+
+UPLOAD DIRECTORY STRUCTURE
 
 The library and program suite are set up to enforce a certain directory
 structure. 
 
-There is a root directory where all rips are places (henceforth called 
-'the rip root'). Subdirectories of the rip root are named by artists.
+There is a root directory where all uploads are placed (henceforth called 
+'the upload root'). Subdirectories of the upload root are named by 
+artists.
 
 Contained in each artist directory is one directory for each unique
 release (i.e. album, single, ...) that has been ripped.
@@ -38,7 +58,7 @@ music they describe.
 
 Here is an example of the directory structure needed.
 
-rip_root
+upload_root
 |---Pop Star
 |   `---Pop Star - 2010 - New Album
 |       `---Pop Star - 2010 - New Album [FLAC]
@@ -70,24 +90,64 @@ rip_root
             |---01 Fixies.mp3
             |---02 Fixies (Messenger Bag Remix).mp3
             |---03 Fixed Gears in Space.flac
-            `---Fixies.log
-                Fixies.cue
-                   
-RIP/UPLOAD WORKFLOW
+            |---Fixies.log
+            `---Fixies.cue
 
-First, before you rip a CD, run 
+PACKAGE WORKFLOW
+
+The What package enforces a specific workflow. This should be fully
+automated soon, but there are still kinks. There are two parts to
+uploading; ripping and coverting/releasing. The term releasing is used
+meaning checking for a complete release, creating a torrrent, and adding
+the torrent to your preferred client.
+                   
+RIP WORKFLOW
+
+All FLAC files should be ripped to the same directory (the 
+'rip directory'). This directory should not  be in the upload hierarchy 
+(it probably could be, if placed with care). 
+
+Log and CUE files should accompany all your rips. The What package will 
+not tolerate releases which can be trumped.
+
+TIFF image scans of album artwork should also be placed in the rip
+directory before releasing. TIFF album artwork is more or less required
+at the moment. In the near future, there will be a way to require JPEG
+images or even not require album artwork at all.
+
+Ensure that all the necessary files are in the rip directory before
+proceding to the releasing workflow.
+
+RELEASE WORKFLOW
+
+This is more-or-less automated this point. You need only run the
+following command
+    mkrelease \
+        --artist "Indie Duo" --title "Darkest Darkness" --year 2010 \
+        --flac --320 --v0 --v2
+to release the band Indie Duo's brand new LP entitled Darkest Darkness in
+all the best formats (really just the only ones supported at the moment).
+
+Then you just need to upload the 4 respective torrents from your watch
+directory (if they aren't deleted), or from in the upload hierarchy. This
+should suit most of your uploading needs. Enjoy =)
+
+RELEASE (UNDER THE HOOD)
+
+After you rip a CD, run the command,
     release-scaffold \
         --artist <artist> --year <year> --title <title> \
         [--num-discs <num-discs>]
 to create the paths to the necessary music directories.
 
-Then rip the album to FLAC and scan the artwork as TIFF image(s).
-
 If you want, you can run
-    release-ok --artist <artist> --year <year> --title <title>
+    release-ok [--num-discs <num_discs>]
 to check that you have included things like log files and CUE files in
 the flac release directory. This will help make sure that your uploads 
 aren't trumped by others that are more complete.
+
+Move the FLAC and image files into their proper directories (see 
+UPLOAD DIRECTORY STRUCTURE). This will probably be automated soon enough.
 
 Then run 
     release-flac-convert \
@@ -100,31 +160,6 @@ Finally run
         --artist <artist> --year <year> --title <title> \
         [--flac] [--v0] [--v2] [--320]
 to create torrents for each desired format.
-
-INSTALLATION
-
-To install this module type the following:
-
-   perl Makefile.PL
-   make
-   make test
-   make install
-
-DEPENDENCIES
-
-What requires these non-standard modules and libraries from the CPAN:
-    Getopt::Euclid
-    Readonly
-    Exception::Class
-    Class::InsideOut
-    Term::Readline
-    Data::Dumper
-
-The easiest way to get all these dependencies is to install the CPAN
-module. You can get the latest version from the following link:
-    http://search.cpan.org/~andk/CPAN/lib/CPAN.pm
-Then read the CPAN documentation about installing modules (it's really
-easy).
 
 COPYRIGHT AND LICENCE
 

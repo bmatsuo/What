@@ -1,0 +1,28 @@
+INSTALLATION
+
+To install this module, with the included scripts, type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+DEPENDENCIES
+
+What requires these non-standard modules and libraries from the CPAN:
+    Getopt::Euclid
+    Readonly
+    Exception::Class
+    Class::InsideOut
+    Term::Readline
+    Data::Dumper
+
+The easiest way to get all these dependencies is to install the CPAN
+module. You can get the latest version from the following link:
+    http://search.cpan.org/~andk/CPAN/lib/CPAN.pm
+Then read the CPAN documentation about installing modules (it's really
+easy).
+
+The What scripts also require external programs. Specifically,
+    lame
+    flac

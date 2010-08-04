@@ -1,0 +1,19 @@
+my $WhatCDConfig = {
+
+# Personal What.CD passkey for making torrents.
+'passkey'   => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+
+# Location FLAC rips and album art TIFF scans are placed
+'rip_dir'   => '~/Music/Last Rip',
+
+# Root directory holding data and torrents for all uploads.
+'upload_root' => '~/Music/Rips',
+
+# Directory watched by torrent client for new torrents.
+'watch'     => '~/Downloads',
+
+# Favorite pager (probably either 'more' or 'less')
+'pager'     => '/usr/bin/more',
+
+};
+
