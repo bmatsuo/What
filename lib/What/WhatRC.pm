@@ -44,8 +44,10 @@ our $VERSION = '0.0_4';
 my %default_whatrc = (
     # Don't actually put your announce url in this file. Use ~/.whatrc.
     passkey => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    # Root directory where uploaded files/torrents go.
+    upload_root => "$ENV{'HOME'}/Music/Rips",
     # The folder where music rips are stored.
-    rip_dir => "$ENV{'HOME'}/Music/Rips",
+    rip_dir => "$ENV{'HOME'}/Music/Last Rip",
     # Pager used for long documents.
     pager   => '/usr/bin/more',
     # The directory watched by the bit torrent client for new torrents.
