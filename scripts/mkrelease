@@ -56,6 +56,14 @@ sub main{
         title => $opt{'--title'},
         year => $opt{'--year'},);
 
+    my $user_wants_a_format 
+        = $opt{'--v0'} || $opt{'--v2'} || $opt{'--320'} || $opt{'--flac'};
+
+    if (!$user_wants_a_format) {
+        print {\*STDERR} "No formats selected to release. Aborting...\n";
+        exit(1);
+    }
+
     my ($artist, $year, $title)
         = map {$opt{$_}} qw{--artist --year --title};
 
@@ -79,23 +87,43 @@ sub main{
 
     my @release_files = bsd_glob("$rip_dir/*");
 
+    my $file_is_info = sub {$_[0] =~ m/Info\.txt\A/xms}
+
+    my @info = grep {$file_is_info->{$_}} @release_files;
+
+    @release_files = grep {!$file_is_info->{$_}} @release_files;
+
     my $subsystem = What::Subsystem->new(
         dryrun => $opt{'--dry-run'},
         verbose => $opt{'--verbose'},);
 
-    my @check_release = ('release-ok');
-    my @move_release = ('mv', @release_files, $flac_dir);
+    my @check_release = ('release-ok', 
+        ($opt{'--num-discs'} ? ('--num-discs',$opt{'--num-discs'}) 
+            : ()),
+        ($opt{'--verbose'} ? '--verbose' : ());
+
     my @scaffold = ('release-scaffold', 
         '--artist', $opt{'--artist'},
         '--title', $opt{'--title'},
-        '--year', $opt{'--year'},);
+        '--year', $opt{'--year'},
+        ($opt{'--verbose'} ? '--verbose' : ()),
+        ($opt{'--dry-run'} ? '--dry-run' : (),);
+
+    my @move_release = ('mv', '-r', @release_files, $flac_dir);
+
+    my @move_info 
+        = ('mv', $info[0], $release->dir($whatrc->{upload_root}));
+
     my @convert = ('release-flac-convert', 
         '--artist', $opt{'--artist'},
         '--title', $opt{'--title'},
         '--year', $opt{'--year'},
         ($opt{'--v0'} ? '--v0' : ()),
         ($opt{'--v2'} ? '--v2' : ()),
-        ($opt{'--320'} ? '--320' : ()),);
+        ($opt{'--320'} ? '--320' : ()),
+        ($opt{'--verbose'} ? '--verbose' : ()),
+        ($opt{'--dry-run'} ? '--dry-run' : (),);
+
     my @mktorrent = ('release-mktorrent', 
         '--artist', $opt{'--artist'},
         '--title', $opt{'--title'},
@@ -103,11 +131,14 @@ sub main{
         ($opt{'--v0'} ? '--v0' : ()),
         ($opt{'--v2'} ? '--v2' : ()),
         ($opt{'--320'} ? '--320' : ()),
-        ($opt{'--flac'} ? '--flac' : ()),);
+        ($opt{'--flac'} ? '--flac' : ()),
+        ($opt{'--verbose'} ? '--verbose' : ()),
+        ($opt{'--dry-run'} ? '--dry-run' : (),);
 
     $subsystem->exec(@check_release) == 0 or die;
     $subsystem->exec(@scaffold ) == 0 or die;
     $subsystem->exec(@move_release) == 0 or die;
+    $subsystem->exec(@move_info) == 0 or die;
     $subsystem->exec(@convert) == 0 or die;
     $subsystem->exec(@mktorrent ) == 0 or die;
 
@@ -170,6 +201,11 @@ Release year.
 =item --320
 
 =item --flac | --FLAC
+
+=item --num-discs <num_discs>
+
+=for Euclid:
+    num_discs.type: +integer
 
 =item --dry-run
 

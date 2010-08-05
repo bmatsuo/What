@@ -64,6 +64,7 @@ sub main{
     my @images;
     my $log_file;
     my $cue_file;
+    my $info_file;
 
     my @hidden_files = map {basename($_)} bsd_glob("$rip_dir/.*");
 
@@ -97,6 +98,7 @@ sub main{
         elsif ($ext eq 'tiff') { push @images, $file }
         elsif ($ext eq 'log') { $log_file = $file }
         elsif ($ext eq 'cue') { $cue_file = $file }
+        elsif (basename($file) eq "Info.txt") { $info_file = $file }
         elsif ($ext eq '') {
             print {\*STDERR} 
                 "warning: File with no extension $file found.\n";
@@ -130,6 +132,15 @@ sub main{
     }
     elsif ($opt{'--verbose'}) {
         print {\*STDERR} "Log file found.\n";
+    }
+
+    if (!defined $info_file) {
+        print {\*STDERR}
+            "No info file found in flac directory.\n";
+        $exitcode = 1;
+    }
+    elsif ($opt{'--verbose'}) {
+        print {\*STDERR} "Info.txt found.\n";
     }
 
     if (!defined $cue_file) {
