@@ -7,3 +7,4 @@ dist
 scripts/.DS_Store
 lib/.DS_Store
 t/.DS_Store
+*.swp

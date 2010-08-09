@@ -58,13 +58,16 @@ sub main{
         print {\*STDERR} "Can't find rip directory $rip_dir.\n";
     }
 
-    my @release_files = bsd_glob("$rip_dir/*");
+    # TODO: This is not ideal. I should fix multi-CD releases.
+    my @release_files 
+        = (bsd_glob("$rip_dir/*"), bsd_glob("$rip_dir/CD*/*"));
 
     my @flac_files;
     my @images;
-    my $log_file;
-    my $cue_file;
+    my @log_files;
+    my @cue_files;
     my $info_file;
+    my $num_discs = 1;
 
     my @hidden_files = map {basename($_)} bsd_glob("$rip_dir/.*");
 
@@ -96,9 +99,13 @@ sub main{
 
         if ($ext eq 'flac') { push @flac_files, $file }
         elsif ($ext eq 'tiff') { push @images, $file }
-        elsif ($ext eq 'log') { $log_file = $file }
-        elsif ($ext eq 'cue') { $cue_file = $file }
+        elsif ($ext eq 'log') { push @log_files,  $file }
+        elsif ($ext eq 'cue') { push @cue_files, $file }
         elsif (basename($file) eq "Info.txt") { $info_file = $file }
+        elsif (-d $file && $file =~ m/CD(\d+)/xms) {
+            my $n = $1;
+            $num_discs = $n if $n > $num_discs;
+        }
         elsif ($ext eq '') {
             print {\*STDERR} 
                 "warning: File with no extension $file found.\n";
@@ -125,9 +132,11 @@ sub main{
         print {\*STDERR} scalar(@images)." TIFF images found.\n";
     }
 
-    if (!defined $log_file) {
+    if (@log_files < $num_discs) {
         print {\*STDERR}
-            "No log file found in flac directory.\n";
+            "Missing log files for $num_discs discs. Found \n";
+        print {\*STDERR}
+            join "\n", @log_files, "";
         $exitcode = 1;
     }
     elsif ($opt{'--verbose'}) {
@@ -136,16 +145,18 @@ sub main{
 
     if (!defined $info_file) {
         print {\*STDERR}
-            "No info file found in flac directory.\n";
+            "Info.txt was not found in flac directory.\n";
         $exitcode = 1;
     }
     elsif ($opt{'--verbose'}) {
         print {\*STDERR} "Info.txt found.\n";
     }
 
-    if (!defined $cue_file) {
+    if (@cue_files < $num_discs) {
         print {\*STDERR}
-            "No CUE file found in flac directory.\n";
+            "Missing cue files for $num_discs discs. Found \n";
+        print {\*STDERR}
+            join "\n", @cue_files, "";
         $exitcode = 1;
     }
     elsif ($opt{'--verbose'}) {
