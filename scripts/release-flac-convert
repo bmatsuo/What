@@ -53,6 +53,7 @@ my $exitcode = 0;
 
 # main() - main program execution 
 sub main{
+    local $| = 1;
     my $artist = $opt{'--artist'};
     my $title = $opt{'--title'};
     my $year = $opt{'--year'};
