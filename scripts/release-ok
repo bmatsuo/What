@@ -98,7 +98,7 @@ sub main{
         my $ext = $file =~ m/ \. ([^.]+) \z/xms ? lc $1 : "";
 
         if ($ext eq 'flac') { push @flac_files, $file }
-        elsif ($ext eq 'tiff') { push @images, $file }
+        elsif ($ext eq 'tiff' or $ext eq 'jpg') { push @images, $file }
         elsif ($ext eq 'log') { push @log_files,  $file }
         elsif ($ext eq 'cue') { push @cue_files, $file }
         elsif (basename($file) eq "Info.txt") { $info_file = $file }
@@ -186,7 +186,93 @@ sub main{
 # Purpose: Check that all desired files are in a release directory.
 # Returns: 
 sub release_dir_is_complete {
+    my $dir = shift;
+
+    my $disc_dir_pattern = "$dir/CD*";
+
+    my @discs = bsd_glob($disc_dir_pattern);
+
+    my $is_multidisc = scalar @discs;
+
+    push @discs, "" if !$is_multidisc;
+
+    find_supplemental_files($dir);
+
+    for my $disc_dir (@discs) { check_music_dir($disc_dir); }
+
     return;
+}
+
+sub find_supplemental_files {
+    my $dir = shift;
+    my $supplements_ok = 1;
+
+    # Find release description text file, Info.txt.
+    my $info = "$dir/Info.txt";
+
+    if (!-e $info) {
+        print {\*STDERR} "Can't find description $info.\n";
+        $exitcode = 1;
+        $supplements_ok = 0;
+    }
+
+    # Find images (JPEG, TIFF, PNG)
+    my @images = grep {
+        m/\. (jpg | tiff | png) \z/xms;
+    } bsd_glob("$dir/*.*");
+
+    if (!@images) {
+        print {\*STDERR} "No images were found.\n";
+        $exitcode = 1;
+        $supplements_ok = 0;
+    }
+
+    return $supplements_ok;
+}
+
+sub check_music_dir {
+    my $dir = shift;
+    my $music_dir_ok = 1;
+
+    my @flac_files = bsd_glob("$dir/*.flac");
+
+    if (!@flac_files) {
+        print {\*STDERR} "No FLAC audio files found in $dir.\n";
+        $exitcode = 1;
+        $music_dir_ok = 0;
+    }
+
+    my @log_files = bsd_glob("$dir/*.log");
+
+    if (!@log_files) {
+        print {\*STDERR} "No rip log found in $dir.\n";
+        $exitcode = 1;
+        $music_dir_ok = 0;
+    }
+
+    my @cue_files = bsd_glob("$dir/*.log");
+
+    if (!@cue_files) {
+        print {\*STDERR} "No CUE file found in $dir.\n";
+        $exitcode = 1;
+        $music_dir_ok = 0;
+    }
+
+    if (@cue_files > 1) {
+        print {\*STDERR} "Multiple CUE files found in $dir.\n";
+        $exitcode = 1;
+        $music_dir_ok = 0;
+    }
+
+    return $music_dir_ok;
+}
+
+sub check_cue_file {
+    my $cue_path = shift;
+}
+
+sub check_log_file {
+    my $log_path = shift;
 }
 
 # Finally, kickstart the script

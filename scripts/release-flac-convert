@@ -103,7 +103,7 @@ sub main{
         = (map {flac_files_in($_)} @flac_dirs);
     my @flac_files = keys %flac_info;
 
-    print "Finding (or creating) format directories:\nn";
+    print "Finding (or creating) format directories:\n";
 
     for my $format (@desired_formats) {
         print "$format...";

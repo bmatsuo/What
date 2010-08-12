@@ -1,0 +1,151 @@
+#!/usr/bin/env perl
+
+# Use perldoc or option --man to read documentation
+
+########################################################################
+# MODULES
+########################################################################
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+use Readonly;
+
+# Include private modules.
+use What::WhatRC;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+Readonly my $prog_incantation  => $0;
+Readonly my $prog_dir          => dirname($0);
+Readonly my $prog_name         => basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+my $illegal_chars = qr{([/?:])}xms;
+my %replacement = (
+    '/' => '[slash]',
+    '?' => '[question]',
+    ':' => '[colon]',);
+my $whatrc = What::WhatRC->new('~/.whatrc');
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+sub has_illegals { $_[0] =~ $illegal_chars; }
+
+sub illegals_replaced {
+    my $s = shift;
+    $s =~ s/$illegal_chars/$replacement{$1}/gexms;
+    return $s;
+}
+
+sub fix_file {
+    my $path = shift;
+    my $fixed = illegals_replaced($path);
+    return if ($fixed eq $path);
+    croak("Destination file exists. $fixed ") if -e  $fixed;
+}
+
+sub fix_cue {
+    my $cue_path = shift;
+
+    open my $cue, "<", $cue_path
+        or croak("Couldn't open $cue");
+
+    my @cue = <$cue>;
+
+    for (@cue) { 
+        $_ = illegals_replaced($_) 
+            if $_ =~ m/\A
+                \s* FILE \s+ " (?: [^"] | \\" )* .wav" \s+ WAVE \s* \n? 
+                \z/xms}
+
+    close $cue;
+
+    open $cue, ">", $cue_path;
+
+    print {$cue} @cue;
+
+    close $cue;
+}
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+release-rm-badchar
+-- short description
+
+=head1 VERSION
+
+Version 0.0_1
+Originally created on 08/10/10 00:14:05
+
+=head1 USAGE
+
+release-rm-badchar [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHOR & COPYRIGHT 
+
+©Bryan Matsuo (bryan.matsuo@gmail.com)
+
