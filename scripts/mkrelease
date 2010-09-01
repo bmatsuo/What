@@ -12,6 +12,7 @@ use warnings;
 use File::Basename;
 use File::Glob 'bsd_glob';
 use Carp;
+use LWP::Simple;
 
 # Include CPAN modules.
 use Getopt::Euclid qw{ :vars<opt_> };
@@ -89,7 +90,9 @@ sub main{
 
     my $file_is_info = sub {$_[0] =~ m/Info\.txt\z/xms};
 
-    my @info = grep {$file_is_info->($_)} @release_files;
+    my @info 
+        = defined $opt{'--bandcamp'} ? ("") 
+        : grep {$file_is_info->($_)} @release_files;
 
     if (!@info) {
         print {\*STDERR} "Can't find Info.txt.\n";
@@ -140,11 +143,73 @@ sub main{
         ($opt{'--verbose'} ? '--verbose' : ()),
         ($opt{'--dry-run'} ? '--dry-run' : ()));
 
-    $subsystem->exec(@check_release) == 0 or die;
+    if (!$opt{'--bandcamp'}) {
+        # The release must be in the rip_dir. So check it.
+        $subsystem->exec(@check_release) == 0 or die;
+    }
+
+    # Create the release directory structure.
     $subsystem->exec(@scaffold ) == 0 or die;
-    $subsystem->exec(@move_release) == 0 or die;
-    $subsystem->exec(@move_info) == 0 or die;
-    $subsystem->exec(@convert) == 0 or die;
+
+    if ($opt{'--bandcamp'}) {
+        my $artist_subdomain = lc $artist;
+        # All I know now is that spaces turned to empty strings.
+        $artist_subdomain =~ s/[^a-zA-Z0-9]//xms;
+        my $album_url_path = lc $title;
+        # All I know now is that spaces turned to dashes.
+        $album_url_path =~ s/[^a-zA-Z0-9]/-/xms;
+        my $album_url 
+            = join "/", "http://$artist_subdomain.bandcamp.com",
+                "album", $album_url_path;
+        my $album_html = get($album_url) 
+            or die("Can't fetch $album_url."
+                ." Please report this if it's a non-user error.");
+        # Regexp to find the album id in html.
+        my $album_id_p = qr{<!-- \s album \s id \s (\d+) \s -->}xms;
+        if ($album_html =~ $album_id_p) {
+            # Consturct a base url for requests
+            my $album_id = $1;
+            my $base_request_url 
+                = join '/', 
+                    "http://popplers5.bandcamp.com", 
+                    "download", "album";
+
+            # TODO: Create a request, download and unzip for each format.
+            REQUESTFORMAT:
+            for my $format (qw{flac 320 v0 v2}) {
+                next REQUESTFORMAT if !defined $opt{"--$format"};
+                print "Fetching $format...\n";
+                my $format_dir = $release->format_dir($up_root, $format);
+                my $format_zip = $format_dir.".zip";
+                my $enc_format = $format eq 'flac' ? $format
+                    : "mp3-$format";
+                my $request_arg_string 
+                    = "enc=$enc_format&id=$album_id";
+                my $request = "$base_request_url?$request_arg_string";
+                my @fetch = ('curl', $request, '-o', $format_zip);
+                $subsystem->exec(@fetch) == 0 or die;
+                if (not $format eq 'flac') { 
+                    # release-scaffold makes a FLAC dir.
+                    # Others need to be created now.
+                    my @mk_format_dir = ('mkdir', $format_dir);
+                    $subsystem->exec(@mk_format_dir) == 0 or die;
+                }
+                my @unzip_format 
+                    = ('unzip','-d', $format_dir, $format_zip);
+                $subsystem->exec(@unzip_format) == 0 or die;
+                my @rm_zip = ('rm', $format_zip);
+                $subsystem->exec(@rm_zip) == 0 or die;
+            }
+        }
+        else {
+            die("Can't find album id.")
+        }
+    }
+    else { # This is a rip, not bandcamp.
+        $subsystem->exec(@move_release) == 0 or die;
+        $subsystem->exec(@move_info) == 0 or die;
+        $subsystem->exec(@convert) == 0 or die;
+    }
     $subsystem->exec(@mktorrent ) == 0 or die;
 
     exit($exitcode);
@@ -211,6 +276,10 @@ Release year.
 
 =for Euclid:
     num_discs.type: +integer
+
+=item --bandcamp
+
+Release is on bandcamp, and should be fetched.
 
 =item --dry-run
 

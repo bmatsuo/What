@@ -92,7 +92,7 @@ sub name {
     return $name;
 }
 
-# Subroutine: $release->artist_dir($rip_dir)
+# Subroutine: $release->artist_dir($upload_root)
 # Type: INSTANCE METHOD
 # Purpose: 
 #   Compute the release's root directory, given the rip root directory.
@@ -109,7 +109,7 @@ sub artist_dir {
     return $artist_dir;
 }
 
-# Subroutine: $release->dir($rip_dir)
+# Subroutine: $release->dir($upload_root)
 # Type: INSTANCE METHOD
 # Purpose: 
 #   Compute the release's root directory, given the rip root directory.
@@ -128,7 +128,7 @@ sub dir {
     return $release_root;
 }
 
-# Subroutine: $release->format_dir($rip_dir, $format)
+# Subroutine: $release->format_dir($upload_root, $format)
 # Type: INSTANCE METHOD
 # Purpose: 
 #   Compute the release's root directory, given the rip root directory.
@@ -148,16 +148,16 @@ sub format_dir {
     return $format_dir;
 }
 
-# Subroutine: $release->format_disc_dirs($rip_dir, $format);
+# Subroutine: $release->format_disc_dirs($upload_root, $format);
 # Type: INSTANCE METHOD
 # Purpose: Find all disc directories in a rip directory.
 # Returns: 
 #   A list of disc directories (containing music) for a given format.
 sub format_disc_dirs {
     my $self = shift;
-    my ($rip_dir, $format) = @_;
+    my ($upload_root, $format) = @_;
 
-    my $format_dir = $self->format_dir($rip_dir, $format);
+    my $format_dir = $self->format_dir($upload_root, $format);
 
     my @disc_dirs = bsd_glob(glob_safe($format_dir)."/CD*/");
 
