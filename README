@@ -25,6 +25,7 @@ PACKAGE FEATURES
 This package can:
     Convert a FLAC release to any of the 'perfect 3' MP3 bitrate settings.
     Create torrents for releases.
+    Convert release images to lower res versions for web hosting.
     Organize your all your releases into a user navigatable hierarchy.
     Create releases and torrents for albums available on bandcamp.com
     Make you a sandwich, if you have permissions.
