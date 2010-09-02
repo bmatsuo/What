@@ -4,9 +4,9 @@ what version 0.00_05
 ABSTRACT
 
 The goal of the What package is to be the ultimate package of command-
-line tools for What users. I stress the word users.
-
-This is not a package of tools for seedboxes. 
+line tools for What users. I stress the word users. This is not a package
+of tools for seedboxes. This is meant to help Joe Everyuser get a good
+ratio.
 
 The package currently centers around creating releases. Depending on user
 feedback, more libraries and more programs will be added.
@@ -31,16 +31,21 @@ This package can:
 
 PACKAGE DEFECIENCIES
 
-This package can not:
+This package will probably never:
     Rip CDs to FLAC.
     Upload torrents.
+    Score FLAC rip logs (this might be approximateable).
+
+This package can not currently:
+    Handle multi-disc rips (recently broken, HIGH priority)
+    Handle FLACs with non-ISO-Latin-1 tags (converts, but tags are shite).
+    Create M3U playlists for MP3 files.
     OGG/Apple Lossless/AAC coversions.
-    Multi-disc rips (recently broken, HIGH on todo list)
-    Non-ISO-Latin-1 characters in FLAC tags (I really want this) 
-    Create M3U playlists for MP3 files (todo).
-    Check FLAC log rip files (todo).
-    Create album descriptions (todo).
-    Create release descriptions (todo).
+    Create album descriptions.
+    Create release descriptions.
+    Manage snatches or your personal media library.
+
+The above list is pretty much a todo list.
 
 UPLOAD DIRECTORY STRUCTURE
 
@@ -198,3 +203,18 @@ to create torrents for each desired format.
 COPYRIGHT AND LICENCE
 
 Copyright (C) 2010 by Bryan Matsuo <bryan.matsuo@gmail.com>
+
+This file is part of What.
+
+What is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+What is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with What.  If not, see <http://www.gnu.org/licenses/>.

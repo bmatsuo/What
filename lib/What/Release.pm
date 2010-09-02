@@ -213,9 +213,19 @@ Bryan Matsuo, E<lt>bryan.matsuo@gmail.comE<gt>
 
 Copyright (C) 2010 by Bryan Matsuo
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.9 or,
-at your option, any later version of Perl 5 you may have available.
+This file is part of What.
 
+What is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+What is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with What.  If not, see <http://www.gnu.org/licenses/>.
 
 =cut
