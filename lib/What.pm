@@ -27,7 +27,7 @@ our @EXPORT = qw(
     tracker_url
 );
 
-our $VERSION = '0.00_04';
+our $VERSION = '0.00_05';
 
 my $tracker_url = "http://tracker.what.cd:34000";
 

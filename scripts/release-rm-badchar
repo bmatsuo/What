@@ -1,4 +1,16 @@
 #!/usr/bin/env perl
+#
+# THIS SCRIPT HAS SERIOUS PROBLEMS, DOES NOT WORK CORRECTLY, 
+# IS NOT IN THE MKRELEASE WORKFLOW, AND IS NOT INSTALLED.
+
+# There are issues with the encodings used in filenames.
+# For example the slash character '/' is searched for, 
+#   but there is a fatter unicode slash (often used by XLD) 
+#   that is totally missed and unchecked. 
+# Until this is fixed, 
+# searching for illegal chars will continue to work incorrectly.
+# Replacing illegal chars will still be postponed until after 
+#   all illegal chars can be found.
 
 # Use perldoc or option --man to read documentation
 
@@ -18,6 +30,7 @@ use Readonly;
 
 # Include private modules.
 use What::WhatRC;
+
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES

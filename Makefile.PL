@@ -12,6 +12,8 @@ WriteMakefile(
         Class::InsideOut => 0,
         Term::Readline => 0,
         Data::Dumper => 0,
+        MP3::Tag => 0,
+        Audio::FLAC::Header => 0,
     }, # e.g., Module::Name => 1.1
     EXE_FILES   => [qw{
         scripts/release-scaffold 
