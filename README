@@ -37,7 +37,6 @@ This package will probably never:
     Score FLAC rip logs (this might be approximateable).
 
 This package can not currently:
-    Handle multi-disc rips (recently broken, HIGH priority)
     Handle FLACs with non-ISO-Latin-1 tags (converts, but tags are shite).
     Create M3U playlists for MP3 files.
     OGG/Apple Lossless/AAC coversions.
@@ -66,9 +65,8 @@ release (FLAC, 320kbps, V0, V2, ...). Torrents for each format will also
 reside in the release directory. Then the torrent's directory is the same
 as the directory the torrent should downloaded to.
 
-For releases with multiple discs, the library should soon support placing
-files for each disc in seperate subdirectories of the rip directory labeled 'CDX' for disc number
-X.
+For releases with multiple discs, the audio files are placed in seperate 
+subdirectories of the rip directory labeled 'CDX' for disc number X.
 
 Images are all placed in the top level of a format's directory, 
 regardless of whether or not there are multiple discs in the release.
@@ -125,12 +123,18 @@ and finally adding the torrent to your preferred client.
                    
 RIP WORKFLOW
 
-All FLAC files should be ripped to the same directory (the 
+All new releases should be ripped to the same directory (the 
 'rip directory'). This directory should not be in the upload hierarchy 
-(it probably could be, if placed with care). 
+(it probably could be, if placed with care). The program will check
+the release and then place it in the upload heirachy.
 
-Log and CUE files should accompany all your rips. The What package will 
-not tolerate releases which can be trumped!
+For single disc rips, all flac files should be placed directly in the
+rip directory. For multidisc rips, flac files should be separated into
+subdirectorys of the form "<rip directory>/CDX/" where X is a disc number.
+
+Log and CUE files should accompany all your rips, and should be placed
+in the rip directory. The What package will not tolerate releases which 
+can be trumped! This actually might change later.
 
 TIFF image scans of album artwork and disc images should also be placed 
 in the rip directory before releasing. JPEG album artwork is also 

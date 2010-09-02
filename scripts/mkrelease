@@ -106,8 +106,6 @@ sub main{
         verbose => $opt{'--verbose'},);
 
     my @check_release = ('release-ok', 
-        ($opt{'--num-discs'} ? ('--num-discs', $opt{'--num-discs'}) 
-            : ()),
         ($opt{'--verbose'} ? '--verbose' : ()));
 
     my @scaffold = ('release-scaffold', 
