@@ -535,7 +535,7 @@ sub copy_tags {
         # HANDLE DISCNUMBER SPECIALLY,
         #'DISCNUMBER'  => 'TPOS',
         #'DISCTOTAL'   => 'TPOS',
-        'COMMENT' => 'COMM',
+        #'COMMENT' => 'COMM',
         # Ignore the vendor tag,
         #'VENDOR' => 'TENC',
     );
@@ -547,6 +547,7 @@ sub copy_tags {
         for my $flac_tag (keys %id3v2_tag) {
             my $tag_val = $song_tag{$flac_tag};
             if (defined $tag_val) {
+                print {\*STDERR} "Setting $flac_tag: $tag_val\n";
                 my $mp3_tag = $id3v2_tag{$flac_tag};
                 $mp3->set_id3v2_frame($mp3_tag, $tag_val);
             }
@@ -565,8 +566,8 @@ sub copy_tags {
             = defined $d_num && defined $d_tot ?  "$d_num/$d_tot"
                 : defined $d_num ? $d_num
                 : "";
-        $mp3->set_id3v2_frame('TRCK', $t_val) if ($t_val =~ m/.*/xms);
-        $mp3->set_id3v2_frame('TPOS', $d_val) if ($d_val =~ m/.*/xms);
+        $mp3->set_id3v2_frame('TRCK', $t_val) if ($t_val =~ m/.+/xms);
+        $mp3->set_id3v2_frame('TPOS', $d_val) if ($d_val =~ m/.+/xms);
         $mp3->{ID3v2}->write_tag();
     }
 
