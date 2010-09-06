@@ -216,7 +216,7 @@ sub main{
         for my $format (keys %dest_for) {
             my $format_dest_dir = $dest_for{$format};
             my @cp_others_cmd 
-                = ('cp', @other_files, $format_dest_dir);
+                = ('cp', '-r', @other_files, $format_dest_dir);
             subsystem(@cp_others_cmd) == 0
                 or syserr(
                     error=>
