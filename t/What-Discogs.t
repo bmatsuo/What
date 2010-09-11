@@ -15,56 +15,50 @@ print "Please enter a valid discogs api key:";
 my $key = <STDIN>;
 chomp $key;
 
-my $query;
-
 #######################
 # Release Query Tests #
 #######################
-$query = What::Discogs::Query::Release->new(
-    id => 59180, api => $key);
-
-my $release = $query->release;
-$query->DEMOLISH;
+my $release 
+    = What::Discogs::get_release(id => 59180, api => $key);
 
 # TEST parsing seems succesful
 ok($release->num_tracks == 6);
+$release->DEMOLISH;
 
 ######################
 # Artist Query Tests #
 ######################
-$query = What::Discogs::Query::Artist->new(
-    name=>"Lady Gaga", api => $key);
-
-$artist = $query->artist;
-$query->DEMOLISH;
+my $artist 
+    = What::Discogs::get_artist(name=>"Lady Gaga", api => $key);
 
 # TEST parsing seems succesful
 ok(@{$artist->realeases} > 1);
+$artist->DEMOLISH;
 
 #####################
 # Label Query Tests #
 #####################
-$query = What::Discogs::Query::Label->new(
-    name=>"Interscope Records", api => $key);
-
-$label = $query->label;
-$query->DEMOLISH;
+my $label 
+    = What::Discogs::get_label(name=>"Interscope Records", api => $key);
 
 # TEST parsing seems succesful
 ok($label->parent eq "Universal Music Group");
+$label->DEMOLISH;
 
 ######################
 # Search Query Tests #
 ######################
-$query = What::Discogs::Query::Label->new(
-    qstr="Lady Gaga", api => $key);
+my $result_list 
+    = What::Discogs::search(qstr="Lady Gaga", api => $key);
 
 # TEST $result_list->all_results
-my $results = $query->all_results;
-$query->DEMOLISH;
-ok($results->size > 20);
+ok($result_list->size > 20);
 
 # TEST $result_list->filter
-my $filtered_results 
-    = $results->filter(sub{$_[0]->title =~ /The Fame Monster/});
-ok($results->size > 0);
+my $filtered_list 
+    = $result_list->filter(
+        sub{$_[0]->title =~ /The Fame Monster/});
+
+$result_list->DEMOLISH;
+
+ok($filtered_list->size > 0);
