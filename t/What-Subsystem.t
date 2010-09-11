@@ -8,11 +8,7 @@
 use Test::More tests => 2;
 BEGIN { use_ok('What::Subsystem') };
 
-ok( 0 
-    == subsystem(
-        dryrun => 1,
-        verbose => 0,
-        cmd => "blah",));
+ok( 0 == subsystem( dryrun => 1, verbose => 0, cmd => "blah",));
 
 #########################
 

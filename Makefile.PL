@@ -14,6 +14,7 @@ WriteMakefile(
         Data::Dumper => 0,
         MP3::Tag => 0,
         Audio::FLAC::Header => 0,
+        XML::Twig => 0,
     }, # e.g., Module::Name => 1.1
     EXE_FILES   => [qw{
         scripts/snatch-inspect

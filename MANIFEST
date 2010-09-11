@@ -10,6 +10,7 @@ t/What-WhatRC.t
 t/What-Utils.t
 t/What-M3U.t
 t/What-Format.t
+t/What-XMLLib.t
 lib/What.pm
 lib/What/Prompt.pm
 lib/What/Prompt/Base.pm
@@ -20,6 +21,7 @@ lib/What/Release.pm
 lib/What/Utils.pm
 lib/What/M3U.pm
 lib/What/Format.pm
+lib/What/XMLLib.pm
 scripts/snatch-inspect
 scripts/release-import
 scripts/release-scaffold
