@@ -1,15 +1,17 @@
-package What::Discogs::Label;
-
-use 5.008009;
 use strict;
 use warnings;
 use Carp;
 
-# CPAN Modules
-use XML::Twig;
+package What::Discogs::Artist::Release;
+use What::Discogs::Release::Reference::Base;
+use Moose;
+extends 'What::Discogs::Release::Reference::Base';
 
-# Private Modules
-use What::XMLLib;
+has 'year' => (isa => 'Str', 'is' => 'rw', 'required' => 0);
+has 'type' => ('isa' => 'Str', 'is' => 'rw', 'required' => 1);
+has 'label' => ('isa' => 'Str', 'is' => 'rw', 'required' => 1);
+# Maybe should be required for featured artist releases...
+has 'track_info' => ('isa' => 'Str', 'is' => 'rw', 'required' => 0);
 
 1;
 __END__
@@ -17,8 +19,8 @@ __END__
 
 =head1 NAME
 
-What::Discogs::Label
--- A class for a label discography
+What::Discogs::Artist
+-- A class for an artist discography.
 
 =head1 SYNOPSIS
 

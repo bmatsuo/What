@@ -1,15 +1,91 @@
-package What::Discogs::Label;
-
-use 5.008009;
 use strict;
 use warnings;
 use Carp;
 
-# CPAN Modules
-use XML::Twig;
+package What::Discogs::Search::Result;
+use Moose;
 
-# Private Modules
-use What::XMLLib;
+has 'type' => ('isa' => 'Str', 'is' => 'rw', required => 1);
+has 'title' => ('isa' => 'Str', 'is' => 'rw', required => 1);
+has 'number' => ('isa' => 'Int', 'is' => 'rw', required => 1);
+has 'uri' => ('isa' => 'Str', 'is' => 'rw', required => 1);
+has 'summary' => ('isa' => 'Str', 'is' => 'rw');
+
+sub dup {
+    my $self = shift;
+    return SearchResult->new(
+        number=>$self->number, type=>$self->type, 
+        title=>$self->title, uri=>$self->uri, summary=>$self->summary);
+}
+
+package What::Discogs::Search::ResultList;
+use Moose;
+
+has 'query' => ('isa' => 'QueryBase', 'is' => 'rw', 'required' => 1);
+has 'results' => ('isa' => 'ArrayRef[SearchResult]', 
+                    'is' => 'rw', required => 1);
+has 'num_results' => (isa => 'Int', is => 'rw', required => 1);
+has 'start' => ('isa' => 'Int', 'is' => 'rw', required => 1);
+has 'end' => ('isa' => 'Int', 'is' => 'rw', required => 1);
+
+# Access a result by its number;
+sub get_result_number {
+    my ($self, $num) = @_;
+    my $index = $num - $self->start;
+    return $self->get_result($index);
+}
+
+# Access a result by its index in the SearchResultList;
+sub get_result {
+    my ($self, $index) = @_;
+    # Return undex if $index is not in interval [0, start - end]
+    return if $index < 0 or $index > $self->end - $self->start;
+    return $self->results->[$index];
+}
+
+sub length {
+    my $self = shift;
+    my $length = $self->end - $self->start;
+    return $length;
+}
+
+sub dup {
+    my $self = shift;
+    my @duped_results = map {$_->dup} @{$self->results};
+    return SearchResultList->new(
+        query=>$self->query, 
+        start=>$self->start, end=>$self->end, 
+        num_results=> $self->num_results,
+        results=>\@duped_results,
+    );
+}
+
+# Instance method.
+# Takes a subroutine as an argument and returns a new SearchResultList.
+# The argument should accept one argument (a SearchResult) and return 
+# a boolean result.
+# The contents of the new SearchResultList will contain 
+# results for which the argument subruotine returns true.
+sub grep {
+    my ($self, $sub_should_include) = @_;
+
+    my $new_list = $self->dup;
+
+    $new_list->query(QueryBase::null_query());
+
+    my @matched_results 
+        = grep {$sub_should_include->($_)} @{$self->results};
+    my $num_matched = scalar @matched_results;
+    for my $i (0 .. $num_matched - 1) {
+        $matched_results[$i]->number($i + 1);
+    }
+
+    $new_list->start(1);
+    $new_list->end($num_matched);
+    $new_list->num_results($num_matched);
+    $new_list->results(\@matched_results);
+    return $new_list;
+}
 
 1;
 __END__
@@ -17,8 +93,8 @@ __END__
 
 =head1 NAME
 
-What::Discogs::Label
--- A class for a label discography
+What::Discogs::Search
+-- For managing search results.
 
 =head1 SYNOPSIS
 

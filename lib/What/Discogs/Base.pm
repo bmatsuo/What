@@ -1,28 +1,14 @@
+package What::Discogs::Base;
 use strict;
 use warnings;
 use Carp;
-use What::Discogs::Discography;
-use What::Discogs::Release;
 
-package What::Discogs::Label::Release;
+# Private Modules
 use Moose;
-extends 'What::Discogs::Release::Reference::Base';
 
-has 'catno' => ('isa' => 'Str', 'is' => 'rw', 'required' => 1);
-has 'artist' => ('isa' => 'Str', 'is' => 'rw', 'required' => 1);
-
-package Label;
-use Moose;
-extends 'What::Discogs::Discography';
-
-has 'parent_label' => (isa => 'Str', is => 'rw', 'required' => 0);
-has 'sublabels' => (isa => 'Str', is => 'rw', 'required' => 0);
-has 'contact_info' => (isa => 'Str', is => 'rw', 'required' => 0);
-has 'profile' => (isa => 'Str', is => 'rw', 'required' => 0);
-has 'releases' 
-    => (isa => 'ArrayRef[LabelRelease]', 'is' => 'rw', 'required' => 0,
-        default => sub { [] });
-
+has 'query' => ('isa' => 'QueryBase', 'is' => 'rw', 'required' => 1);
+has 'images' => ('isa' => 'ArrayRef[Str]', 'is' => 'rw', 'required' => 0,
+    default => sub { [] });
 
 1;
 __END__
@@ -30,16 +16,10 @@ __END__
 
 =head1 NAME
 
-What::Discogs::Label
--- A class for a label discography
+What::Discogs::Discography
+-- A base class for discographies
 
 =head1 SYNOPSIS
-
-    use What::Discogs::Label;
-    
-    my $api = "XXXXXX" # Use a real discogs.com api key
-
-    ...
 
 =head1 ABSTRACT
 
@@ -51,15 +31,11 @@ None by default.
 
 =over
 
-=item What::Discogs
-
-=item What::Discogs::Release
-
 =item What::Discogs::Artist
 
-=item What::Discogs::Search
+=item What::Discogs::Label
 
-=item What::Discogs::Query
+=item What::Discogs::Release
 
 =back
 

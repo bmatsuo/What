@@ -1,15 +1,76 @@
-package What::Discogs::Label;
-
-use 5.008009;
 use strict;
 use warnings;
 use Carp;
 
-# CPAN Modules
-use XML::Twig;
+package What::Discogs::Release::Reference::Base;
+# A base class for objects referring to a Whad::Discogs::Release
+use Moose;
 
-# Private Modules
-use What::XMLLib;
+has 'title' => (isa => 'Str', 'is' => 'rw', 'required' => 1);
+has 'id' => (isa => 'Int', 'is' => 'rw', 'required' => 1);
+has 'format' => (isa => 'Str', 'is' => 'rw', 'required' => 1);
+
+package What::Discogs::Release::Label;
+use Moose;
+
+has 'name' => (isa => 'Str', is => 'rw', 'required' => 1);
+has 'catno' => (isa => 'Str', is => 'rw', 'required' => 1);
+
+package What::Discogs::Release::ExtraArtist::Base;
+use Moose;
+
+has 'name' => (isa => 'Str', is => 'rw', 'required' => 1);
+has 'copy_number' => (isa => 'Int', is => 'rw', 'required' => 0);
+has 'role' => (isa => 'Str', is => 'rw', 'required' => 0);
+
+package What::Discogs::Release::ExtraArtist;
+use Moose;
+extends 'What::Discogs::Release::ExtraArtist::Base';
+
+has 'tracks' => (isa => 'Str', is => 'rw', 'required' => 0);
+
+package What::Discogs::Release::Track::ExtraArtist;
+use Moose;
+extends 'What::Discogs::Release::ExtraArtist::Base';
+
+package What::Discogs::Release::Track;
+use Moose;
+
+has 'artists' => (isa => 'ArrayRef[Str]', is => 'rw', 'required' => 0,
+    default => sub { [] });
+has 'position' => (isa => 'Str', is => 'rw', required => 0);
+has 'title' => (isa => 'Str', is => 'rw', required => 0);
+has 'duration' => (isa => 'Str', is => 'rw', required => 0);
+has 'extra_artists' 
+    => (isa => 'ArrayRef[What::Discogs::Release::Track::ExtraArtist]', is => 'rw',
+        default => sub { [] }, required => 0);
+
+package What::Discogs::Release::Format;
+use Moose;
+
+has 'type' => (isa => 'Str', is => 'rw', required => 1);
+has 'quantity' => (isa => 'Int', is => 'rw', required => 1);
+has 'descriptions' => (isa => 'ArrayRef[Str]', is => 'rw', required => 0,
+    default => sub { [] },);
+
+package What::Discogs::Release;
+use Moose;
+extends 'What::Discogs::Base';
+
+has 'title' => (isa => 'Str', is => 'rw', 'required' => 1);
+has 'artists' => (isa => 'ArrayRef[Str]', is => 'rw', 'required' => 1);
+has 'formats' 
+    => (isa => 'ArrayRef[What::Discogs::Release::Format]', is => 'rw', 'required' => 1);
+has 'country' => (isa => 'Str', is => 'rw', 'required' => 1);
+has 'genres' => (isa => 'ArrayRef[Str]', is => 'rw', 'required' => 0,
+    default => sub { [] });
+has 'styles' => (isa => 'ArrayRef[Str]', is => 'rw', 'required' => 0,
+    default => sub { [] });
+has 'date' => (isa => 'Str', is => 'rw', 'required' => 1);
+has 'note' => (isa => 'Str', is => 'rw', 'required' => 0);
+has 'tracks' 
+    => (isa => 'ArrayRef[What::Discogs::Release::Track]', is => 'rw', 'required' => 0,
+        default => sub { [] });
 
 1;
 __END__
@@ -17,8 +78,8 @@ __END__
 
 =head1 NAME
 
-What::Discogs::Label
--- A class for a label discography
+What::Discogs::Release
+-- A class for a discogs release.
 
 =head1 SYNOPSIS
 
