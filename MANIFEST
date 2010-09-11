@@ -11,6 +11,7 @@ t/What-Utils.t
 t/What-M3U.t
 t/What-Format.t
 t/What-XMLLib.t
+t/What-Discogs.t
 lib/What.pm
 lib/What/Prompt.pm
 lib/What/Prompt/Base.pm
@@ -24,6 +25,14 @@ lib/What/Format.pm
 lib/What/XMLLib.pm
 scripts/snatch-inspect
 scripts/release-import
+lib/What/Discogs.pm
+lib/What/Discogs/Base.pm
+lib/What/Discogs/Discography.pm
+lib/What/Discogs/Artist.pm
+lib/What/Discogs/Release.pm
+lib/What/Discogs/Label.pm
+lib/What/Discogs/Search.pm
+lib/What/Discogs/Query.pm
 scripts/release-scaffold
 scripts/release-art-convert
 scripts/release-flac-convert
