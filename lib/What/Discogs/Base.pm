@@ -6,7 +6,7 @@ use Carp;
 # Private Modules
 use Moose;
 
-has 'query' => ('isa' => 'QueryBase', 'is' => 'rw', 'required' => 1);
+has 'query' => ('isa' => 'What::Discogs::Query::Base', 'is' => 'rw', 'required' => 1);
 has 'images' => ('isa' => 'ArrayRef[Str]', 'is' => 'rw', 'required' => 0,
     default => sub { [] });
 

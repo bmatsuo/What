@@ -22,7 +22,7 @@ package What::Discogs::Search::ResultList;
 use Moose;
 
 has 'query' => ('isa' => 'QueryBase', 'is' => 'rw', 'required' => 1);
-has 'results' => ('isa' => 'ArrayRef[SearchResult]', 
+has 'results' => ('isa' => 'ArrayRef[What::Discogs::Search::Result]', 
                     'is' => 'rw', required => 1);
 has 'num_results' => (isa => 'Int', is => 'rw', required => 1);
 has 'start' => ('isa' => 'Int', 'is' => 'rw', required => 1);

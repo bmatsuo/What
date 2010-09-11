@@ -20,7 +20,7 @@ has 'sublabels' => (isa => 'Str', is => 'rw', 'required' => 0);
 has 'contact_info' => (isa => 'Str', is => 'rw', 'required' => 0);
 has 'profile' => (isa => 'Str', is => 'rw', 'required' => 0);
 has 'releases' 
-    => (isa => 'ArrayRef[LabelRelease]', 'is' => 'rw', 'required' => 0,
+    => (isa => 'ArrayRef[What::Discogs::Label::Release]', 'is' => 'rw', 'required' => 0,
         default => sub { [] });
 
 
