@@ -152,10 +152,11 @@ sub main{
     if ($opt{'--bandcamp'}) {
         my $artist_subdomain = lc $artist;
         # All I know now is that spaces turned to empty strings.
-        $artist_subdomain =~ s/[^a-zA-Z0-9]//xms;
+        $artist_subdomain =~ s/[^a-zA-Z0-9]+//gxms;
         my $album_url_path = lc $title;
         # All I know now is that spaces turned to dashes.
-        $album_url_path =~ s/[^a-zA-Z0-9]/-/xms;
+        $album_url_path =~ s/[^a-zA-Z0-9]+/-/gxms;
+        $album_url_path =~ s/ -+ \z//xms;
         my $album_url 
             = join "/", "http://$artist_subdomain.bandcamp.com",
                 "album", $album_url_path;
@@ -176,7 +177,7 @@ sub main{
             REQUESTFORMAT:
             for my $format (qw{flac 320 v0 v2}) {
                 next REQUESTFORMAT if !defined $opt{"--$format"};
-                print "Fetching $format...\n";
+                print "Fetching $format... ";
                 my $format_dir = $release->format_dir($up_root, $format);
                 my $format_zip = $format_dir.".zip";
                 my $enc_format = $format eq 'flac' ? $format
@@ -184,6 +185,7 @@ sub main{
                 my $request_arg_string 
                     = "enc=$enc_format&id=$album_id";
                 my $request = "$base_request_url?$request_arg_string";
+                print $request, "\n";
                 my @fetch = ('curl', $request, '-o', $format_zip);
                 $subsystem->exec(@fetch) == 0 or die;
                 if (not $format eq 'flac') { 
