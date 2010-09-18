@@ -485,7 +485,7 @@ sub lame_bitrate_options {
 # Purpose: Return general options for lame (always used).
 # Returns: A list of options.
 sub lame_general_tag_options {
-    return qw{--add-id3v2 --ignore-tag-errors};
+    return qw{--add-id3v2};
 }
 
 # Subroutine: lame_tag_options($flac_info)
