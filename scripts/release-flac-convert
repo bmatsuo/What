@@ -384,15 +384,21 @@ sub faac_tag_options {
         # forget --cover-art,
     );
     my @tag_options;
-    for my $tag_name (map {lc $_} keys %tag) {
-        my $tag_val = $tag{$tag_name};
+    for my $tag (keys %tag) {
+        my $uniform_tag = lc $tag;
+        my $tag_val = $tag{$tag};
         next if !defined $tag_val;
         next if $tag_val !~ /./xms;
 
-        my $tag_opt = $aac_tag{$tag_name};
+        my $tag_opt = $aac_tag{$uniform_tag};
         next if !defined $tag_opt;
 
-        push @tag_options, $tag_opt, $tag_val;
+        if ($uniform_tag eq 'compilation') {
+            push @tag_options, $tag_opt;
+        }
+        else {
+            push @tag_options, $tag_opt, $tag_val;
+        }
     }
     return @tag_options;
 }
