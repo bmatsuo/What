@@ -68,7 +68,7 @@ sub main{
 
     my @desired_formats 
         = map {$opt{"--$_"} ? $_ : () } 
-            qw{v0 v2 320};
+            qw{v0 v2 320 ogg};
 
     my %converted_to;
     for my $format (@desired_formats) { $converted_to{$format} = {} }
@@ -185,7 +185,8 @@ sub main{
                     or syserr(
                         error=> "Couldn't convert $flac_path to $dest\n"
                             ."$?");
-                copy_tags_to_ogg($flac_info{$flac_path}, $dest);
+                # (This may not be needed.)
+                # copy_tags_to_ogg($flac_info{$flac_path}, $dest);
             }
             else { # Converting to MP3 format.
                 my @lame_cmd = lame_command(
@@ -707,6 +708,10 @@ Produce an MP3 release set with quality setting -v2.
 =item --320 | --cbr
 
 Produce an MP3 release set with a constant bitrate of 320kbps.
+
+=item --ogg | --q8
+
+Produce an OGG release set with quality setting of 8.0.
 
 =item --all
 
