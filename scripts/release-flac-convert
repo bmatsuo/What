@@ -347,7 +347,7 @@ sub wav_output {
 # Returns: 
 #   Return the proper options for setting the bitrate of AAC files.
 sub faac_bitrate_options {
-    return ();
+    return ('-c', 22050, '-b', 320,);
 }
 
 # Subroutine: faac_other_options(
@@ -358,7 +358,7 @@ sub faac_bitrate_options {
 #   Return general setting the AAC files.
 sub faac_other_options {
     my %arg = @_;
-    return ('-o', $arg{output});
+    return ('-PRBCw', '-o', $arg{output});
 }
 
 # Subroutine: faac_tag_options(
@@ -498,9 +498,9 @@ sub lame_general_tag_options {
 sub lame_tag_options {
     my $flac_info = shift;
 
-    my %flac_tag = %{$flac_info->{tags}};
+    my %tag = %{$flac_info->{tags}};
 
-    my @options = lame_general_tag_options;
+    my @tag_options = lame_general_tag_options();
 
     my %lame_tag = (
         artist => '--ta',
@@ -516,7 +516,6 @@ sub lame_tag_options {
         #composer => '--writer',
         # forget --cover-art,
     );
-    my @tag_options;
     for my $tag (keys %tag) {
         my $uniform_tag = lc $tag;
         my $tag_val = $tag{$tag};
@@ -528,7 +527,7 @@ sub lame_tag_options {
 
         push @tag_options, $tag_opt, $tag_val;
     }
-    return @options;
+    return @tag_options;
 }
 
 # Subroutine: lame_options(
@@ -544,7 +543,7 @@ sub lame_tag_options {
 sub lame_options {
     my %arg = @_;
     my @bitrate_opts = lame_bitrate_options($arg{bitrate});
-    my @general_opts = qw{--quiet --nohist};
+    my @general_opts = qw{--quiet --nohist --replaygain-accurate};
     my @tag_opts = lame_tag_options($arg{flac_info});
     my @lame_opts = (@bitrate_opts, @general_opts, @tag_opts);
     return @lame_opts;
@@ -673,10 +672,10 @@ sub copy_tags_to_mp3 {
     $mp3->get_tags;
 
     my %id3v2_tag = (
-        'COMPOSER'    => 'TCOM',
         'COMPILATION' => 'TCMP',
-        'ALBUMARTIST' => 'TPE2',
         'ISRC' => 'TSRC',
+        #'ALBUMARTIST' => 'TPE2', # THESE CAN HAVE NONASCII CHARS
+        #'COMPOSER'    => 'TCOM', # THESE CAN HAVE NONASCII CHARS
         #'ALBUM' => 'TALB', # Handled in MP3 Creation
         #'ARTIST'=> 'TPE1', # Handled in MP3 Creation
         #'TITLE' => 'TIT2', # Handled in MP3 Creation
