@@ -157,7 +157,7 @@ sub main{
         my $ogg = $flac;
         $ogg =~ s/ \.flac \z/.ogg/xms;
         my $aac = $flac;
-        $aac =~ s/ \.flac \z/.aac/xms;
+        $aac =~ s/ \.flac \z/.m4a/xms;
 
         # Create the call to the flac command.
         my @flac_cmd = flac_command($flac_path, $temp_wav_dest_dir);
