@@ -59,7 +59,7 @@ sub main{
 
     my $user_wants_a_format 
         = $opt{'--v0'} || $opt{'--v2'} || $opt{'--320'} 
-        || $opt{'--flac'} || $opt{'--ogg'};
+        || $opt{'--flac'} || $opt{'--ogg'} || $opt{'--aac'};
 
     if (!$user_wants_a_format) {
         print {\*STDERR} "No formats selected to release. Aborting...\n";
@@ -129,6 +129,7 @@ sub main{
         ($opt{'--v2'} ? '--v2' : ()),
         ($opt{'--320'} ? '--320' : ()),
         ($opt{'--ogg'} ? '--ogg' : ()),
+        ($opt{'--aac'} ? '--aac' : ()),
         ($opt{'--verbose'} ? '--verbose' : ()),
         ($opt{'--dry-run'} ? '--dry-run' : ()),);
 
@@ -141,6 +142,7 @@ sub main{
         ($opt{'--320'} ? '--320' : ()),
         ($opt{'--flac'} ? '--flac' : ()),
         ($opt{'--ogg'} ? '--ogg' : ()),
+        ($opt{'--aac'} ? '--aac' : ()),
         ($opt{'--verbose'} ? '--verbose' : ()),
         ($opt{'--dry-run'} ? '--dry-run' : ()));
 
@@ -276,6 +278,8 @@ Release year.
 =item --flac | --FLAC
 
 =item --ogg | --q8
+
+=item --aac
 
 =item --num-discs <num_discs>
 

@@ -64,6 +64,7 @@ sub main{
         '320'   => $opt{'--320'},
         'FLAC'  => $opt{'--flac'},
         'OGG'  => $opt{'--ogg'},
+        'AAC'  => $opt{'--aac'},
     );
 
     my $announce = $whatrc->announce();
@@ -190,7 +191,11 @@ Make torrent for FLAC files.
 
 =item --ogg | --q8
 
-Make torrent for ogg files.
+Make torrent for OGG files.
+
+=item --aac
+
+Make torrent for AAC files.
 
 =item --dry-run
 

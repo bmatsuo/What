@@ -156,6 +156,8 @@ sub main{
         $mp3 =~ s/ \.flac \z/.mp3/xms;
         my $ogg = $flac;
         $ogg =~ s/ \.flac \z/.ogg/xms;
+        my $aac = $flac;
+        $aac =~ s/ \.flac \z/.aac/xms;
 
         # Create the call to the flac command.
         my @flac_cmd = flac_command($flac_path, $temp_wav_dest_dir);
@@ -177,8 +179,20 @@ sub main{
                     ? "/".basename(dirname($flac_path)) : "";
             my $dest = $dest_for{$format};
             $dest .= $disc_subdir;
-            $dest .= $format eq 'ogg' ? "/$ogg" : "/$mp3";
-            if ($format eq 'ogg') {
+            $dest .= $format eq 'ogg' ? "/$ogg"
+                : $format eq 'aac' ? "/$aac"
+                : "/$mp3"; # $format eq 'aac'
+            if ($format eq 'aac') {
+                my @faac_cmd = faac_command(
+                    input => $wav_path,
+                    output => $dest,
+                    info => $flac_info{$flac_path},);
+                subsystem(@faac_cmd) == 0
+                    or syserr(
+                        error=> "Couldn't convert $flac_path to $dest\n"
+                            ."$?");
+            }
+            elsif ($format eq 'ogg') {
                 my @oggenc_cmd = oggenc_cmd(
                     input => $flac_path,
                     output => $dest,);
@@ -186,8 +200,6 @@ sub main{
                     or syserr(
                         error=> "Couldn't convert $flac_path to $dest\n"
                             ."$?");
-                # (This may not be needed.)
-                # copy_tags_to_ogg($flac_info{$flac_path}, $dest);
             }
             else { # Converting to MP3 format.
                 my @lame_cmd = lame_command(
@@ -328,6 +340,81 @@ sub wav_output {
     $wav_name =~ s/ \.flac \z/.wav/xms;
     my $wav_path = "$wav_dir/$wav_name";
     return $wav_path;
+}
+
+# Subroutine: faac_bitrate_options()
+# Type: INTERNAL UTILITY
+# Returns: 
+#   Return the proper options for setting the bitrate of AAC files.
+sub oggenc_bitrate_options {
+    return ();
+}
+
+# Subroutine: faac_other_options(
+#   output => $path
+#   )
+# Type: INTERNAL UTILITY
+# Returns: 
+#   Return general setting the AAC files.
+sub oggenc_bitrate_options {
+    my %arg = @_;
+    return ('-o', $arg{output});
+}
+
+# Subroutine: faac_tag_options(
+#   info => $flac_info
+# )
+# Type: INTERNAL UTILITY
+# Returns: 
+#   Return the proper tag options for AAC files.
+sub oggenc_bitrate_options {
+    my %arg = @_;
+    my %tag = %{$arg{info}->{tags}};
+    my %aac_tag = (
+        artist => '--artist',
+        title => '--title',
+        date => '--year',
+        tracknumber => '--track',
+        discnumber => '--disc',
+        composer => '--writer',
+        genre => '--genre',
+        album => '--album',
+        compilation => '--compilation',
+        comment => '--comment',
+        # forget --cover-art,
+    );
+    my @tag_options;
+    for my $tag_name (map {lc $_} keys %tag) {
+        my $tag_val = $tag{$tag_name};
+        next if !defined $tag_val;
+        next if $tag_val !~ /./xms;
+
+        my $tag_opt = $aac_tag{$tag_name};
+        next if !defined $tag_opt;
+
+        push @tag_options, $tag_opt, $tag_val;
+    }
+    return @tag_options;
+}
+
+
+# Subroutine: faac_command(
+#   input => $wav_path
+#   output => $aac_path
+#   info => $flac_info
+# Type: INTERNAL UTILITY
+# Returns: 
+#   Returns a system command to create a (320kbps) AAC audio file.
+sub faac_command {
+    my %arg = @_;
+    my $wav = $arg{input};
+    my @faac_command = (
+        'faac',
+        faac_bitrate_options(%arg),
+        faac_tag_options(%arg),
+        faac_other_options(%arg),
+        $wav);
+    return @faac_command;
 }
 
 # Subroutine: oggenc_bitrate_options()
