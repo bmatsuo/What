@@ -105,7 +105,8 @@ sub main{
 
     for my $format (@desired_formats) {
         print "Finding $format directories...";
-        my $format_dest_dir = $release->format_dir($format);
+        my $format_dest_dir 
+            = $release->format_dir($whatrc->{upload_root},$format);
         if (!-d $format_dest_dir) {
             subsystem ('mkdir', $format_dest_dir) == 0
                 or syserr(

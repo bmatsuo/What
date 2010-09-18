@@ -58,7 +58,8 @@ sub main{
         year => $opt{'--year'},);
 
     my $user_wants_a_format 
-        = $opt{'--v0'} || $opt{'--v2'} || $opt{'--320'} || $opt{'--flac'};
+        = $opt{'--v0'} || $opt{'--v2'} || $opt{'--320'} 
+        || $opt{'--flac'} || $opt{'--ogg'};
 
     if (!$user_wants_a_format) {
         print {\*STDERR} "No formats selected to release. Aborting...\n";
@@ -127,6 +128,7 @@ sub main{
         ($opt{'--v0'} ? '--v0' : ()),
         ($opt{'--v2'} ? '--v2' : ()),
         ($opt{'--320'} ? '--320' : ()),
+        ($opt{'--ogg'} ? '--ogg' : ()),
         ($opt{'--verbose'} ? '--verbose' : ()),
         ($opt{'--dry-run'} ? '--dry-run' : ()),);
 
@@ -138,6 +140,7 @@ sub main{
         ($opt{'--v2'} ? '--v2' : ()),
         ($opt{'--320'} ? '--320' : ()),
         ($opt{'--flac'} ? '--flac' : ()),
+        ($opt{'--ogg'} ? '--ogg' : ()),
         ($opt{'--verbose'} ? '--verbose' : ()),
         ($opt{'--dry-run'} ? '--dry-run' : ()));
 
@@ -271,6 +274,8 @@ Release year.
 =item --320
 
 =item --flac | --FLAC
+
+=item --ogg | --q8
 
 =item --num-discs <num_discs>
 

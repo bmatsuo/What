@@ -59,10 +59,11 @@ sub main{
         verbose=>$opt{'--verbose'});
 
     my %want_format = (
-        'V0'    => $opt{'--V0'},
-        'V2'    => $opt{'--V2'},
+        'V0'    => $opt{'--v0'},
+        'V2'    => $opt{'--v2'},
         '320'   => $opt{'--320'},
-        'FLAC'  => $opt{'--FLAC'},
+        'FLAC'  => $opt{'--flac'},
+        'OGG'  => $opt{'--ogg'},
     );
 
     my $announce = $whatrc->announce();
@@ -186,6 +187,10 @@ Make torrent for 320kbps CBR MP3s.
 =item --flac | --FLAC
 
 Make torrent for FLAC files.
+
+=item --ogg | --q8
+
+Make torrent for ogg files.
 
 =item --dry-run
 
