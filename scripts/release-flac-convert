@@ -801,6 +801,10 @@ Produce an MP3 release set with a constant bitrate of 320kbps.
 
 Produce an OGG release set with quality setting of 8.0.
 
+=item --aac
+
+Produce an AAC release set with bitrate of 320kbps.
+
 =item --all
 
 Produce all possible bitrates of MP3 files.
