@@ -347,7 +347,7 @@ sub oggenc_bitrate_options {
 sub oggenc_options {
     my %arg = @_;
     my $output = $arg{output};
-    return ('-o', $output);
+    return ('-Q', '-o', $output);
 }
 
 # Subroutine: oggenc_cmd(
@@ -361,7 +361,7 @@ sub oggenc_cmd {
     my %arg = @_;
     my $flac = $arg{input};
     return ('oggenc', 
-        ogg_bitrate_options(), ogg_other_options(), $flac,);
+        oggenc_bitrate_options(), oggenc_options(%arg), $flac,);
 }
 
 # Subroutine: lame_bitrate_options($bitrate)
