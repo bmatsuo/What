@@ -103,15 +103,9 @@ sub main{
         = (map {flac_files_in($_)} @flac_dirs);
     my @flac_files = keys %flac_info;
 
-    print "Finding (or creating) format directories:\n";
-
     for my $format (@desired_formats) {
-        print "$format...";
-        my $format_dir_name 
-            = release_root_name(
-                %release_info,
-                audio_format => $format);
-        my $format_dest_dir = "$release_path/$format_dir_name";
+        print "Finding $format directories...";
+        my $format_dest_dir = $release->format_dir($format);
         if (!-d $format_dest_dir) {
             subsystem ('mkdir', $format_dest_dir) == 0
                 or syserr(
@@ -159,6 +153,8 @@ sub main{
         my $flac = basename($flac_path);
         my $mp3 = $flac;
         $mp3 =~ s/ \.flac \z/.mp3/xms;
+        my $ogg = $flac;
+        $ogg =~ s/ \.flac \z/.ogg/xms;
 
         # Create the call to the flac command.
         my @flac_cmd = flac_command($flac_path, $temp_wav_dest_dir);
@@ -172,26 +168,38 @@ sub main{
 
         print "WAVE...";
 
-        # Convert the decoded WAVE into all desired MP3 formats.
+        # Convert the decoded WAVE into all desired formats.
         for my $format (@desired_formats) {
             my $uc_format = uc $format;
             my $disc_subdir 
                 = $release_is_multidisc 
                     ? "/".basename(dirname($flac_path)) : "";
-            my $mp3_dest = "$dest_for{$format}";
-            $mp3_dest .= $disc_subdir;
-            $mp3_dest .= "/$mp3";
-            my @lame_cmd = lame_command(
-                wav => $wav_path,
-                mp3 => $mp3_dest,
-                bitrate => $format,
-                flac_info => $flac_info{$flac_path},);
-            # Execute lame command.
-            subsystem(@lame_cmd) == 0
-                or syserr(
-                    error=>
-                        "Couldn't convert $flac_path to $mp3_dest\n$?");
-            copy_tags($flac_info{$flac_path}, $mp3_dest);
+            my $dest = $dest_for{$format};
+            $dest .= $disc_subdir;
+            $dest .= $format eq 'ogg' ? "/$ogg" : "/$mp3";
+            if ($format eq 'ogg') {
+                my @oggenc_cmd = oggenc_cmd(
+                    input => $flac_path,
+                    output => $dest,);
+                subsystem(@oggenc_cmd) == 0
+                    or syserr(
+                        error=> "Couldn't convert $flac_path to $dest\n"
+                            ."$?");
+                copy_tags_to_ogg($flac_info{$flac_path}, $dest);
+            }
+            else { # Converting to MP3 format.
+                my @lame_cmd = lame_command(
+                    wav => $wav_path,
+                    mp3 => $dest,
+                    bitrate => $format,
+                    flac_info => $flac_info{$flac_path},);
+                # Execute lame command.
+                subsystem(@lame_cmd) == 0
+                    or syserr(
+                        error=> "Couldn't convert $flac_path to $dest\n"
+                            ."$?");
+                copy_tags_to_mp3($flac_info{$flac_path}, $dest);
+            }
             print "$uc_format...";
         }
 
@@ -318,6 +326,40 @@ sub wav_output {
     $wav_name =~ s/ \.flac \z/.wav/xms;
     my $wav_path = "$wav_dir/$wav_name";
     return $wav_path;
+}
+
+# Subroutine: oggenc_bitrate_options()
+# Type: INTERNAL UTILITY
+# Returns: 
+#   Return the proper options for setting the bitrate of ogg files.
+sub oggenc_bitrate_options {
+    return qw{-q 8};
+}
+
+# Subroutine: oggenc_other_options(
+#   output => $path
+# )
+# Type: INTERNAL UTILITY
+# Returns: 
+#   Return the proper options creating ogg files.
+sub oggenc_options {
+    my %arg = @_;
+    my $output = $arg{output};
+    return ('-o', $output);
+}
+
+# Subroutine: oggenc_cmd(
+#   output => $ogg_path,
+#   input => $flac_path,
+# )
+# Type: INTERNAL UTILITY
+# Returns: 
+#   A command to convert $flac_path to Ogg vorbis file $ogg_path.
+sub oggenc_cmd {
+    my %arg = @_;
+    my $flac = $arg{input};
+    return ('oggenc', 
+        ogg_bitrate_options(), ogg_other_options(), $flac,);
 }
 
 # Subroutine: lame_bitrate_options($bitrate)
@@ -504,7 +546,19 @@ sub flac_files_in {
     return %flac_info;
 }
 
-# Subroutine: copy_tags($flac_info_ref, $mp3)
+# Subroutine: copy_tags_to_ogg($flac_info_ref, $ogg)
+# Type: INTERFACE SUB
+# Purpose: 
+#   Make the tags of $ogg reflect the tags described by an
+#   Audio::FLAC::Header object $flace_info_ref.
+#   Assumes that $ogg has no tags and does not erase any pre-existing
+#   data.
+# Returns: Nothing
+sub copy_tags_to_ogg {
+    #TODO Implement this method.
+}
+
+# Subroutine: copy_tags_to_mp3($flac_info_ref, $mp3)
 # Type: INTERFACE SUB
 # Purpose: 
 #   Make the tags of $mp3 reflect the tags described by an
@@ -512,7 +566,7 @@ sub flac_files_in {
 #   Assumes that $mp3 has no tags and does not erase any pre-existing
 #   data.
 # Returns: Nothing
-sub copy_tags {
+sub copy_tags_to_mp3 {
     my ($flac_info_ref, $mp3_path) = @_;
 
     my $mp3 = MP3::Tag->new($mp3_path);
