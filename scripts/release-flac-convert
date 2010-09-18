@@ -502,28 +502,32 @@ sub lame_tag_options {
 
     my @options = lame_general_tag_options;
 
-    #my %tag_option = (
-    #    ALBUM => '--tl',
-    #    ARTIST=> '--ta',
-    #    TITLE => '--tt',
-    #    DATE => '--ty',
-    #    GENRE => '--tg',
-    #    TRACKNUMBER => '--tn',
-    #    COMMENT => '--tc',
-    #);
-    #
-    #for my $tag (keys %flac_tag) {
-    #    if (defined $tag_option{$tag}) {
-    #        my @lame_opts_for_tag = ($tag_option{$tag}, $flac_tag{$tag});
-    #        my $opts_end = scalar @options;
-    #        push @options, @lame_opts_for_tag;
-    #        next;
-    #    }
-    #    # TODO: Handle these tags seperately
-    #    #else {
-    #    #    warn "Tag $tag couldn't be found among the aptions"
-    #    #}
-    #}
+    my %lame_tag = (
+        artist => '--ta',
+        album => '--tl',
+        title => '--tt',
+        date => '--ty',
+        genre => '--tg',
+        comment => '--tc',
+        # The rest of the tags need to be handled as the were...
+        #tracknumber => '--tn',
+        #discnumber => '--disc',
+        #compilation => '--compilation',
+        #composer => '--writer',
+        # forget --cover-art,
+    );
+    my @tag_options;
+    for my $tag (keys %tag) {
+        my $uniform_tag = lc $tag;
+        my $tag_val = $tag{$tag};
+        next if !defined $tag_val;
+        next if $tag_val !~ /./xms;
+
+        my $tag_opt = $lame_tag{$uniform_tag};
+        next if !defined $tag_opt;
+
+        push @tag_options, $tag_opt, $tag_val;
+    }
     return @options;
 }
 
@@ -671,13 +675,13 @@ sub copy_tags_to_mp3 {
     my %id3v2_tag = (
         'COMPOSER'    => 'TCOM',
         'COMPILATION' => 'TCMP',
-        'ALBUM' => 'TALB',
         'ALBUMARTIST' => 'TPE2',
-        'ARTIST'=> 'TPE1',
-        'TITLE' => 'TIT2',
         'ISRC' => 'TSRC',
-        'DATE' => 'TDRC',
-        'GENRE' => 'TCON',
+        #'ALBUM' => 'TALB', # Handled in MP3 Creation
+        #'ARTIST'=> 'TPE1', # Handled in MP3 Creation
+        #'TITLE' => 'TIT2', # Handled in MP3 Creation
+        #'DATE' => 'TDRC', # Handled in MP3 Creation
+        #'GENRE' => 'TCON', # Handled in MP3 Creation
         # HANDLE TRACKNUMBER SPECIALLY,
         #'TRACKNUMBER' => 'TRCK',
         #'TRACKTOTAL' => 'TRCK',
