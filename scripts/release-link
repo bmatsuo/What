@@ -65,7 +65,17 @@ sub main{
         die "There are files in the rip directory\n$rip_filelist\n";
     }
 
-    link_dirs($snatch, $rip_dir);
+    if ($opt{'--copy'}) {
+        my @files = find_file_pattern('*', $snatch);
+        my @cp = ('cp', '-r', @files, $rip_dir);
+        subsystem(
+            cmd=>\@cp,
+            verbose => $opt{'--verbose'},
+            dry_run => $opt{'--dry-run'},);
+    }
+    else {
+        link_dirs($snatch, $rip_dir);
+    }
 
     exit($exitcode);
 }
@@ -94,8 +104,8 @@ sub link_dirs {
 
     merge_structure($src,$mirror);
     my $subsystem = What::Subsystem->new(
-        verbose => 0,
-        dry_run => 0,
+        verbose => $opt{'--verbose'},
+        dry_run => $opt{'--dry-run'},);
     );
 
     my @files = find_file_pattern('*',$src);
@@ -152,6 +162,14 @@ Path to snatch directory.
 
 =for Euclid:
     dlpath.type: readable, -d dlpath
+
+=item -c | --copy
+
+Copy release items instead of hard-linking them.
+
+=item --verbose
+
+=item --dry-run
 
 =item --version
 
