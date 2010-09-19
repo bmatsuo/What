@@ -24,6 +24,8 @@ PACKAGE FEATURES
 
 This package can:
     Convert a FLAC release to any of the 'perfect 3' MP3 bitrate settings.
+    Convert a FLAC release to OGG vorbis with -q8 quality setting.
+    Convert a FLAC release to AAC with ~256 ABR setting (don't use).
     Create torrents for releases.
     Convert release images to lower res versions for web hosting.
     Organize your all your releases into a user navigatable hierarchy.
@@ -38,9 +40,10 @@ This package will probably never:
     Score FLAC rip logs (this might be approximateable).
 
 This package can not currently:
-    Handle FLACs with non-ISO-Latin-1 tags (converts, but tags are shite).
-    Create M3U playlists for MP3 files.
-    OGG/Apple Lossless/AAC coversions.
+    Make good MP3s w/ non-ISO-Latin-1 tags (mojibake (lame sucks)).
+    Create M3U playlists.
+    Apple Lossless coversions.
+    Untrumpable AAC (CBR 320 kbps) conversions (no good portable lib/app).
     Create album descriptions.
     Create release descriptions.
     Manage snatches or your personal media library.

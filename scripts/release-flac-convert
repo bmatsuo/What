@@ -347,7 +347,7 @@ sub wav_output {
 # Returns: 
 #   Return the proper options for setting the bitrate of AAC files.
 sub faac_bitrate_options {
-    return ('-c', 22050, '-b', 320,);
+    return ('-q', 500, '-c', 44100, '-b', 320,);
 }
 
 # Subroutine: faac_other_options(
@@ -358,7 +358,7 @@ sub faac_bitrate_options {
 #   Return general setting the AAC files.
 sub faac_other_options {
     my %arg = @_;
-    return ('-PRBCw', '-o', $arg{output});
+    return ('-RBCw', '-o', $arg{output});
 }
 
 # Subroutine: faac_tag_options(
