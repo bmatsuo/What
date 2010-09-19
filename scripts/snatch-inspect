@@ -1,0 +1,149 @@
+#!/usr/bin/env perl
+
+# Use perldoc or option --man to read documentation
+
+########################################################################
+# MODULES
+########################################################################
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+use Readonly;
+
+# Include private modules.
+use What::Subsystem;
+use What::Prompt;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+Readonly my $prog_incantation  => $0;
+Readonly my $prog_dir          => dirname($0);
+Readonly my $prog_name         => basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my $subsystem = What::Subsystem->new(
+        verbose => 0,
+        dry_run => 0,);
+    my $prompt = What::Prompt->new(
+        text => '?',
+        is_multiline => 0);
+
+    my $snatch = $opt{'--snatch'};
+
+    die "--snatch is not a directory." if !-d $snatch;
+
+    my @files = find_hierarchy($snatch);
+
+    my @flacs = grep {m/\.flac\z/xms} @files;
+
+    # This command is MAC OS X ONLY.
+    my @inspect_flacs = ('open', @flacs);
+    $subsystem->exec(@inspect_flacs)
+        or die "Couldn't open flac files.";
+
+    $prompt->text("Do the tags look good enough?[Y/n]");
+    $prompt->validator(
+        sub {my $r = shift; $r =~ m/\A(?: [yYnN] | \z )/xms});
+    my $resp = $prompt->prompt_user();
+    my $tags_are_good = $resp =~ m/\A(?: y | \z)/ixms
+    if (!$tags_are_good) {
+        # TODO: Begin the Tag trump workflow.
+    }
+    else {
+        # TODO: Check some random spectrals (if there is a way).
+        # TODO: If spectrals are suspect, 
+        #   save them to the download dir for uploading to the forum.
+    }
+
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+snatch-inspect
+-- short description
+
+=head1 VERSION
+
+Version 0.0_1
+Originally created on 09/19/10 09:19:23
+
+=head1 USAGE
+
+snatch-inspect [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=snatch [=] <dlpath>
+
+Path to a perfect FLAC (soon other formats will be allowed).
+
+=for Euclid:
+    dlpath.type: readable, -d dlpath
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHOR & COPYRIGHT 
+
+©Bryan Matsuo (bryan.matsuo@gmail.com)
+

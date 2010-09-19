@@ -15,6 +15,7 @@ lib/What/WhatRC.pm
 lib/What/Release.pm
 lib/What/Utils.pm
 lib/What/M3U.pm
+scripts/snatch-inspect
 scripts/release-scaffold
 scripts/release-art-convert
 scripts/release-flac-convert

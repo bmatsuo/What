@@ -16,6 +16,7 @@ WriteMakefile(
         Audio::FLAC::Header => 0,
     }, # e.g., Module::Name => 1.1
     EXE_FILES   => [qw{
+        scripts/snatch-inspect
         scripts/release-scaffold 
         scripts/release-art-convert
         scripts/release-flac-convert
