@@ -41,6 +41,7 @@ This package will probably never:
     Score FLAC rip logs (this might be approximateable).
 
 This package can not currently:
+    Handle bandcamp.com releases (they keep getting more clever).
     Make good MP3s w/ non-ISO-Latin-1 tags (makes mojibake (lame sucks)).
     Apple Lossless coversions.
     'Perfect' AAC 320 CBR conversions  (no good portable lib/app).
