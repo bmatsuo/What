@@ -265,7 +265,10 @@ sub main{
             = grep {$_ !~ m/\.(?: flac | m3u )\z/xms} @other_disc_files;
         my $disc_name = basename($disc_dir);
         for my $format (@desired_formats) {
-            my $format_ext = $format eq 'aac' ? 'm4a' : $format;
+            my $format_ext 
+                = $format eq 'aac' ? 'm4a' : 
+                $format eq 'ogg' ? 'ogg' :
+                'mp3';
             my $format_dir 
                 = $release->format_dir($whatrc->{upload_root},$format);
             my $format_disc_dir = "$format_dir/$disc_name";
