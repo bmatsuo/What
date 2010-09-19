@@ -23,12 +23,14 @@ CONTENTS
 PACKAGE FEATURES
 
 This package can:
+    Organize your all your releases into a user navigatable hierarchy.
+    Create M3U playlists for release discs.
     Convert a FLAC release to any of the 'perfect 3' MP3 bitrate settings.
     Convert a FLAC release to OGG vorbis with -q8 quality setting.
     Convert a FLAC release to AAC with ~256 ABR setting (don't use).
-    Create torrents for releases.
+    Convert M3U playlists when release is converted.
+    Create torrents for releases of any format.
     Convert release images to lower res versions for web hosting.
-    Organize your all your releases into a user navigatable hierarchy.
     Create releases and torrents for albums available on bandcamp.com
     Make you a sandwich, if you have permissions.
 
@@ -40,13 +42,14 @@ This package will probably never:
     Score FLAC rip logs (this might be approximateable).
 
 This package can not currently:
-    Make good MP3s w/ non-ISO-Latin-1 tags (mojibake (lame sucks)).
-    Create M3U playlists.
+    Make good MP3s w/ non-ISO-Latin-1 tags (makes mojibake (lame sucks)).
     Apple Lossless coversions.
-    Untrumpable AAC (CBR 320 kbps) conversions (no good portable lib/app).
+    'Perfect' AAC 320 CBR conversions  (no good portable lib/app).
     Create album descriptions.
     Create release descriptions.
-    Manage snatches or your personal media library.
+    Manage your snatches.
+    Manage your personal media library.
+    Manage your personal media archival/backup.
 
 The above list is pretty much a todo list.
 
