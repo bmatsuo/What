@@ -1,0 +1,180 @@
+#!/usr/bin/env perl
+
+# Use perldoc or option --man to read documentation
+
+########################################################################
+# MODULES
+########################################################################
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+use Readonly;
+
+# Include private modules.
+use What::Whatrc;
+use What::Utils;
+use What::Subsystem;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+Readonly my $prog_incantation  => $0;
+Readonly my $prog_dir          => dirname($0);
+Readonly my $prog_name         => basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+my $whatrc = What::Whatrc::new->('~/.whatrc');
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my $snatch = $opt{'--snatch'};
+
+    if (!-d $snatch) {
+        die "--snatch must be a directory (sry no singles).";
+    }
+
+    my $rip_dir = $whatrc->{rip_dir};
+    my @rip_files 
+        = (find_file_pattern('*', $rip_dir),
+            find_file_pattern('.*', $rip_dir),);
+    if (@rip_files > 2) { # Should always find '.' and '..'
+        die "There are files in the rip directory".
+    }
+
+    link_dirs($snatch, $rip_dir);
+
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+# Subroutine: link_dirs($src, $mirror)
+# Purpose: 
+#   In this sense linking means that all the non directory files in
+#   the $mirror directory structure will be hard-linked to corresponding
+#   files in the $src directory structure.
+#   The two directories will look identical. But there is only one copy
+#   of the data on the disk. One of the links can be deleted and 
+#   the data remains, referenced by the remaining link.
+#   So, release files that are linked in the rip directory can be 
+#   deleted if they are not wanted. COOL!
+# Returns: Nothing.
+sub link_dirs {
+    my ($src,$mirror) = @_;
+
+    die "$src is not a directory." if !-d $src;
+    die "$mirror is not a directory." if !-d $mirror;
+    die "Source and mirror are the same directory" if $src eq $mirror;
+
+    merge_structure($src,$mirror);
+    my $subsystem = What::Subsystem->new(
+        verbose => 0;
+        dry_run => 0;
+    );
+
+    my @files = find_file_pattern('*',$src);
+    for my $src_file (@files) {
+        my $filename = basename($src_file);
+        my $mirror_file = "$mirror/$filename";
+        if (-d $src_file) {
+            link_dirs($src_file,$mirror_file);
+        }
+        else {
+            if (!-e $mirror_file) {
+                my @link_files = ('ln', $src_file, $mirror_file);
+                $subsystem->exec(@link_files) == 0 
+                    or die "Couldn't link\n$src_file->$mirror_file";
+            }
+        }
+    }
+
+    return;
+}
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+release-link
+-- link a perfect FLAC snatch into the rip directory for better.php
+
+=head1 VERSION
+
+Version 0.0_1
+Originally created on 09/19/10 07:45:52
+
+=head1 USAGE
+
+release-link [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --snatch [=] <dlpath>
+
+Path to snatch directory.
+
+=for Euclid:
+    dlpath.type: readable, -d dlpath
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+Given a path to a perfect flac snatch, release-link will mimic its 
+directory structure in the rip directory and then hardlink all the 
+files into rip directory's hierarchy.
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHOR & COPYRIGHT 
+
+©Bryan Matsuo (bryan.matsuo@gmail.com)
+

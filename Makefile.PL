@@ -21,6 +21,7 @@ WriteMakefile(
         scripts/release-flac-convert
         scripts/release-mktorrent
         scripts/release-mkm3u
+        scripts/release-link
         scripts/release-ok
         scripts/mkrelease
     }],
