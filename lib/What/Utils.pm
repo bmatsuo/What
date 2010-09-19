@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use File::Glob 'bsd_glob';
+use What::Subsystem;
 
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
@@ -29,9 +30,58 @@ our @EXPORT = qw(
     find_file_pattern
     find_hierarchy
     search_hierarchy
+    find_subdirs
+    merge_structure
 );
 
 our $VERSION = '0.00_01';
+
+# Subroutine: merge_structure($skeleton, $body)
+# Type: INTERFACE SUB
+# Purpose: 
+#   Make sure the $body directory has the $skeleton's directory structure.
+# Returns: Nothing.
+sub merge_structure {
+    my ($skeleton, $body) = @_;
+
+    # Check the existence of both directories.
+    croak("$skeleton is not a directory.") if !-d $skeleton;
+    croak("$body is not a directory.") if !-d $body;
+
+    # Iterate over subdirs
+    my @bones = find_subdirs($skeleton);
+    for my $bone (@bones) {
+        # Look for the subdir in the body.
+        my $bone_location = join '/', $body, basename($bone);
+        my $body_has_bone = -d $bone_location;
+
+        # Add the subdirectory to the body when we can't find it.
+        if (!$body_has_bone) {
+            my @add_bone = ('mkdir', $bone_location);
+            subsystem(
+                cmd => \@add_bone;
+                # TODO: turn these args into args of this method.
+                dry_run => 0;
+                verbose => 0;
+            );
+        }
+
+        # Merge the subdirectory structure.
+        merge_structure($bone, $bone_location);
+    }
+
+    return;
+}
+
+# Subroutine: find_subdirs($dir)
+# Type: INTERFACE SUB
+# Returns: List of subdirectories of $dir>
+sub find_subdirs {
+    my $dir = shift;
+    my @subdirs = bsd_glob(glob_safe($dir)."/*/");
+    map {$_ =~ s! /\z !!xms} @subdirs;
+    return @subdirs;
+}
 
 # Subroutine: find_hierarchy($dir)
 # Type: INTERFACE SUB
