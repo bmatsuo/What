@@ -59,7 +59,9 @@ sub main{
         = (find_file_pattern('*', $rip_dir),
             find_file_pattern('.*', $rip_dir),);
     if (@rip_files > 2) { # Should always find '.' and '..'
-        die "There are files in the rip directory".
+        @rip_files = grep {$_ !~ m!/.{1,2}\z!xms} @rip_files;
+        my $rip_filelist = join "\n", map {basename($_)} @rip_files;
+        die "There are files in the rip directory\n$rip_filelist\n".
     }
 
     link_dirs($snatch, $rip_dir);
