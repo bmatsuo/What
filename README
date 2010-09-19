@@ -84,9 +84,9 @@ Here is an example of the directory structure needed.
 
 upload_root
 |---Pop Star
-|   `---Pop Star - 2010 - New Album
+|   `---Pop Star - New Album (2010)
 |       |---Info.txt
-|       `---Pop Star - 2010 - New Album [FLAC]
+|       `---Pop Star - New Album (2010) [FLAC]
 |           |---Front.tiff
 |           |---Back.tiff
 |           |---Disc1.tiff
@@ -104,14 +104,14 @@ upload_root
 |               |---New Album - CD2.log
 |               `---New Album - CD2.cue
 `---Indie Duo
-    `---Indie Duo - 2009 - Fixies EP
-        |---Indie Duo - 2009 - Fixies EP [FLAC]
+    `---Indie Duo - Fixies EP (2009)
+        |---Indie Duo - Fixies EP (2009) [FLAC]
         |   |---01 Fixies.flac
         |   |---02 Fixies (Messenger Bag Remix).flac
         |   |---03 Fixed Gears in Space.flac
         |   |---Fixies.log
         |   `---Fixies.cue
-        |---Indie Duo - 2009 - Fixies EP [V0]
+        |---Indie Duo - Fixies EP (2009) [V0]
         |   |---01 Fixies.mp3
         |   |---02 Fixies (Messenger Bag Remix).mp3
         |   |---03 Fixed Gears in Space.flac
