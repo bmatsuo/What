@@ -31,7 +31,6 @@ This package can:
     Convert M3U playlists when release is converted.
     Create torrents for releases of any format.
     Convert release images to lower res versions for web hosting.
-    Create releases and torrents for albums available on bandcamp.com
     Make you a sandwich, if you have permissions.
 
 PACKAGE DEFECIENCIES
@@ -169,13 +168,9 @@ all the best formats (really just the only ones supported at the moment).
 Then you just need to upload the 4 respective torrents from your watch
 directory (if they aren't deleted), or from in the upload hierarchy. 
 
-To create a release from an album on bandcamp.com, it is album just as 
-easy. Lets say you want to release Garage's latest, The Lo-Fi EP, from 
-bandcamp. The following command will do the trick
-    mkrelease \
-        --bandcamp \
-        --artist "Garage" --title "The Lo-Fi EP" --year 2010 \
-        --flac --320 --v0 --v2
+Bandcamp.com releasing was recently broken. It may come back. 
+But it probably won't be as automatic because their web request system
+seems to be getting more sophisticated with this kind of stuff.
 
 This should suit most of your uploading needs. Enjoy =)
 
