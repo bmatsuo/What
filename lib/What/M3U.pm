@@ -93,7 +93,9 @@ sub mkm3u_info {
 
     my $m3u = "#EXTM3U\n";
     for my $flac (@ordered_tracks) {
-        $m3u .= "#EXTINF:$file_info{$flac}->{trackLengthSeconds},"
+        my $length_in_sec = $file_info{$flac}->{trackTotalLengthSeconds};
+        $length_in_sec =~ s/\.\d+\z//xms;
+        $m3u .= "#EXTINF:$length_in_sec,"
             . describe_track($file_info{$flac}) . "\n";
         $m3u .= basename($flac) . "\n";
     }
