@@ -1,0 +1,156 @@
+#!/usr/bin/env perl
+
+# Use perldoc or option --man to read documentation
+
+########################################################################
+# MODULES
+########################################################################
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use File::Glob qw{bsd_glob};
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+use Readonly;
+
+# Include private modules.
+use What::WhatRC;
+use What::Release;
+use What::M3U;
+use What::Utils;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+Readonly my $prog_incantation  => $0;
+Readonly my $prog_dir          => dirname($0);
+Readonly my $prog_name         => basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+my $whatrc = read_whatrc("~/.whatrc");
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my $rip_dir = $whatrc->{rip_dir};
+    my $artist = $opt{'--artist'};
+    my $title = $opt{'--title'};
+    my $year = $opt{'--title'};
+    my $release = What::Release->new(
+        artist => $artist,
+        title => $title,
+        year => $year,
+    );
+    $rip_dir =~ s/"/\\"/xms;
+    my @files = split "\n", `find "$rip_dir"`;
+    my @flac_files = grep {m/ \.flac \z/xms} @files;
+    my @music_directories = map {dirname($_)} @flac_files;
+    my %disc_dir = map {($_ => 1)} @music_directories;
+    my @disc_dirs = keys %disc_dir;
+    for my $disc_dir (@disc_dirs) {
+        my @disc_flacs = bsd_glob(glob_safe(%disc_dir)."/*.flac");
+        my $disc_dir_rel = $disc_dir;
+        substr $disc_dir_rel, 0, length $rip_dir, q{};
+        $disc_dir_rel =~ s!\A / !!xms;
+        my $m3u_name = $disc_dir_rel;
+        $m3u_name =~ s!/! - !xms;
+        $m3u_name 
+            = $m3u_name =~ m/./xms ? "$title - $m3u_name.m3u"
+            : "$title.m3u";
+        my $m3u_path = "$disc_dir/$m3u_name";
+        print "Creating playlist $m3u_path...\n";
+        open my $m3u, ">", $m3u_path
+            or die "Couldn't open M3U file $m3u_path";
+        print {$m3u} mkm3u(files => \@disc_flacs);
+        close $m3u;
+    }
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+release-mkm3u
+-- short description
+
+=head1 VERSION
+
+Version 0.0_1
+Originally created on 09/19/10 01:25:00
+
+=head1 USAGE
+
+release-mkm3u [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=item --artist <artist>
+
+=item --title <title>
+
+=item --year <year>
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+Find all disc directories in the rip directory, 
+and make m3u playlists for them.
+
+Playlists are stored in the respective disc directories.
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHOR & COPYRIGHT 
+
+©Bryan Matsuo (bryan.matsuo@gmail.com)
+

@@ -20,6 +20,7 @@ WriteMakefile(
         scripts/release-art-convert
         scripts/release-flac-convert
         scripts/release-mktorrent
+        scripts/release-mkm3u
         scripts/release-ok
         scripts/mkrelease
     }],
