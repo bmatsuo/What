@@ -87,8 +87,7 @@ sub new {
 # Returns: String containing the name of the release.
 sub name {
     my $self = shift;
-
-    my $name = "$self->{artist} - $self->{year} - $self->{title}";
+    my $name = "$self->{artist} - $self->{title} ($self->{year})";
     return $name;
 }
 
