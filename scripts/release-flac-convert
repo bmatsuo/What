@@ -10,7 +10,8 @@
 use strict;
 use warnings;
 use File::Basename;
-use File::Glob qw{:glob};
+use File::Glob qw{bsd_glob};
+use List::Util qw{first};
 use Carp;
 
 # Include CPAN modules.
@@ -25,6 +26,7 @@ use Exception::Class (
     'SystemCallError' => {alias=>'syserr'},);
 
 # Include private modules.
+use What::Utils;
 use What::WhatRC;
 use What::Release;
 
@@ -245,6 +247,54 @@ sub main{
                         join ("\n",
                             "Couldn't copy other files",
                             map {basename($_)} @other_files,""));
+        }
+    }
+
+    # Copy other files in each disc directory, and reformat m3u.
+    for my $disc_dir (@flac_dirs) {
+        my @other_disc_files = bsd_glob(glob_safe($disc_dir)."/*");
+        @other_disc_files = grep {$_ !~ m/\A \./xms} @other_disc_files;
+        my @flac_m3us = grep {$_ =~ m/\.m3u\z/xms} @other_disc_files;
+        my $flac_m3u = shift @flac_m3us;
+        if (@flac_m3us > 0) {
+            print {\*STDERR} 
+                "wtf?! multiple M3Us found; $flac_m3u and @flac_m3us\n";
+            print {\*STDERR} "skipping @flac_m3us\n";
+        }
+        @other_disc_files 
+            = grep {$_ !~ m/\.(?: flac | m3u )\z/xms} @other_disc_files;
+        my $disc_name = basename($disc_dir);
+        for my $format (@desired_formats) {
+            my $format_ext = $format eq 'aac' ? 'm4a' : $format;
+            my $format_dir 
+                = $release->format_dir($whatrc->{upload_root},$format);
+            my $format_disc_dir = "$format_dir/$disc_name";
+
+            if (@other_disc_files > 0) {
+                my @cp_other_disc_files 
+                    = ('cp', @other_disc_files, $format_disc_dir);
+                if (subsystem(@cp_other_disc_files) != 0) {
+                    my @files = map {basename($_)} @other_disc_files;
+                    my @err 
+                        = ("Couldn't copy files to $format_disc_dir", 
+                            @files);
+                    syserr( error => join ("\n", @err, ""), );
+                }
+            }
+
+            open my $m3u_in, "<", $flac_m3u
+                or die "Couldn't open playlist $flac_m3u.";
+            my $m3u = do {local $/; <$m3u_in>};
+            close $m3u_in;
+
+            $m3u =~ s/\.flac ( \n | \z )/\.$format_ext$1/gxms;
+
+            my $format_m3u = "$format_disc_dir/".basename($flac_m3u);
+
+            open my $m3u_out, ">", $format_m3u
+                or die "Can't write to playlist $format_m3u.";
+            print {$m3u_out} $m3u;
+            close $m3u_out;
         }
     }
 
