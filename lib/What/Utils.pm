@@ -26,9 +26,54 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
     glob_safe
+    find_file_pattern
+    find_hierarchy
+    search_hierarchy
 );
 
 our $VERSION = '0.00_01';
+
+# Subroutine: find_hierarchy($dir)
+# Type: INTERFACE SUB
+# Purpose: Find all the files in the hierachy of a given directory
+# Returns: A list of files in $dir that match $pattern.
+#   Directories all always ordered before their contents.
+sub find_hierachy {
+    my ($dir) = @_;
+
+    croak("Given non-directory as second argument $dir") if (!-d $dir);
+    my @files = bsd_glob(glob_safe($dir))."/*";
+    my @subdirs = grep {-d $_} @files;
+    my @nondirs = grep {!-d $_} @files;
+
+    return (@files, map {find_hierarchy($_)} @subdirs);
+}
+
+# Subroutine: search_hierarchy($pattern, $dir)
+# Type: INTERFACE SUB
+# Purpose: Search the hierarchy of $dir for files matching $pattern.
+#   $pattern should be be standard string or perl regex.
+# Returns: List of files matching $pattern.
+sub search_hierarchy {
+    my ($pattern, $dir) = @_;
+    my @files = find_hierarchy($dir);
+    my @matches = grep {basename($_) =~ $pattern} @files;
+    return @matches;
+}
+
+# Subroutine: find_file_pattern($pattern, $dir)
+# Type: INTERFACE SUB
+# Purpose: Find files of a given pattern in a directory.
+#   The pattern is a standard bsd_glob pattern.
+# Returns: A list of files in $dir that match $pattern.
+# Example: find_file_pattern('*.mp3', '~/Music/Favorite Band/Album')
+sub find_file_pattern {
+    my ($patt, $dir) = @_;
+
+    croak("Given non-directory as second argument $dir") if (!-d $dir);
+
+    return bsd_glob(glob_safe($dir))."/$pattern";
+}
 
 # Subroutine: glob_safe($str)
 # Type: INTERFACE SUB
