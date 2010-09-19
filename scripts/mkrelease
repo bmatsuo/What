@@ -152,10 +152,10 @@ sub main{
         ($opt{'--dry-run'} ? '--dry-run' : ()));
 
     if (!$opt{'--bandcamp'}) {
-        # Create any necessary m3u files.
-        $subsystem->exec(@mkm3u) == 0 or die;
         # The release must be in the rip_dir. So check it.
         $subsystem->exec(@check_release) == 0 or die;
+        # Create any necessary m3u files.
+        $subsystem->exec(@mkm3u) == 0 or die;
     }
 
     # Create the release directory structure.
