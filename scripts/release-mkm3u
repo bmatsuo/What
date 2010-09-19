@@ -63,10 +63,15 @@ sub main{
     my @files = split "\n", `find "$rip_dir"`;
     my @flac_files = grep {m/ \.flac \z/xms} @files;
     my @music_directories = map {dirname($_)} @flac_files;
-    my %disc_dir = map {($_ => 1)} @music_directories;
-    my @disc_dirs = keys %disc_dir;
+    my %disc_dir_keys = map {($_ => 1)} @music_directories;
+    my @disc_dirs = keys %disc_dir_keys;
     for my $disc_dir (@disc_dirs) {
-        my @disc_flacs = bsd_glob(glob_safe(%disc_dir)."/*.flac");
+        my @existing_m3us = bsd_glob(glob_safe($disc_dir)."/*.m3u");
+        if (@existing_m3us > 0) {
+            print "M3U found in $disc_dir. Skipping...\n";
+            next;
+        }
+        my @disc_flacs = bsd_glob(glob_safe($disc_dir)."/*.flac");
         my $disc_dir_rel = $disc_dir;
         substr $disc_dir_rel, 0, length $rip_dir, q{};
         $disc_dir_rel =~ s!\A / !!xms;
