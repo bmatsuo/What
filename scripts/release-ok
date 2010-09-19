@@ -66,6 +66,7 @@ sub main{
     my @images;
     my @log_files;
     my @cue_files;
+    my @m3u_files;
     my $info_file;
     my $num_discs = 1;
 
@@ -101,6 +102,7 @@ sub main{
         elsif ($ext eq 'tiff' or $ext eq 'jpg') { push @images, $file }
         elsif ($ext eq 'log') { push @log_files,  $file }
         elsif ($ext eq 'cue') { push @cue_files, $file }
+        elsif ($ext eq 'm3u') { push @m3u_files, $file }
         elsif (basename($file) eq "Info.txt") { $info_file = $file }
         elsif (-d $file && $file =~ m/CD(\d+)/xms) {
             my $n = $1;
