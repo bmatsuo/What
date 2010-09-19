@@ -109,6 +109,11 @@ sub main{
     my @check_release = ('release-ok', 
         ($opt{'--verbose'} ? '--verbose' : ()));
 
+    my @mkm3u = ('release-mkm3u', 
+        '--artist', $opt{'--artist'},
+        '--title', $opt{'--title'},
+        '--year', $opt{'--year'},);
+
     my @scaffold = ('release-scaffold', 
         '--artist', $opt{'--artist'},
         '--title', $opt{'--title'},
@@ -147,6 +152,8 @@ sub main{
         ($opt{'--dry-run'} ? '--dry-run' : ()));
 
     if (!$opt{'--bandcamp'}) {
+        # Create any necessary m3u files.
+        $subsystem->exec(@mkm3u) == 0 or die;
         # The release must be in the rip_dir. So check it.
         $subsystem->exec(@check_release) == 0 or die;
     }
