@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use File::Glob 'bsd_glob';
+use File::Basename;
 use What::Subsystem;
 
 require Exporter;
@@ -59,10 +60,10 @@ sub merge_structure {
         if (!$body_has_bone) {
             my @add_bone = ('mkdir', $bone_location);
             subsystem(
-                cmd => \@add_bone;
+                cmd => \@add_bone,
                 # TODO: turn these args into args of this method.
-                dry_run => 0;
-                verbose => 0;
+                dry_run => 0,
+                verbose => 0,
             );
         }
 
@@ -122,7 +123,7 @@ sub find_file_pattern {
 
     croak("Given non-directory as second argument $dir") if (!-d $dir);
 
-    return bsd_glob(glob_safe($dir))."/$pattern";
+    return bsd_glob(glob_safe($dir)."/$patt");
 }
 
 # Subroutine: glob_safe($str)

@@ -17,7 +17,7 @@ use Getopt::Euclid qw{ :vars<opt_> };
 use Readonly;
 
 # Include private modules.
-use What::Whatrc;
+use What::WhatRC;
 use What::Utils;
 use What::Subsystem;
 
@@ -40,7 +40,7 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $whatrc = What::Whatrc::new->('~/.whatrc');
+my $whatrc = read_whatrc('~/.whatrc');
 
 ########################################################################
 # MAIN FUNCTION
@@ -49,6 +49,7 @@ my $whatrc = What::Whatrc::new->('~/.whatrc');
 # main() - main program execution 
 sub main{
     my $snatch = $opt{'--snatch'};
+    $snatch =~ s!/\z!!xms;
 
     if (!-d $snatch) {
         die "--snatch must be a directory (sry no singles).";
@@ -61,7 +62,7 @@ sub main{
     if (@rip_files > 2) { # Should always find '.' and '..'
         @rip_files = grep {$_ !~ m!/.{1,2}\z!xms} @rip_files;
         my $rip_filelist = join "\n", map {basename($_)} @rip_files;
-        die "There are files in the rip directory\n$rip_filelist\n".
+        die "There are files in the rip directory\n$rip_filelist\n";
     }
 
     link_dirs($snatch, $rip_dir);
@@ -93,8 +94,8 @@ sub link_dirs {
 
     merge_structure($src,$mirror);
     my $subsystem = What::Subsystem->new(
-        verbose => 0;
-        dry_run => 0;
+        verbose => 0,
+        dry_run => 0,
     );
 
     my @files = find_file_pattern('*',$src);
