@@ -42,6 +42,22 @@ PROGRAM DEPENDENCIES
 
 The What scripts also require free, cross-platform, external programs. 
 Specifically,
-    lame
-    flac
-    mktorrent
+    lame                                (for MP3 reencoding)
+    vorbis-tools (with FLAC support)    (for OGG reencoding)
+    faac                                (for AAC reencoding)
+    flac                                (for FLAC stream decoding)
+    mktorrent                           (for making torrent files)
+
+If you do not need any of these functional areas, you do not need to 
+install the dependencies. The 'flac' dependency is required for
+any reencoding.
+
+The 'vorbis-tools' dependency must be compiled with flac support.
+If compiling from source, just read documentation about this option.
+If installing vorbis-tools via a package manager. Look into the 
+package managers documentation for variants/patches which will install
+a package with flac support.
+
+If you are installing vorbis-tools on Mac OS X with macports, then
+the following command should install vorbis-tools properly:
+    sudo port install vorbis-tools+flac
