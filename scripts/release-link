@@ -108,7 +108,22 @@ sub link_dirs {
         dry_run => $opt{'--dry-run'},);
     );
 
+    my %accepted_ext = (
+        'flac' => 1,
+        'log' => 1,
+        'cue' => 1,
+        'txt' => 1,
+        'nfo' => 1,
+        'm3u' => 1,
+        'jpg' => 1,
+        'tiff' => 1,
+        'png' => 1,
+    );
+
+    my %ext_found;
+
     my @files = find_file_pattern('*',$src);
+    LINKSOURCE:
     for my $src_file (@files) {
         my $filename = basename($src_file);
         my $mirror_file = "$mirror/$filename";
@@ -117,9 +132,23 @@ sub link_dirs {
         }
         else {
             if (!-e $mirror_file) {
-                my @link_files = ('ln', $src_file, $mirror_file);
-                $subsystem->exec(@link_files) == 0 
-                    or die "Couldn't link\n$src_file->$mirror_file";
+                my $ext = $filename;
+                if ($ext =~ s/\A .+ \.([^.]+) \z//xms) {
+                    if (!$accepted_ext{$ext}) {
+                        print {\*STDERR} 
+                            "Not linking file with unknown extension;"
+                            . " $filename\n";
+                        next LINKSOURCE;
+                    }
+                    $ext_found{$ext} = 1;
+                    my @link_files = ('ln', $src_file, $mirror_file);
+                    $subsystem->exec(@link_files) == 0 
+                        or die "Couldn't link\n$src_file->$mirror_file";
+                }
+                else {
+                    print {\*STDERR} 
+                        "Ignoring file w/o extension; $filename\n";
+                }
             }
         }
     }
