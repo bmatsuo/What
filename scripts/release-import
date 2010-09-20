@@ -130,14 +130,21 @@ sub main{
     print {$info} $desc;
     close $info;
 
-    my @mkrelease = ('mkrelease', 
-        '--artist', $release->{artist},
-        '--title', $release->{title},
-        '--year', $release->{year},
-        (grep {$opt{$_}} qw{--flac --ogg --aac --320 --v0 --v2}),);
-    $subsys->exec(@mkrelease) == 0
-        or die "Import failed. ",
-            "Fix the specified problems then try running mkrelease.\n";
+    if (!$release_has_bad_tags) {
+        my @mkrelease = ('mkrelease', 
+            '--artist', $release->{artist},
+            '--title', $release->{title},
+            '--year', $release->{year},
+            (grep {$opt{$_}} qw{--flac --ogg --aac --320 --v0 --v2}),);
+        $subsys->exec(@mkrelease) == 0
+            or die "Import failed. ",
+                "Fix specified problems then try running mkrelease.\n";
+    }
+    else {
+        print {\*STDERR} "Release is in rip dir. But it has bad tags. ",
+            "Re-tag it and then run makerelease.\n"
+
+    }
 
     exit($exitcode);
 }
