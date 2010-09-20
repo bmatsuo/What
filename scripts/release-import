@@ -1,0 +1,128 @@
+#!/usr/bin/env perl
+
+# Use perldoc or option --man to read documentation
+
+########################################################################
+# MODULES
+########################################################################
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+use Readonly;
+
+# Include private modules.
+use What::WhatRC;
+use What::Release;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+Readonly my $prog_incantation  => $0;
+Readonly my $prog_dir          => dirname($0);
+Readonly my $prog_name         => basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+my $whatrc = read_whatrc('~/.whatrc');
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my $snatch = $opt{'--snatch'};
+    my $release = What::Release->new(
+        artist => $opt{'--artist'};
+        title => $opt{'--title'};
+        year => $opt{'--year'};
+    );
+
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+release-import
+-- Import a snatch into the upload hierarchy.
+
+=head1 VERSION
+
+Version 0.0_1
+Originally created on 09/20/10 00:55:49
+
+=head1 USAGE
+
+release-import [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=item --snatch [=] <dlpath>
+
+=for Euclid:
+    dlpath.type: readable, -d dlpath
+
+=item --artist [=] <artist>
+
+=item --title [=] <title>
+
+=item --year [=] <year>
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHOR & COPYRIGHT 
+
+©Bryan Matsuo (bryan.matsuo@gmail.com)
+

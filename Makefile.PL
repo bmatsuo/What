@@ -17,6 +17,7 @@ WriteMakefile(
     }, # e.g., Module::Name => 1.1
     EXE_FILES   => [qw{
         scripts/snatch-inspect
+        scripts/release-import
         scripts/release-scaffold 
         scripts/release-art-convert
         scripts/release-flac-convert
