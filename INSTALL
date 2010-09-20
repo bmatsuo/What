@@ -14,8 +14,13 @@ then customize.
 CROSS-PLATFORM COMPATABILITY
 
 So far, this package has only been extensively tested on Mac OS X. It
-should also work with zero or minimal difficulty on most Linux
-distributions. 
+should also work with minimal difficulty on most Linux
+distributions. There is an issue where the OS X utility 'open' is 
+called. Linux has no standard utitily for opening arbitrary files. 
+Under Gnome, gnome-open can perform a similar task. The situation is
+not ideal and should eventually disappear. But for now, snatch-inspect
+and release-import will not work under Linux. I will try to make a patch
+to allow these programs to work under gnome in the future.
 
 I highly doubt that it will work on Microsoft Windows. Some kind MS Perl
 hacker would need to come along and fix things that cause problems.
@@ -42,15 +47,16 @@ PROGRAM DEPENDENCIES
 
 The What scripts also require free, cross-platform, external programs. 
 Specifically,
-    lame                                (for MP3 reencoding)
-    vorbis-tools (with FLAC support)    (for OGG reencoding)
-    faac                                (for AAC reencoding)
-    flac                                (for FLAC stream decoding)
-    mktorrent                           (for making torrent files)
+    lame                             (for MP3 reencoding)
+    vorbis-tools (with FLAC support) (for OGG reencoding)
+    faac                             (for AAC reencoding)
+    flac                             (for FLAC stream decoding)
+    mktorrent                        (for making torrent files)
+    spek (command-line binary)       (for viewing spectrograms)
 
 If you do not need any of these functional areas, you do not need to 
 install the dependencies. The 'flac' dependency is required for
-any reencoding.
+reencoding to pretty much any format though.
 
 The 'vorbis-tools' dependency must be compiled with flac support.
 If compiling from source, just read documentation about this option.

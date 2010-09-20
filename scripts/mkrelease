@@ -57,13 +57,16 @@ sub main{
         title => $opt{'--title'},
         year => $opt{'--year'},);
 
-    my $user_wants_a_format 
+    my $user_wants_a_conversion
         = $opt{'--v0'} || $opt{'--v2'} || $opt{'--320'} 
-        || $opt{'--flac'} || $opt{'--ogg'} || $opt{'--aac'};
+        || $opt{'--ogg'} || $opt{'--aac'};
+
+    my $user_wants_a_format 
+        = $user_wants_a_conversion || $opt{'--flac'};
 
     if (!$user_wants_a_format) {
-        print {\*STDERR} "No formats selected to release. Aborting...\n";
-        exit(1);
+        print {\*STDERR} "No formats selected to release.\n",
+            "FLAC will be moved into hierarchy with no torrents made.\n";
     }
 
     my ($artist, $year, $title)
@@ -130,11 +133,7 @@ sub main{
         '--artist', $opt{'--artist'},
         '--title', $opt{'--title'},
         '--year', $opt{'--year'},
-        ($opt{'--v0'} ? '--v0' : ()),
-        ($opt{'--v2'} ? '--v2' : ()),
-        ($opt{'--320'} ? '--320' : ()),
-        ($opt{'--ogg'} ? '--ogg' : ()),
-        ($opt{'--aac'} ? '--aac' : ()),
+        (grep {$opt{$_}} qw{--v0 --v2 --320 --ogg --aac}),
         ($opt{'--verbose'} ? '--verbose' : ()),
         ($opt{'--dry-run'} ? '--dry-run' : ()),);
 
@@ -142,12 +141,7 @@ sub main{
         '--artist', $opt{'--artist'},
         '--title', $opt{'--title'},
         '--year', $opt{'--year'},
-        ($opt{'--v0'} ? '--v0' : ()),
-        ($opt{'--v2'} ? '--v2' : ()),
-        ($opt{'--320'} ? '--320' : ()),
-        ($opt{'--flac'} ? '--flac' : ()),
-        ($opt{'--ogg'} ? '--ogg' : ()),
-        ($opt{'--aac'} ? '--aac' : ()),
+        (grep {$opt{$_}} qw{--flac --v0 --v2 --320 --ogg --aac}),
         ($opt{'--verbose'} ? '--verbose' : ()),
         ($opt{'--dry-run'} ? '--dry-run' : ()));
 
@@ -220,9 +214,18 @@ sub main{
     else { # This is a rip, not bandcamp.
         $subsystem->exec(@move_release) == 0 or die;
         $subsystem->exec(@move_info) == 0 or die;
-        $subsystem->exec(@convert) == 0 or die;
+        if ($user_wants_a_conversion) {
+            $subsystem->exec(@convert) == 0 or die;
+        }
     }
-    $subsystem->exec(@mktorrent ) == 0 or die;
+    if ($user_wants_a_format) {
+        $subsystem->exec(@mktorrent ) == 0 or die;
+    }
+    else {
+        print {\*STDERR} "Release is ready.\n",
+            "Use release-flac-convert / release-mktorrent ",
+            "to upload the release.\n";
+    }
 
     exit($exitcode);
 }

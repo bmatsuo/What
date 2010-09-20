@@ -92,7 +92,7 @@ sub main{
         '--artist', $release->{artist},
         '--title', $release->{title},
         '--year', $release->{year},
-        '--flac');
+        (grep {$opt{$_}} qw{--flac --ogg --aac --320 --v0 --v2}),);
     $subsys->exec(@mkrelease) == 0
         or die "Import failed";
 
@@ -143,6 +143,30 @@ release-import [options]
 =head1 OPTIONS
 
 =over
+
+=item --flac | --FLAC
+
+Create a flac torrent.
+
+=item --ogg | --OGG | --q8
+
+Convert to OGG q8.0 and create a torrent.
+
+=item --aac | --AAC
+
+Convert to AAC and create a torrent.
+
+=item --320
+
+Convert to MP3 CBR 320 and create a torrent.
+
+=item --v0 | --V0
+
+Convert to MP3 VBR V0 and create a torrent.
+
+=item --v2 | --V2
+
+Convert to MP3 VBR V2 and create a torrent.
 
 =item --version
 

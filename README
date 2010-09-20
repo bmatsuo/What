@@ -18,6 +18,7 @@ CONTENTS
     Workflow
     Rip Workflow
     Release Workflow
+    Importing Workflow
     Release (Under the Hood)
 
 PACKAGE FEATURES
@@ -25,11 +26,12 @@ PACKAGE FEATURES
 This package can:
     Organize your all your releases into a user navigatable hierarchy.
     Create M3U playlists for release discs.
-    Convert a FLAC release to any of the 'perfect 3' MP3 bitrate settings.
+    Convert a FLAC release to MP3 with 320, V0, or V2 bitrate settings.
     Convert a FLAC release to OGG vorbis with -q8 quality setting.
     Convert a FLAC release to AAC with ~256 ABR setting (don't use).
-    Convert M3U playlists when release is converted.
-    Create torrents for releases of any format.
+    Rerelease FLAC / Log 100% / Cue snatches for tag trumps / better.php.
+    Convert M3U playlists.
+    Create torrents for releases.
     Convert release images to lower res versions for web hosting.
     Make you a sandwich, if you have permissions.
 
@@ -42,12 +44,11 @@ This package will probably never:
 
 This package can not currently:
     Handle bandcamp.com releases (they keep getting more clever).
-    Make good MP3s w/ non-ISO-Latin-1 tags (makes mojibake (lame sucks)).
-    Apple Lossless coversions.
-    'Perfect' AAC 320 CBR conversions  (no good portable lib/app).
+    Make good MP3s w/ non-Latin-1 tags (=> mojibake (lame: L 2 utf-8)).
+    Make Apple Lossless coversions (meh).
+    Make 'perfect' AAC 320 CBR conversions (no good portable lib/app).
     Create album descriptions.
     Create release descriptions.
-    Manage your snatches.
     Manage your personal media library.
     Manage your personal media archival/backup.
 
@@ -174,6 +175,20 @@ But it probably won't be as automatic because their web request system
 seems to be getting more sophisticated with this kind of stuff.
 
 This should suit most of your uploading needs. Enjoy =)
+
+IMPORTING WORKFLOW
+
+If you've downloaded a FLAC / Log (100%) / Cue torrent and want to both
+categorize it in the upload hierarchy and possibly reencode it for 
+better.php; then you need to use the program release-import
+
+Say the snatch directory is at path 
+    '/Users/Me/Music/DL/Artist - Title {2010} FLAC'
+Then, much like releasing a rip, you use the command
+    release-import \
+        --artist Artist --title Title --year 2010 \
+        --snatch '/Users/Me/Music/DL/Artist - Title {2010} FLAC'
+        --flac --320 --v0 --v2 --ogg
 
 RELEASE (UNDER THE HOOD)
 
