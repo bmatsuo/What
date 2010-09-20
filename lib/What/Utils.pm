@@ -89,15 +89,15 @@ sub find_subdirs {
 # Purpose: Find all the files in the hierachy of a given directory
 # Returns: A list of files in $dir that match $pattern.
 #   Directories all always ordered before their contents.
-sub find_hierachy {
+sub find_hierarchy {
     my ($dir) = @_;
 
     croak("Given non-directory as second argument $dir") if (!-d $dir);
-    my @files = bsd_glob(glob_safe($dir))."/*";
+    my @files = bsd_glob(glob_safe($dir)."/*");
     my @subdirs = grep {-d $_} @files;
     my @nondirs = grep {!-d $_} @files;
 
-    return (@files, map {find_hierarchy($_)} @subdirs);
+    return (@files, (map {find_hierarchy($_)} @subdirs));
 }
 
 # Subroutine: search_hierarchy($pattern, $dir)

@@ -10,6 +10,7 @@
 use strict;
 use warnings;
 use File::Basename;
+use List::Util qw{shuffle};
 use Carp;
 
 # Include CPAN modules.
@@ -19,6 +20,7 @@ use Readonly;
 # Include private modules.
 use What::Subsystem;
 use What::Prompt;
+use What::Utils;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -48,35 +50,86 @@ sub main{
     my $subsystem = What::Subsystem->new(
         verbose => 0,
         dry_run => 0,);
-    my $prompt = What::Prompt->new(
+    my $prompt = What::Prompt->new({
         text => '?',
-        is_multiline => 0);
+        is_multiline => 0,});
 
     my $snatch = $opt{'--snatch'};
+    $snatch =~ s!/\z!!xms;
 
     die "--snatch is not a directory." if !-d $snatch;
 
     my @files = find_hierarchy($snatch);
+    if (@files <= 2) {
+        die "Couldn't find any files."
+    }
 
     my @flacs = grep {m/\.flac\z/xms} @files;
+    if (!@flacs) {
+        die "Couldn't find any FLAC files."
+    }
 
     # This command is MAC OS X ONLY.
-    my @inspect_flacs = ('open', @flacs);
-    $subsystem->exec(@inspect_flacs)
+    my @inspect_flacs = ('open', '-W', @flacs);
+    $subsystem->exec(@inspect_flacs) == 0
         or die "Couldn't open flac files.";
 
     $prompt->text("Do the tags look good enough?[Y/n]");
     $prompt->validator(
         sub {my $r = shift; $r =~ m/\A(?: [yYnN] | \z )/xms});
     my $resp = $prompt->prompt_user();
-    my $tags_are_good = $resp =~ m/\A(?: y | \z)/ixms
-    if (!$tags_are_good) {
-        # TODO: Begin the Tag trump workflow.
+    my $tags_are_good = $resp =~ m/\A(?: y | \z)/ixms;
+
+    $prompt->text("Do you want to look at some spectrals?[Y/n]");
+    $resp = $prompt->prompt_user();
+    my $should_check_spectrals = $resp =~ m/\A(?: y | \z)/ixms;
+    my $spectrals_look_ok = 1;
+
+    if ($should_check_spectrals) {
+        # Shuffle the list of flacs.
+        my @shuffled_flacs = shuffle (@flacs);
+        my $want_more_spectrals = 1;
+        my $num_spectrals_viewed = 0;
+
+        # Check some random spectrals.
+        while ($want_more_spectrals) {
+            my $flac = shift @shuffled_flacs;
+
+            # Create a spectrogram for $flac.
+            my @spek = ('spek', $flac);
+            $subsystem->exec(@spek) == 0
+                or die "Couldn't make spectrogram for $flac.";
+            ++$num_spectrals_viewed;
+
+            # Ask user if the spectrogram looks OK.
+            $prompt->text("Is the spectrogram acceptable?[Y/n]");
+            $resp = $prompt->prompt_user();
+            my $spectral_looks_ok = $resp =~ m/\A(?: y | \z)/ixms;
+
+            $spectrals_look_ok = 0 if !$spectral_looks_ok;
+
+            # TODO: make the min number of spectrals viewed an option.
+            if (!$spectrals_look_ok || $num_spectrals_viewed >= 2) {
+                # Ask user if the spectrogram looks OK.
+                $prompt->text("Do you want another spectrogram?[Y/n]");
+                $resp = $prompt->prompt_user();
+                $want_more_spectrals = $resp =~ m/\A(?: y | \z)/ixms;
+            }
+        }
+
+        if (!@shuffled_flacs) { print "All spectrograms viewed.\n"; }
     }
-    else {
-        # TODO: Check some random spectrals (if there is a way).
-        # TODO: If spectrals are suspect, 
-        #   save them to the download dir for uploading to the forum.
+
+    if (!$tags_are_good){
+        print {\*STDERR} "Bad tag(s) found.\n";
+        # Set the exitcode to 1, encoding a tag error.
+        $exitcode = 1;
+    }
+    if (!$spectrals_look_ok) {
+        print {\*STDERR} "Bad spectrogram(s) founds.\n";
+        # Set exitcode to 2, encoding suspicious spectals; 
+        #   and overriding any bad tag error.
+        $exitcode = 2;
     }
 
     exit($exitcode);
@@ -110,7 +163,7 @@ snatch-inspect [options]
 
 =over
 
-=snatch [=] <dlpath>
+=item --snatch [=] <dlpath>
 
 Path to a perfect FLAC (soon other formats will be allowed).
 
@@ -136,6 +189,16 @@ Print the usual program information
 =back
 
 =head1 DESCRIPTION
+
+Inspects tags (and soon hopefully spectros) of snatched perfect FLAC 
+releases.
+
+This program is currently Mac OS X only due to reliance on 'open' for
+openning flacs for tag inspection. Its not clear to me what the best 
+way to inspect tags in the terminal is.
+
+The user must set the systems default program to open FLAC files as one
+which can properly inspect their tags (for instance, Tag.app for OS X).
 
 =head1 BUGS
 

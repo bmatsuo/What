@@ -14,7 +14,7 @@ BEGIN { use_ok('What::M3U') };
 sub mkdummyinfo {
     my ($length, $track_num, $artist, $title) = @_;
     my $track = {
-        trackLengthSeconds => $length, 
+        trackTotalLengthSeconds => $length, 
         tags => {
             TRACKNUMBER => $track_num,
             artist => $artist,

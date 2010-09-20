@@ -17,7 +17,7 @@ my $release = What::Release->new(
 my $release_dir = $release->dir("/home/bryan");
 
 ok( $release_dir 
-    eq '/home/bryan/Lady Gaga/Lady Gaga - 2009 - The Fame Monster')
+    eq '/home/bryan/Lady Gaga/Lady Gaga - The Fame Monster (2009)')
 
 #########################
 
