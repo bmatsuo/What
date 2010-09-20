@@ -52,6 +52,8 @@ my %default_whatrc = (
     pager   => '/usr/bin/more',
     # The directory watched by the bit torrent client for new torrents.
     watch   => "$ENV{'HOME'}/Downloads",
+    # Favorite text editor.
+    editor  => 'nano',
 );
 
 my @rc_paths = qw{rip_dir pager upload_root};
@@ -63,7 +65,9 @@ my $dumper = Data::Dumper->new([\%default_whatrc],['WhatCDConfig']);
 #       announce => $annource_url,
 #       rip_dir => $rip_directory,
 #       upload_root => $upload_root_dir,
-#       pager   => $default_terminal_pager,)
+#       pager   => $default_terminal_pager,
+#       watch   => $torrent_watch_directory,
+#       editor  => $text_editor,)
 # Type: CLASS METHOD
 # Purpose: 
 #   What::WhatRC constructor.

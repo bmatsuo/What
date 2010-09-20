@@ -15,5 +15,8 @@ my $WhatCDConfig = {
 # Favorite pager (probably either 'more' or 'less')
 'pager'     => '/usr/bin/more',
 
+# Favorite text editor.
+'editor'  => 'nano',
+
 };
 
