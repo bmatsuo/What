@@ -94,7 +94,8 @@ sub main{
         '--year', $release->{year},
         (grep {$opt{$_}} qw{--flac --ogg --aac --320 --v0 --v2}),);
     $subsys->exec(@mkrelease) == 0
-        or die "Import failed";
+        or die "Import failed. ",
+            "Fix the specified problems then try running mkrelease.\n";
 
     exit($exitcode);
 }
