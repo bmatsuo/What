@@ -184,11 +184,25 @@ better.php; then you need to use the program release-import
 
 Say the snatch directory is at path 
     '/Users/Me/Music/DL/Artist - Title {2010} FLAC'
+
 Then, much like releasing a rip, you use the command
     release-import \
         --artist Artist --title Title --year 2010 \
+        --320 --v0 --v2 --ogg
         --snatch '/Users/Me/Music/DL/Artist - Title {2010} FLAC'
-        --flac --320 --v0 --v2 --ogg
+This will add the snatch into the upload hierarchy, convert it to the 
+4 requested formats, and create 4 torrents.
+
+Before the snatch is added to the upload hierarchy, you will be
+guided through the process of checking the tags and a few spectrograms.
+This will insure that you are importing a quality release.
+
+If the spectrograms of the snatch of suspect, no actions will be taken.
+If the tags are poorly done, then a copy of the snatch is placed in the
+rip directory, so that the files can be retagged and a tag trump can be
+performed. If the spectrograms look fine and the tags are already good
+then hard-links to the release files are made in the rip directory. 
+This uses (effectively) zero extra HDD space. 
 
 RELEASE (UNDER THE HOOD)
 

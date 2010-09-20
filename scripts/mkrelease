@@ -65,7 +65,7 @@ sub main{
         = $user_wants_a_conversion || $opt{'--flac'};
 
     if (!$user_wants_a_format) {
-        print {\*STDERR} "No formats selected to release.\n",
+        print {\*STDERR} "No formats selected to release. ",
             "FLAC will be moved into hierarchy with no torrents made.\n";
     }
 
