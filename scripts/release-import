@@ -19,6 +19,8 @@ use Readonly;
 # Include private modules.
 use What::WhatRC;
 use What::Release;
+use What::Subsystem;
+use What::Prompt;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -49,10 +51,50 @@ my $whatrc = read_whatrc('~/.whatrc');
 sub main{
     my $snatch = $opt{'--snatch'};
     my $release = What::Release->new(
-        artist => $opt{'--artist'};
-        title => $opt{'--title'};
-        year => $opt{'--year'};
-    );
+        artist => $opt{'--artist'},
+        title => $opt{'--title'},
+        year => $opt{'--year'},);
+    my $subsys = What::Subsystem->new(
+        verbose => 0,
+        dry_run => 0,);
+    my $prompt = What::Prompt->new({
+        text => "?",
+        is_multiline => 1,});
+
+    my $snatch_ok = sub {$_[0] == 0};
+    my $snatch_has_bad_tags = sub {$_[0] == 1};
+    my $snatch_has_bad_spec = sub {$_[0] == 2};
+
+    my @inspect = ('snatch-inspect', '--snatch', $snatch);
+    my $snatch_status = $subsys->exec(@inspect);
+    if ($snatch_has_bad_spec->($snatch_status)) {
+        die "Halting import: Suspicious spectrals.";
+    }
+
+    my @link = ('release-link', '--snatch', $snatch);
+    if($snatch_has_bad_tags->($snatch_status)) {
+        print {\*STDERR} 
+            "Copying release (not linking) so tags can be fixed.\n";
+        push @link, '--copy';
+    }
+    $subsys->exec(@link) == 0 
+        or die "Halting import: Couldn't create link release.";
+
+    $prompt->text(
+        "Please enter a description of the release:");
+    my $desc = $prompt->prompt_user();
+    open my $info, ">", "$whatrc->{rip_dir}/Info.txt"
+        or die "Couldn't create info file.";
+    print {$info} $desc;
+    close $info;
+
+    my @mkrelease = ('mkrelease', 
+        '--artist', $release->{artist},
+        '--title', $release->{title},
+        '--year', $release->{year},
+        '--flac');
+    $subsys->exec(@mkrelease) == 0
+        or die "Import failed";
 
     exit($exitcode);
 }

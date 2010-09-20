@@ -106,14 +106,13 @@ sub link_dirs {
     my $subsystem = What::Subsystem->new(
         verbose => $opt{'--verbose'},
         dry_run => $opt{'--dry-run'},);
-    );
 
     my %accepted_ext = (
         'flac' => 1,
         'log' => 1,
         'cue' => 1,
-        'txt' => 1,
-        'nfo' => 1,
+        #'txt' => 1,
+        #'nfo' => 1,
         'm3u' => 1,
         'jpg' => 1,
         'tiff' => 1,
@@ -133,7 +132,7 @@ sub link_dirs {
         else {
             if (!-e $mirror_file) {
                 my $ext = $filename;
-                if ($ext =~ s/\A .+ \.([^.]+) \z//xms) {
+                if ($ext =~ s/\A .+ \.([^.]+) \z/$1/xms) {
                     if (!$accepted_ext{$ext}) {
                         print {\*STDERR} 
                             "Not linking file with unknown extension;"
