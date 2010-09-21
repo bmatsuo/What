@@ -59,7 +59,7 @@ sub main{
 
     # TODO: This is not ideal. I should fix multi-CD releases.
     my @release_files 
-        = find_hierarchy($rip_dir);
+        = find_hierarchy($rip_dir, 1);
         # = (bsd_glob("$rip_dir/*"), bsd_glob("$rip_dir/CD*/*"));
 
     my @flac_files = grep {m/\.flac\z/xms} @release_files;
@@ -190,10 +190,7 @@ sub main{
     }
 
     my @hidden_files 
-        # Need to make find_hierarchy find hidden files.
-        # = grep {m!/\..*!xms} @release_files;
-        = map {basename($_)} bsd_glob("$rip_dir/.*");
-        shift @hidden_files; shift @hidden_files;
+        = grep {basename($_) =~ m!\A\..*\z!xms} @release_files;
     if (scalar @hidden_files) {
         print {\*STDERR} "Hidden files found; @hidden_files\n";
         $exitcode = 1;
@@ -207,13 +204,6 @@ sub main{
         if ($name =~ $illegal_chars) {
             print {\*STDERR} 
                 "Illegal character $1 in filename '$name'.\n";
-            $exitcode = 1;
-        }
-
-        # Check if the file is hidden (redundant check).
-        if ($name =~ m/\A \. .+ \z/xms) {
-            print {\*STDERR}
-                "Hidden file found that should't be in torrent; $name\n";
             $exitcode = 1;
         }
 
