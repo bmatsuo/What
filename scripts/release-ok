@@ -20,6 +20,7 @@ use Readonly;
 # Include private modules.
 use What::Release;
 use What::WhatRC;
+use What::Utils;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -70,17 +71,18 @@ sub main{
         print {\*STDERR} scalar(@flac_files)." FLAC files found.\n";
     }
 
-    my @disc_dirs = (map {($_ => 1)} map {dirname($_)} @flac_files);
+    my %disc_files = (map {($_ => [])} map {dirname($_)} @flac_files);
+    my @disc_dirs = keys %disc_files;
     my $num_discs = scalar @disc_dirs;
     if ($num_discs == 0) {
         print {\*STDERR} "Unexpected error: No discs found?! o.O\n";
         $exitcode = 1;
     }
     if ($opt{'--verbose'}) {
-        print {\*STDERR} "$num_discs discs found.\n";
+        print {\*STDERR} "$num_discs discs found.\n":
     }
 
-    my @images = grep {m/\.(?: jpg | tiff | png )\z/xms} @flac_files;
+    my @images = grep {m/\.(?: jpg | tiff | png )\z/xms} @release_files;
     if (!@images){
         print {\*STDERR} "No images found.\n";
         $exitcode = 1;
@@ -89,11 +91,11 @@ sub main{
         print {\*STDERR} scalar(@images)." Images found.\n";
     }
 
-    my @log_files = grep {m/\.log\z/xms};
+    my @log_files = grep {m/\.log\z/xms} @release_files;
     if (@log_files < @disc_dirs) {
-        my $num_missing = @log_files - @disc_dirs;
+        my $num_missing_logs = @log_files - @disc_dirs;
         print {\*STDERR}
-            "Missing log files for $num_missing discs. Found \n";
+            "Missing log files for $num_missing_logs discs. Found \n";
         print {\*STDERR}
             join "\n", @log_files, "";
         $exitcode = 1;
@@ -102,11 +104,11 @@ sub main{
         print {\*STDERR} "Corresponding logs file found.\n";
     }
 
-    my @cue_files = grep {m/\.cue\z/xms};
+    my @cue_files = grep {m/\.cue\z/xms} @release_files;
     if (@cue_files < $num_discs) {
-        my $num_missing = @cue_files - $num_discs
+        my $num_missing_cues = @cue_files - $num_discs;
         print {\*STDERR}
-            "Missing cue files for $num_missing discs. Found \n";
+            "Missing cue files for $num_missing_cues discs. Found \n";
         print {\*STDERR}
             join "\n", @cue_files, "";
         $exitcode = 1;
@@ -115,7 +117,7 @@ sub main{
         print {\*STDERR} "Corresponding cue files found.\n";
     }
 
-    my @m3u_files = grep {m/\.m3u\z/xms};
+    my @m3u_files = grep {m/\.m3u\z/xms} @release_files;
     my $info_file = find_file_pattern("Info.txt", $rip_dir);
     if (!defined $info_file) {
         print {\*STDERR}
