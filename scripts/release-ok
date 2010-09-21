@@ -52,99 +52,71 @@ sub main{
 
     my $rip_dir = $whatrc->{rip_dir};
 
-    $rip_dir =~ s/(\[ | \] | [{}*?])/\\$1/xms;
-
     if (!-d $rip_dir) {
         print {\*STDERR} "Can't find rip directory $rip_dir.\n";
     }
 
     # TODO: This is not ideal. I should fix multi-CD releases.
     my @release_files 
-        = (bsd_glob("$rip_dir/*"), bsd_glob("$rip_dir/CD*/*"));
+        = find_hierarchy($rip_dir);
+        # = (bsd_glob("$rip_dir/*"), bsd_glob("$rip_dir/CD*/*"));
 
-    my @flac_files;
-    my @images;
-    my @log_files;
-    my @cue_files;
-    my @m3u_files;
-    my $info_file;
-    my $num_discs = 1;
-
-    my @hidden_files = map {basename($_)} bsd_glob("$rip_dir/.*");
-
-    shift @hidden_files; shift @hidden_files;
-
-    if (scalar @hidden_files) {
-        print {\*STDERR} "Hidden files found; @hidden_files\n";
-        $exitcode = 1;
-    }
-
-    for my $file (@release_files) {
-
-        my $name = basename($file);
-
-        if ($name =~ $illegal_chars) {
-            print {\*STDERR} 
-                "Illegal character $1 in filename '$name'.\n";
-            $exitcode = 1;
-        }
-
-        if ($name =~ m/\A \. .+ \z/xms) {
-            print {\*STDERR}
-                "Hidden file found that should't be in torrent; $name\n";
-            $exitcode = 1;
-        }
-
-        # Extract the file's extension
-        my $ext = $file =~ m/ \. ([^.]+) \z/xms ? lc $1 : "";
-
-        if ($ext eq 'flac') { push @flac_files, $file }
-        elsif ($ext eq 'tiff' or $ext eq 'jpg') { push @images, $file }
-        elsif ($ext eq 'log') { push @log_files,  $file }
-        elsif ($ext eq 'cue') { push @cue_files, $file }
-        elsif ($ext eq 'm3u') { push @m3u_files, $file }
-        elsif (basename($file) eq "Info.txt") { $info_file = $file }
-        elsif (-d $file && $file =~ m/CD(\d+)/xms) {
-            my $n = $1;
-            $num_discs = $n if $n > $num_discs;
-        }
-        elsif ($ext eq '') {
-            print {\*STDERR} 
-                "warning: File with no extension $file found.\n";
-        }
-        else {
-            print {\*STDERR} 
-                "warning: File with unexpected type $ext found; $file\n";
-        }
-    }
-
+    my @flac_files = grep {m/\.flac\z/xms} @release_files;
     if (!@flac_files) {
         print {\*STDERR} "No FLAC files found in FLAC directory.\n";
         $exitcode = 1;
     }
-    elsif ($opt{'--verbose'}) {
+    if ($opt{'--verbose'}) {
         print {\*STDERR} scalar(@flac_files)." FLAC files found.\n";
     }
 
-    if (!@images){
-        print {\*STDERR} "No TIFF images found in FLAC directory.\n";
+    my @disc_dirs = (map {($_ => 1)} map {dirname($_)} @flac_files);
+    my $num_discs = scalar @disc_dirs;
+    if ($num_discs == 0) {
+        print {\*STDERR} "Unexpected error: No discs found?! o.O\n";
         $exitcode = 1;
     }
-    elsif ($opt{'--verbose'}) {
-        print {\*STDERR} scalar(@images)." TIFF images found.\n";
+    if ($opt{'--verbose'}) {
+        print {\*STDERR} "$num_discs discs found.\n";
     }
 
-    if (@log_files < $num_discs) {
+    my @images = grep {m/\.(?: jpg | tiff | png )\z/xms} @flac_files;
+    if (!@images){
+        print {\*STDERR} "No images found.\n";
+        $exitcode = 1;
+    }
+    if ($opt{'--verbose'}) {
+        print {\*STDERR} scalar(@images)." Images found.\n";
+    }
+
+    my @log_files = grep {m/\.log\z/xms};
+    if (@log_files < @disc_dirs) {
+        my $num_missing = @log_files - @disc_dirs;
         print {\*STDERR}
-            "Missing log files for $num_discs discs. Found \n";
+            "Missing log files for $num_missing discs. Found \n";
         print {\*STDERR}
             join "\n", @log_files, "";
         $exitcode = 1;
     }
     elsif ($opt{'--verbose'}) {
-        print {\*STDERR} "Log file found.\n";
+        print {\*STDERR} "Corresponding logs file found.\n";
     }
 
+    my @cue_files = grep {m/\.cue\z/xms};
+    if (@cue_files < $num_discs) {
+        my $num_missing = @cue_files - $num_discs
+        print {\*STDERR}
+            "Missing cue files for $num_missing discs. Found \n";
+        print {\*STDERR}
+            join "\n", @cue_files, "";
+        $exitcode = 1;
+    }
+    elsif ($opt{'--verbose'}) {
+        print {\*STDERR} "Corresponding cue files found.\n";
+    }
+
+    my @m3u_files = grep {m/\.m3u\z/xms};
+    my $info_file = find_file_pattern("Info.txt", $rip_dir);
     if (!defined $info_file) {
         print {\*STDERR}
             "Info.txt was not found in flac directory.\n";
@@ -154,15 +126,55 @@ sub main{
         print {\*STDERR} "Info.txt found.\n";
     }
 
-    if (@cue_files < $num_discs) {
-        print {\*STDERR}
-            "Missing cue files for $num_discs discs. Found \n";
-        print {\*STDERR}
-            join "\n", @cue_files, "";
+    my @hidden_files 
+        # Need to make find_hierarchy find hidden files.
+        # = grep {m!/\..*!xms} @release_files;
+        = map {basename($_)} bsd_glob("$rip_dir/.*");
+        shift @hidden_files; shift @hidden_files;
+    if (scalar @hidden_files) {
+        print {\*STDERR} "Hidden files found; @hidden_files\n";
         $exitcode = 1;
     }
-    elsif ($opt{'--verbose'}) {
-        print {\*STDERR} "CUE file found.\n";
+
+    # Run over all the files to look for errors and unexpected files.
+    for my $file (@release_files) {
+        my $name = basename($file);
+
+        # Check the file name for illegal characters.
+        if ($name =~ $illegal_chars) {
+            print {\*STDERR} 
+                "Illegal character $1 in filename '$name'.\n";
+            $exitcode = 1;
+        }
+
+        # Check if the file is hidden (redundant check).
+        if ($name =~ m/\A \. .+ \z/xms) {
+            print {\*STDERR}
+                "Hidden file found that should't be in torrent; $name\n";
+            $exitcode = 1;
+        }
+
+        # Extract the file's extension
+        my $ext = $file =~ m/ \. ([^.]+) \z/xms ? lc $1 : "";
+
+        # Categorize the file.
+        if ($ext eq 'flac') {}
+        elsif ($ext eq 'log') {}
+        elsif ($ext eq 'cue') {}
+        elsif ($ext eq 'm3u') {}
+        elsif ($ext =~ m/\A(?: tiff | jpg | png )\z/xms) {}
+        elsif ($file eq "$rip_dir/Info.txt") {}
+        elsif (-d $file) {} # Ignore directories.
+        # Any other files are not expected.
+        # This may turn into an error at some point.
+        elsif ($ext eq '') {
+            print {\*STDERR} 
+                "warning: Unexpected extension-less file $file found.\n";
+        }
+        else {
+            print {\*STDERR} 
+                "warning: Unexpected file of type $ext found; $file\n";
+        }
     }
 
     if ($opt{'--verbose'}) {
