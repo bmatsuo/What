@@ -7,6 +7,7 @@ use Carp;
 
 use File::Glob 'bsd_glob';
 use What::Utils;
+use What::Format;
 
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
@@ -137,14 +138,50 @@ sub format_dir {
 
     my $rip_root = shift;
 
-    my $format = uc shift;
+    my $format = shift;
+
+    # Fix case of $format, and identify type.
+    my $format_ext = format_extension($format);
+    my $format_print = format_normalized($format);
+    croak ("Unknown format $format_print.") if $format_ext eq q{};
 
     my $release_name = $self->name();
     my $release_root = $self->dir($rip_root);
 
-    my $format_dir = "$release_root/$release_name [$format]";
+    my $format_dir = "$release_root/$release_name [$format_print]";
 
     return $format_dir;
+}
+
+# Subroutine: $release->find_audio_files($upload_root, $format)
+# Type: INSTANCE METHOD
+# Purpose: 
+#   Find all audio files in $release's $format dir.
+# Returns: A list of paths to audio files.
+# Exceptions: Croaks when the $format dir of $release does not exist.
+sub find_audio_files {
+    my $self = shift;
+    my ($upload_root, $format) = @_;
+
+    # Fix case of $format, and identify type.
+    my $format_ext = format_extension($format);
+    my $format_print = format_normalized($format);
+    croak ("Unknown format $format_print.") if $format_ext eq q{};
+
+    # Find the format directory.
+    my $format_dir = $self->format_dir($upload_root, $format);
+    croak ("Can't find any $format_print release.") 
+        if !-e $format_dir;
+    croak ("Non-directory in place of $format_print release.") 
+        if !-d $format_dir;
+
+    # Find all of the audio files contained in the format directory.
+    my @format_files = find_hierarchy($format_dir);
+    my @audio_files = grep {m/\.$format_ext\z/xms} @format_files;
+    croak ("Missing $format_print files in $format_print release dir.") 
+        if (!@audio_files);
+
+    return @audio_files;
 }
 
 # Subroutine: $release->format_disc_dirs($upload_root, $format);
@@ -156,16 +193,29 @@ sub format_disc_dirs {
     my $self = shift;
     my ($upload_root, $format) = @_;
 
-    my $format_dir = $self->format_dir($upload_root, $format);
+    # Fix case of $format, and identify type.
+    my $format_ext = format_extension($format);
+    my $format_print = format_normalized($format);
+    croak ("Unknown format $format_print.") if $format_ext eq q{};
 
-    my @disc_dirs = bsd_glob(glob_safe($format_dir)."/CD*/");
+    # Find all the audio files in the release's format dir.
+    my @audio_files = $self->find_audio_files($upload_root,$format);
 
-    # Remove trailing / from directories.
-    map {chop $_} @disc_dirs;
+    # Find directories containing found audio files, and return.
+    my @music_dirs_w_repeats = map {dirname($_)} @audio_files;
+    my %is_music_dir = (map {($_ => 1)} @music_dirs_w_repeats);
+    my @music_dirs = keys %is_music_dir;
+    return @music_dirs if @music_dirs; # This should always happen
 
-    return @disc_dirs if (@disc_dirs);
-    
-    return $format_dir;
+    # Reaching 'return' means at least one directory should be found.
+    croak ("For some reason, no disc directory could be found.");
+
+    # Old code.
+    # my @disc_dirs = bsd_glob(glob_safe($format_dir)."/CD*/");
+    # # Remove trailing / from directories.
+    # map {chop $_} @disc_dirs;
+    # return @disc_dirs if (@disc_dirs);
+    # return $format_dir;
 }
 
 # Preloaded methods go here.
