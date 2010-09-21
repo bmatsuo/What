@@ -84,20 +84,30 @@ sub find_subdirs {
     return @subdirs;
 }
 
-# Subroutine: find_hierarchy($dir)
+# Subroutine: find_hierarchy($dir [, $find_hidden])
 # Type: INTERFACE SUB
-# Purpose: Find all the files in the hierachy of a given directory
+# Purpose: 
+#   Find all the files in the hierachy of a given directory.
+#   If $find_hidden is given and evaluates true, then hidden files
+#   will be included.
 # Returns: A list of files in $dir that match $pattern.
 #   Directories all always ordered before their contents.
 sub find_hierarchy {
-    my ($dir) = @_;
+    my ($dir, $find_hidden) = @_;
 
     croak("Given non-directory as second argument $dir") if (!-d $dir);
     my @files = bsd_glob(glob_safe($dir)."/*");
+
+    if ($find_hidden) {
+        my @hidden_files = bsd_glob(glob_safe($dir)."/.*");
+        shift @hidden_files; shift @hidden_files;
+        push @files, @hidden_files;
+    }
+
     my @subdirs = grep {-d $_} @files;
     my @nondirs = grep {!-d $_} @files;
 
-    return (@files, (map {find_hierarchy($_)} @subdirs));
+    return (@files, (map {find_hierarchy($_, $find_hidden)} @subdirs));
 }
 
 # Subroutine: search_hierarchy($pattern, $dir)
