@@ -142,7 +142,7 @@ sub main{
     print {$info} $desc;
     close $info;
 
-    if (!$ok_snatch) {
+    if ($ok_snatch) {
         my @mkrelease = ('mkrelease', 
             '--artist', $release->{artist},
             '--title', $release->{title},
@@ -155,11 +155,11 @@ sub main{
     else {
         print {\*STDERR} "Release is in rip dir.";
         if ($bad_tags) {
-            print {\*STDERR} "But it has bad tags.",
+            print {\*STDERR} " But it has bad tags.",
                 " Re-tag it and then run mkrelease.\n";
         }
         else {
-            print {\*STDERR} "But there was a problem...",
+            print {\*STDERR} " But there was a problem...",
                 " Fix it if possible and then run mkrelease.\n";
         }
     }

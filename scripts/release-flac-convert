@@ -296,7 +296,12 @@ sub main{
                 'mp3';
             my $format_dir 
                 = $release->format_dir($whatrc->{upload_root},$format);
-            my $format_disc_dir = "$format_dir/$disc_name";
+            my $flac_root_name = basename( $release->format_dir(
+                                                $whatrc->{upload_root}, 
+                                                'flac'));
+            my $format_disc_dir 
+                = $disc_name eq $flac_root_name ? $format_dir 
+                : "$format_dir/$disc_name";
 
             if (@other_disc_files > 0) {
                 my @cp_other_disc_files 
