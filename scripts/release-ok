@@ -79,7 +79,7 @@ sub main{
         $exitcode = 1;
     }
     if ($opt{'--verbose'}) {
-        print {\*STDERR} "$num_discs discs found.\n":
+        print {\*STDERR} "$num_discs discs found.\n";
     }
 
     my @images = grep {m/\.(?: jpg | tiff | png )\z/xms} @release_files;
@@ -90,6 +90,10 @@ sub main{
     if ($opt{'--verbose'}) {
         print {\*STDERR} scalar(@images)." Images found.\n";
     }
+
+    # Handles for finding discs missing files.
+    my %good_disc;
+    my @bad_discs;
 
     my @log_files = grep {m/\.log\z/xms} @release_files;
     my @discs_w_log;
@@ -110,9 +114,9 @@ sub main{
     }
     if (@discs_w_log < @disc_dirs) {
         my @discs_wo_log = do {
-            my %good = (map {($_ => 1)} @discs_w_log);
-            my @bad = grep {!defined $good{$_}} @disc_dirs;
-            @bad;
+            %good_disc = (map {($_ => 1)} @discs_w_log);
+            @bad_discs = grep {!defined $good_disc{$_}} @disc_dirs;
+            @bad_discs;
         };
         my $num_wo_log = scalar @discs_wo_log;
         print {\*STDERR} 
@@ -138,9 +142,9 @@ sub main{
     }
     if (@discs_w_cue < @disc_dirs) {
         my @discs_wo_cue = do {
-            my %good = (map {($_ => 1)} @discs_w_cue);
-            my @bad = grep {!defined $good{$_}} @disc_dirs;
-            @bad;
+            %good_disc = (map {($_ => 1)} @discs_w_cue);
+            @bad_discs = grep {!defined $good_disc{$_}} @disc_dirs;
+            @bad_discs;
         };
         my $num_wo_cue = scalar @discs_wo_cue;
         print {\*STDERR} 
@@ -155,7 +159,7 @@ sub main{
         my $m3u_disc = dirname($m3u);
         if (!defined $disc_files{$m3u_disc}) {
             print {\*STDERR} "warning:",
-                "M3U found in directory w/o FLAC files; $cue\n";
+                "M3U found in directory w/o FLAC files; $m3u\n";
             # For now, this is not considered an error.
             # You might want to put multiple discs into an extra m3u.
             # $exitcode = 1;
@@ -168,9 +172,9 @@ sub main{
     if (@discs_w_m3u < @disc_dirs) {
         # This isn't actually a big deal; mkm3u will find and make.
         # my @discs_wo_m3u = do {
-        #     my %good = (map {($_ => 1)} @discs_w_m3u);
-        #     my @bad = grep {!defined $good{$_}} @disc_dirs;
-        #     @bad;
+        #     %good_discs = (map {($_ => 1)} @discs_w_m3u);
+        #     @bad_discs = grep {!defined $good_disc{$_}} @disc_dirs;
+        #     @bad_discs;
         # };
         # my $num_wo_m3u = scalar @discs_wo_m3u;
         # print {\*STDERR} 

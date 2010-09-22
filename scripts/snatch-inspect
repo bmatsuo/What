@@ -120,16 +120,16 @@ sub main{
         if (!@shuffled_flacs) { print "All spectrograms viewed.\n"; }
     }
 
-    if (!$tags_are_good){
-        print {\*STDERR} "Bad tag(s) found.\n";
-        # Set the exitcode to 1, encoding a tag error.
-        $exitcode = 1;
-    }
     if (!$spectrals_look_ok) {
         print {\*STDERR} "Bad spectrogram(s) founds.\n";
         # Set exitcode to 2, encoding suspicious spectals; 
         #   and overriding any bad tag error.
-        $exitcode = 2;
+        exit(2);
+    }
+    if (!$tags_are_good){
+        print {\*STDERR} "Bad tag(s) found.\n";
+        # Set the exitcode to 1, encoding a tag error.
+        exit(1);
     }
 
     exit($exitcode);
