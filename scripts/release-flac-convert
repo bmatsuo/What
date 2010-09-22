@@ -286,6 +286,9 @@ sub main{
                 "wtf?! multiple M3Us found; $flac_m3u and @flac_m3us\n";
             print {\*STDERR} "skipping @flac_m3us\n";
         }
+        if (!defined $flac_m3u) {
+            die "No m3u found in FLAC disc directory; $disc_dir\n";
+        }
         @other_disc_files 
             = grep {$_ !~ m/\.(?: flac | m3u )\z/xms} @other_disc_files;
         my $disc_name = basename($disc_dir);

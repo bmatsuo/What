@@ -20,6 +20,7 @@ use Readonly;
 
 # Include private modules.
 use What;
+use What::Utils;
 use What::WhatRC;
 use What::Release;
 use What::Subsystem;
@@ -150,6 +151,11 @@ sub main{
         $subsystem->exec(@check_release) == 0 or die;
         # Create any necessary m3u files.
         $subsystem->exec(@mkm3u) == 0 or die;
+        my @m3us = find_file_pattern("*.m3u",$whatrc->{rip_dir});
+        for my $m3u (@m3us) {
+            push @release_files, $m3u 
+                if index ($m3u, @release_files) == -1;
+        }
     }
 
     # Create the release directory structure.
