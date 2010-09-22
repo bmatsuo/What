@@ -68,9 +68,19 @@ sub main{
         year => $opt{'--year'},
     );
 
+    my %format_needs_wav = (
+        v0 => 1,
+        v2 => 1,
+        320 => 1,
+        aac => 1,
+        ogg => 0,);
     my @desired_formats 
         = map {$opt{"--$_"} ? $_ : () } 
             qw{v0 v2 320 ogg aac};
+    my $should_create_wav
+        = scalar 
+            (map {$format_needs_wav{$_} ? ($_) : ()} @desired_formats);
+
 
     my %converted_to;
     for my $format (@desired_formats) { $converted_to{$format} = {} }
@@ -161,17 +171,20 @@ sub main{
         my $aac = $flac;
         $aac =~ s/ \.flac \z/.m4a/xms;
 
-        # Create the call to the flac command.
-        my @flac_cmd = flac_command($flac_path, $temp_wav_dest_dir);
-
         print "Converting $flac...";
 
-        # Attempt to execute the flac command.
-        subsystem(@flac_cmd) == 0
-            or syserr(
-                error=>"Couldn't convert $flac_path to $wav_path\n$?");
+        if ($should_create_wav) {
 
-        print "WAVE...";
+            # Create the call to the flac command.
+            my @flac_cmd = flac_command($flac_path, $temp_wav_dest_dir);
+
+            # Attempt to execute the flac command.
+            subsystem(@flac_cmd) == 0
+                or syserr( error=> "Couldn't convert:\n"
+                                    . "\t$flac_path->$wav_path\n$?");
+
+            print "WAVE...";
+        }
 
         # Convert the decoded WAVE into all desired formats.
         for my $format (@desired_formats) {
@@ -185,6 +198,11 @@ sub main{
                 : $format eq 'aac' ? "/$aac"
                 : "/$mp3"; # $format eq 'aac'
             if ($format eq 'aac') {
+                if (!$should_create_wav) {
+                    print {\*STDERR} 
+                        "Logical error: didn't create WAVE.\n";
+                    exit(1);
+                }
                 my @faac_cmd = faac_command(
                     input => $wav_path,
                     output => $dest,
@@ -204,6 +222,11 @@ sub main{
                             ."$?");
             }
             else { # Converting to MP3 format.
+                if (!$should_create_wav) {
+                    print {\*STDERR} 
+                        "Logical error: didn't create WAVE.\n";
+                    exit(1);
+                }
                 my @lame_cmd = lame_command(
                     wav => $wav_path,
                     mp3 => $dest,
@@ -219,15 +242,17 @@ sub main{
             print "$uc_format...";
         }
 
-        print "DONE\n",
-            "Removing WAVE...";
-
-        # Remove the WAVE path.
-        subsystem('rm', $wav_path) == 0
-            or syserr(
-                error=>"Couldn't remove temporary file $wav_path\n$?");
-
         print "DONE\n";
+        if ($should_create_wav) { # Then we should destroy the wav.
+            print "Removing WAVE...";
+
+            # Remove the WAVE path.
+            subsystem('rm', $wav_path) == 0
+                or syserr( error => "Couldn't remove temporary file;\n"
+                                    . "$wav_path\n$?");
+
+            print "DONE\n";
+        }
     }
 
     my @other_files = other_files_in($flac_source_dir);
