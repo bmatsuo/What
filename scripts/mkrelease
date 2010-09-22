@@ -154,7 +154,7 @@ sub main{
         my @m3us = find_file_pattern("*.m3u",$whatrc->{rip_dir});
         for my $m3u (@m3us) {
             push @release_files, $m3u 
-                if index ($m3u, @release_files) == -1;
+                if grep {$_ eq $m3u} @release_files;
         }
     }
 
