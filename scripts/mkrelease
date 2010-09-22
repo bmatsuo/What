@@ -92,6 +92,11 @@ sub main{
     my $flac_dir = $release->format_dir($up_root, 'FLAC');
 
     my @release_files = bsd_glob("$rip_dir/*");
+    my @existing_m3us = grep {$_ =~ m/\.m3u\z/xms} @release_files;
+    my $root_has_m3u = @existing_m3us > 0;
+    if (!$root_has_m3u) {
+        print "No M3U found @existing_m3us\n";
+    }
 
     my $file_is_info = sub {$_[0] =~ m/Info\.txt\z/xms};
 
@@ -110,55 +115,32 @@ sub main{
         dryrun => $opt{'--dry-run'},
         verbose => $opt{'--verbose'},);
 
-    my @check_release = ('release-ok', 
-        ($opt{'--verbose'} ? '--verbose' : ()));
+    # Check the release and make any necessary M3U files.
+    if (!$opt{'--bandcamp'}) {
+        # The release must be in the rip_dir. So check it.
+        my @check_release = ('release-ok', 
+            ($opt{'--verbose'} ? '--verbose' : ()));
+        $subsystem->exec(@check_release) == 0 or die;
 
-    my @mkm3u = ('release-mkm3u', 
-        '--artist', $opt{'--artist'},
-        '--title', $opt{'--title'},
-        '--year', $opt{'--year'},);
+        # Create any necessary m3u files.
+        my @mkm3u = ('release-mkm3u', 
+            '--artist', $opt{'--artist'},
+            '--title', $opt{'--title'},
+            '--year', $opt{'--year'},);
+        $subsystem->exec(@mkm3u) == 0 or die;
 
+        # Add any created M3U files to the set of release files.
+        my @m3us = find_file_pattern("*.m3u",$whatrc->{rip_dir});
+        push @release_files, @m3us if !$root_has_m3u;
+    }
+
+    # Create the release directory structure.
     my @scaffold = ('release-scaffold', 
         '--artist', $opt{'--artist'},
         '--title', $opt{'--title'},
         '--year', $opt{'--year'},
         ($opt{'--verbose'} ? '--verbose' : ()),
         ($opt{'--dry-run'} ? '--dry-run' : (),));
-
-    my @move_release = ('mv', @release_files, $flac_dir);
-
-    my @move_info 
-        = ('mv', $info[0], $release->dir($up_root));
-
-    my @convert = ('release-flac-convert', 
-        '--artist', $opt{'--artist'},
-        '--title', $opt{'--title'},
-        '--year', $opt{'--year'},
-        (grep {$opt{$_}} qw{--v0 --v2 --320 --ogg --aac}),
-        ($opt{'--verbose'} ? '--verbose' : ()),
-        ($opt{'--dry-run'} ? '--dry-run' : ()),);
-
-    my @mktorrent = ('release-mktorrent', 
-        '--artist', $opt{'--artist'},
-        '--title', $opt{'--title'},
-        '--year', $opt{'--year'},
-        (grep {$opt{$_}} qw{--flac --v0 --v2 --320 --ogg --aac}),
-        ($opt{'--verbose'} ? '--verbose' : ()),
-        ($opt{'--dry-run'} ? '--dry-run' : ()));
-
-    if (!$opt{'--bandcamp'}) {
-        # The release must be in the rip_dir. So check it.
-        $subsystem->exec(@check_release) == 0 or die;
-        # Create any necessary m3u files.
-        $subsystem->exec(@mkm3u) == 0 or die;
-        my @m3us = find_file_pattern("*.m3u",$whatrc->{rip_dir});
-        for my $m3u (@m3us) {
-            push @release_files, $m3u 
-                if grep {$_ eq $m3u} @release_files;
-        }
-    }
-
-    # Create the release directory structure.
     $subsystem->exec(@scaffold ) == 0 or die;
 
     if ($opt{'--bandcamp'}) {
@@ -218,13 +200,32 @@ sub main{
         }
     }
     else { # This is a rip, not bandcamp.
+        my @move_release = ('mv', @release_files, $flac_dir);
         $subsystem->exec(@move_release) == 0 or die;
+
+        my @move_info 
+            = ('mv', $info[0], $release->dir($up_root));
         $subsystem->exec(@move_info) == 0 or die;
+
         if ($user_wants_a_conversion) {
+            my @convert = ('release-flac-convert', 
+                '--artist', $opt{'--artist'},
+                '--title', $opt{'--title'},
+                '--year', $opt{'--year'},
+                (grep {$opt{$_}} qw{--v0 --v2 --320 --ogg --aac}),
+                ($opt{'--verbose'} ? '--verbose' : ()),
+                ($opt{'--dry-run'} ? '--dry-run' : ()),);
             $subsystem->exec(@convert) == 0 or die;
         }
     }
     if ($user_wants_a_format) {
+        my @mktorrent = ('release-mktorrent', 
+            '--artist', $opt{'--artist'},
+            '--title', $opt{'--title'},
+            '--year', $opt{'--year'},
+            (grep {$opt{$_}} qw{--flac --v0 --v2 --320 --ogg --aac}),
+            ($opt{'--verbose'} ? '--verbose' : ()),
+            ($opt{'--dry-run'} ? '--dry-run' : ()));
         $subsystem->exec(@mktorrent ) == 0 or die;
     }
     else {
