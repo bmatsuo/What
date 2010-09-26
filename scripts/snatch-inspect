@@ -92,7 +92,7 @@ sub main{
         my $num_spectrals_viewed = 0;
 
         # Check some random spectrals.
-        while ($want_more_spectrals) {
+        while ($want_more_spectrals and @shuffled_flacs) {
             my $flac = shift @shuffled_flacs;
 
             # Create a spectrogram for $flac.
