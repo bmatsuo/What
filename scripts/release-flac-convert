@@ -29,6 +29,7 @@ use Exception::Class (
 use What::Utils;
 use What::WhatRC;
 use What::Release;
+use What::Subsystem;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -87,6 +88,7 @@ sub main{
     my %dest_for;
 
     my $whatrc = read_whatrc("$ENV{'HOME'}/.whatrc");
+    my $subsystem = What::Subsystem->new();
 
     my $release_root_name = $release->name();
 
@@ -120,7 +122,7 @@ sub main{
         my $format_dest_dir 
             = $release->format_dir($whatrc->{upload_root},$format);
         if (!-d $format_dest_dir) {
-            subsystem ('mkdir', $format_dest_dir) == 0
+            $subsystem->exec('mkdir', $format_dest_dir) == 0
                 or syserr(
                     error=>
                         "Couldn't create directory $format_dest_dir\n$?");
@@ -138,7 +140,7 @@ sub main{
                 my $disc_name = basename($disc_dir);
                 my $format_disc_dir = "$format_dest_dir/$disc_name";
                 if (!-d $format_disc_dir) {
-                    subsystem ('mkdir', $format_disc_dir) == 0
+                    $subsystem->exec('mkdir', $format_disc_dir) == 0
                         or syserr(
                             error=> "Couldn't create disc directory"
                                 ."$format_disc_dir\n$?");
@@ -179,7 +181,7 @@ sub main{
             my @flac_cmd = flac_command($flac_path, $temp_wav_dest_dir);
 
             # Attempt to execute the flac command.
-            subsystem(@flac_cmd) == 0
+            $subsystem->exec(@flac_cmd) == 0
                 or syserr( error=> "Couldn't convert:\n"
                                     . "\t$flac_path->$wav_path\n$?");
 
@@ -207,7 +209,7 @@ sub main{
                     input => $wav_path,
                     output => $dest,
                     info => $flac_info{$flac_path},);
-                subsystem(@faac_cmd) == 0
+                $subsystem->exec(@faac_cmd) == 0
                     or syserr(
                         error=> "Couldn't convert $flac_path to $dest\n"
                             ."$?");
@@ -216,7 +218,7 @@ sub main{
                 my @oggenc_cmd = oggenc_cmd(
                     input => $flac_path,
                     output => $dest,);
-                subsystem(@oggenc_cmd) == 0
+                $subsystem->exec(@oggenc_cmd) == 0
                     or syserr(
                         error=> "Couldn't convert $flac_path to $dest\n"
                             ."$?");
@@ -233,7 +235,7 @@ sub main{
                     bitrate => $format,
                     flac_info => $flac_info{$flac_path},);
                 # Execute lame command.
-                subsystem(@lame_cmd) == 0
+                $subsystem->exec(@lame_cmd) == 0
                     or syserr(
                         error=> "Couldn't convert $flac_path to $dest\n"
                             ."$?");
@@ -247,7 +249,7 @@ sub main{
             print "Removing WAVE...";
 
             # Remove the WAVE path.
-            subsystem('rm', $wav_path) == 0
+            $subsystem->exec('rm', $wav_path) == 0
                 or syserr( error => "Couldn't remove temporary file;\n"
                                     . "$wav_path\n$?");
 
@@ -266,7 +268,7 @@ sub main{
             my $format_dest_dir = $dest_for{$format};
             my @cp_others_cmd 
                 = ('cp', '-r', @other_files, $format_dest_dir);
-            subsystem(@cp_others_cmd) == 0
+            $subsystem->exec(@cp_others_cmd) == 0
                 or syserr(
                     error=>
                         join ("\n",
@@ -309,7 +311,7 @@ sub main{
             if (@other_disc_files > 0) {
                 my @cp_other_disc_files 
                     = ('cp', @other_disc_files, $format_disc_dir);
-                if (subsystem(@cp_other_disc_files) != 0) {
+                if ($subsystem->exec(@cp_other_disc_files) != 0) {
                     my @files = map {basename($_)} @other_disc_files;
                     my @err 
                         = ("Couldn't copy files to $format_disc_dir", 
@@ -366,21 +368,6 @@ sub lame_description {
         "LAME options: @opts", q{};
 
     return $desc;
-}
-
-# Subroutine: subsystem(@cmd)
-# Type: INTERFACE SUB
-# Purpose: 
-#   Print the command if either --dry-run or --verbose is specied.
-#   Run a system command, only if --dry-run is not specified.
-# Returns: 
-#   The exit code of the system command.
-sub subsystem {
-    print "@_\n"
-        if $opt{'--dry-run'} or $opt{'--verbose'};
-    return system @_
-        if not defined $opt{'--dry-run'};
-    return 0;
 }
 
 # Subroutine: flac_options($flac_file, $wav_dest)
