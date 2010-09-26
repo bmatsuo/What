@@ -136,16 +136,14 @@ album-scaffold [options]
 Release artist
 
 for Euclid:
-    artist.type: -z artist
-    artist.default: 'artist'
+    artist.type: string, -z artist
 
 =item --title [=] <title>
 
 Release name
 
 for Euclid:
-    title.type: -z album
-    title.default: 'album'
+    title.type: string, -z album
 
 =item --year [=] <year>
 

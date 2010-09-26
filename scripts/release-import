@@ -205,12 +205,12 @@ release-import [options]
 Release artist.
 
 =for Euclid:
-    artist.type: -z artist
+    artist.type: string, -z artist
 
 =item --title <title>
 
 =for Euclid:
-    title.type: -z title 
+    title.type: string, -z title 
 
 Release title.
 
