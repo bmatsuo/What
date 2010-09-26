@@ -184,27 +184,33 @@ Release year.
 
 =item --v0 | --V0
 
-Make torrent for V0 bitrate MP3s.
+Create an MP3 V0 VBR torrent.
 
 =item --v2 | --V2
 
-Make torrent for V2 bitrate MP3s.
+Create an MP3 V2 VBR torrent.
 
 =item --320
 
-Make torrent for 320kbps CBR MP3s.
+Create an MP3 320kbps CBR torrent.
 
 =item --flac | --FLAC
 
-Make torrent for FLAC files.
+Create a FLAC torrent.
+FLAC files will be stored in the upload hierachy 
+regardless of this option.
 
-=item --ogg | --q8
+=item --ogg | --OGG | --q8
 
-Make torrent for OGG files.
+Create an OGG -q8.0 VBR torrent.
 
-=item --aac
+=item --aac | --AAC
 
-Make torrent for AAC files.
+Create an AAC ~256kbps ABR torrent.
+
+=item --all
+
+Create torrents for all present formats and bitrates (not working yet).
 
 =item --dry-run
 

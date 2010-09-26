@@ -310,13 +310,18 @@ Create a FLAC torrent.
 FLAC files will be stored in the upload hierachy 
 regardless of this option.
 
-=item --ogg | --q8
+=item --ogg | --OGG | --q8
 
 Create an OGG -q8.0 VBR torrent.
 
-=item --aac
+=item --aac | --AAC
 
 Create an AAC ~256kbps ABR torrent.
+
+=item --all
+
+Create torrents for all possible formats and bitrates (not working yet).
+Also not a recommended thing to do in general (no multi-threading yet).
 
 =item --bandcamp
 

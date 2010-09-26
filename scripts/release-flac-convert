@@ -891,27 +891,27 @@ Release year.
 
 =item --v0 | --V0
 
-Produce an MP3 release set with quality setting -v0.
+Convert FLAC release to an MP3 V0 VBR release.
 
 =item --v2 | --V2
 
-Produce an MP3 release set with quality setting -v2.
+Convert FLAC release to an MP3 V2 VBR release.
 
-=item --320 | --cbr
+=item --320
 
-Produce an MP3 release set with a constant bitrate of 320kbps.
+Convert FLAC release to an MP3 320kbps CBR release.
 
-=item --ogg | --q8
+=item --ogg | --OGG | --q8
 
-Produce an OGG release set with quality setting of 8.0.
+Convert FLAC release to an OGG -q8.0 VBR release.
 
-=item --aac
+=item --aac | --AAC
 
-Produce an AAC release set with bitrate of 320kbps.
+Convert FLAC release to an AAC ~256kbps ABR release.
 
 =item --all
 
-Produce all possible bitrates of MP3 files.
+Produce releases in all possible formats and bitrates (not recommended).
 
 =item --force-flac | -f
 
