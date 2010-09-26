@@ -59,29 +59,29 @@ sub main{
         year => $opt{'--year'},);
 
     my $user_wants_a_conversion
-        = $opt{'--v0'} || $opt{'--v2'} || $opt{'--320'} 
-        || $opt{'--ogg'} || $opt{'--aac'};
+    = $opt{'--v0'} || $opt{'--v2'} || $opt{'--320'} 
+    || $opt{'--ogg'} || $opt{'--aac'};
 
     my $user_wants_a_format 
-        = $user_wants_a_conversion || $opt{'--flac'};
+    = $user_wants_a_conversion || $opt{'--flac'};
 
     if (!$user_wants_a_format) {
         print {\*STDERR} "No formats selected to release. ",
-            "FLAC will be moved into hierarchy with no torrents made.\n";
+        "FLAC will be moved into hierarchy with no torrents made.\n";
     }
 
     my ($artist, $year, $title)
-        = map {$opt{$_}} qw{--artist --year --title};
+    = map {$opt{$_}} qw{--artist --year --title};
 
     if ($artist =~ $illegal_chars) {
         print {\*STDERR} 
-            "Illegal character $1 in artist '$artist'.\n";
+        "Illegal character $1 in artist '$artist'.\n";
         $exitcode = 1;
     }
 
     if ($title =~ $illegal_chars) {
         print {\*STDERR} 
-            "Illegal character $1 in title '$title'.\n";
+        "Illegal character $1 in title '$title'.\n";
         $exitcode = 1;
     }
 
@@ -101,8 +101,8 @@ sub main{
     my $file_is_info = sub {$_[0] =~ m/Info\.txt\z/xms};
 
     my @info 
-        = defined $opt{'--bandcamp'} ? ("") 
-        : grep {$file_is_info->($_)} @release_files;
+    = defined $opt{'--bandcamp'} ? ("") 
+    : grep {$file_is_info->($_)} @release_files;
 
     if (!@info) {
         print {\*STDERR} "Can't find Info.txt.\n";
@@ -152,20 +152,20 @@ sub main{
         $album_url_path =~ s/[^a-zA-Z0-9]+/-/gxms;
         $album_url_path =~ s/ -+ \z//xms;
         my $album_url 
-            = join "/", "http://$artist_subdomain.bandcamp.com",
-                "album", $album_url_path;
+        = join "/", "http://$artist_subdomain.bandcamp.com",
+        "album", $album_url_path;
         my $album_html = get($album_url) 
             or die("Can't fetch $album_url."
-                ." Please report this if it's a non-user error.");
+            ." Please report this if it's a non-user error.");
         # Regexp to find the album id in html.
         my $album_id_p = qr{<!-- \s album \s id \s (\d+) \s -->}xms;
         if ($album_html =~ $album_id_p) {
             # Consturct a base url for requests
             my $album_id = $1;
             my $base_request_url 
-                = join '/', 
-                    "http://popplers5.bandcamp.com", 
-                    "download", "album";
+            = join '/', 
+            "http://popplers5.bandcamp.com", 
+            "download", "album";
 
             # TODO: Create a request, download and unzip for each format.
             REQUESTFORMAT:
@@ -175,9 +175,9 @@ sub main{
                 my $format_dir = $release->format_dir($up_root, $format);
                 my $format_zip = $format_dir.".zip";
                 my $enc_format = $format eq 'flac' ? $format
-                    : "mp3-$format";
+                : "mp3-$format";
                 my $request_arg_string 
-                    = "enc=$enc_format&id=$album_id";
+                = "enc=$enc_format&id=$album_id";
                 my $request = "$base_request_url?$request_arg_string";
                 print $request, "\n";
                 my @fetch = ('curl', $request, '-o', $format_zip);
@@ -189,7 +189,7 @@ sub main{
                     $subsystem->exec(@mk_format_dir) == 0 or die;
                 }
                 my @unzip_format 
-                    = ('unzip','-d', $format_dir, $format_zip);
+                = ('unzip','-d', $format_dir, $format_zip);
                 $subsystem->exec(@unzip_format) == 0 or die;
                 my @rm_zip = ('rm', $format_zip);
                 $subsystem->exec(@rm_zip) == 0 or die;
@@ -204,7 +204,7 @@ sub main{
         $subsystem->exec(@move_release) == 0 or die;
 
         my @move_info 
-            = ('mv', $info[0], $release->dir($up_root));
+        = ('mv', $info[0], $release->dir($up_root));
         $subsystem->exec(@move_info) == 0 or die;
 
         if ($user_wants_a_conversion) {
@@ -230,8 +230,8 @@ sub main{
     }
     else {
         print {\*STDERR} "Release is ready.\n",
-            "Use release-flac-convert / release-mktorrent ",
-            "to upload the release.\n";
+        "Use release-flac-convert / release-mktorrent ",
+        "to upload the release.\n";
     }
 
     exit($exitcode);
@@ -270,12 +270,12 @@ mkrelease [options]
 Release artist.
 
 =for Euclid:
-    artist.type: string, -z artist
+    artist.type: string, length artist
 
 =item --title <title>
 
 =for Euclid:
-    title.type: string, -z title 
+    title.type: string, length title
 
 Release title.
 
