@@ -172,6 +172,26 @@ sub create_directory {
 }
 
 
+# Subroutine: 
+#   get_arg_hash(\%arg_ref)
+#   get_arg_hash(%arg)
+# Type: INTERFACE SUB
+# Purpose:
+#   Allow passing arg lists as hashs or hash refs.
+# Example:
+#   sub foo { my %arg = get_arg_hash(@_); print $arg{bar}; }
+#   ...
+#   foo(bar=>3); # prints "3"
+#   foo({bar => 3}); # prints "3"
+# Returns: 
+#   A hash (even length list)
+sub get_arg_hash {
+    return if scalar @_ == 0;
+    my $elm = $_[0];
+    return %{$elm} if (ref $elm);
+    return @_;
+}
+
 # Subroutine: merge_structure($skeleton, $body)
 # Type: INTERFACE SUB
 # Purpose: 

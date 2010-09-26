@@ -35,6 +35,10 @@ lib/What/Discogs/Release.pm
 lib/What/Discogs/Label.pm
 lib/What/Discogs/Search.pm
 lib/What/Discogs/Query.pm
+lib/What/Converter/Base.pm
+lib/What/Converter/MP3.pm
+lib/What/Converter/OGG.pm
+lib/What/Converter/AAC.pm
 scripts/snatch-inspect
 scripts/release-import
 scripts/release-scaffold
