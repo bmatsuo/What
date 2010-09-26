@@ -269,7 +269,13 @@ mkrelease [options]
 
 Release artist.
 
+=for Euclid:
+    artist.type: -z artist
+
 =item --title <title>
+
+=for Euclid:
+    title.type: -z title 
 
 Release title.
 
@@ -288,28 +294,46 @@ Release year.
 
 =item --v0 | --V0
 
+Create an MP3 V0 VBR torrent.
+
 =item --v2 | --V2
+
+Create an MP3 V2 VBR torrent.
 
 =item --320
 
+Create an MP3 320kbps CBR torrent.
+
 =item --flac | --FLAC
+
+Create a FLAC torrent.
+FLAC files will be stored in the upload hierachy 
+regardless of this option.
 
 =item --ogg | --q8
 
+Create an OGG -q8.0 VBR torrent.
+
 =item --aac
 
-=item --num-discs <num_discs>
-
-=for Euclid:
-    num_discs.type: +integer
+Create an AAC ~256kbps ABR torrent.
 
 =item --bandcamp
+
+THIS OPTION IS BROKEN FOR THE TIME BEING!
 
 Release is on bandcamp, and should be fetched.
 
 =item --dry-run
 
+Do not execute any system commands. This is mostly for debugging.
+Used with the --verbose option, 
+it can give a user a better idea of what will happen to their files.
+
 =item --verbose
+
+Print extra information about interior workings, 
+and print system commands to stdout before executing them.
 
 =item --version
 

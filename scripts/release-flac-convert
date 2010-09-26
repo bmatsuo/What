@@ -862,18 +862,27 @@ convert-flac-release [options]
 
 =over
 
-=item --artist [=] <artist>
+=item --artist <artist>
 
 Release artist.
 
-=item --title [=] <title>
+=for Euclid:
+    artist.type: -z artist
+
+=item --title <title>
+
+=for Euclid:
+    title.type: -z title 
 
 Release title.
 
-=item --year [=] <year>
+=item --year <year>
 
 Release year.
-    
+
+=for Euclid:
+    year.type: /\d{4}/
+
 =back
 
 =head1 OPTIONS

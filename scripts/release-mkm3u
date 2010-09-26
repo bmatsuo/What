@@ -120,9 +120,24 @@ release-mkm3u [options]
 
 =item --artist <artist>
 
+Release artist.
+
+=for Euclid:
+    artist.type: -z artist
+
 =item --title <title>
 
+=for Euclid:
+    title.type: -z title 
+
+Release title.
+
 =item --year <year>
+
+Release year.
+
+=for Euclid:
+    year.type: /\d{4}/
 
 =back
 

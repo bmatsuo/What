@@ -200,11 +200,26 @@ release-import [options]
 =for Euclid:
     dlpath.type: readable, -d dlpath
 
-=item --artist [=] <artist>
+=item --artist <artist>
 
-=item --title [=] <title>
+Release artist.
 
-=item --year [=] <year>
+=for Euclid:
+    artist.type: -z artist
+
+=item --title <title>
+
+=for Euclid:
+    title.type: -z title 
+
+Release title.
+
+=item --year <year>
+
+Release year.
+
+=for Euclid:
+    year.type: /\d{4}/
 
 =back
 

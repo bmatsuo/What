@@ -131,34 +131,34 @@ album-scaffold [options]
 
 =over
 
+=item --artist [=] <artist>
+
+Release artist
+
+for Euclid:
+    artist.type: -z artist
+    artist.default: 'artist'
+
+=item --title [=] <title>
+
+Release name
+
+for Euclid:
+    title.type: -z album
+    title.default: 'album'
+
+=item --year [=] <year>
+
+Release year
+
+=for Euclid:
+    year.type: /\d{4}/
+
 =back
 
 =head1 OPTIONS
 
 =over
-
-=item --artist [=] <artist>
-
-Album artist
-
-for Euclid:
-    artist.type: string, -z artist
-    artist.default: 'artist'
-
-=item --title [=] <title>
-
-Album name
-
-for Euclid:
-    title.type: string, -z album
-    title.default: 'album'
-
-=item --year [=] <year>
-
-Album release year
-
-=for Euclid:
-    year.type: /[0-9]{4}/
 
 =item --num-discs [=] <discs>
 

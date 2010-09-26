@@ -108,17 +108,26 @@ convert-art [options]
 
 =over
 
-=item --artist [=] <artist> | -a <artist>
+=item --artist <artist>
 
 Release artist.
 
-=item --title [=] <title> | -r <title>
+=for Euclid:
+    artist.type: -z artist
+
+=item --title <title>
+
+=for Euclid:
+    title.type: -z title 
 
 Release title.
 
-=item --year [=] <year> | -y <year>
+=item --year <year>
 
 Release year.
+
+=for Euclid:
+    year.type: /\d{4}/
 
 =back
 
