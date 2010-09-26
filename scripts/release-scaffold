@@ -19,6 +19,7 @@ use Readonly;
 # Include private modules.
 use What::WhatRC;
 use What::Release;
+use What::Subsystem;
 
 our $VERSION = '0.0_1';
 
@@ -66,27 +67,28 @@ sub main{
     my $artist_path = $release->artist_dir($rip_root);
     my $root_path = $release->dir($rip_root);
     my $flac_dir_path = $release->format_dir($rip_root,'flac');
+    my $subsystem = What::Subsystem->new();
 
     my @mkartist = ('mkdir', $artist_path);
     my @mkroot = ('mkdir', $root_path);
     my @mkflac = ('mkdir', $flac_dir_path);
 
     # Don't check exit code because failure is tolerable
-    subsystem(@mkartist) == 0
+    $subsystem->exec(@mkartist) == 0
         or croak("Couldn't make artist directory $artist_path")
             if !-d $artist_path;
 
-    subsystem(@mkroot) == 0
+    $subsystem->exec(@mkroot) == 0
         or croak("Couldn't make root directory $root_path");
 
-    subsystem(@mkflac) == 0
+    $subsystem->exec(@mkflac) == 0
         or croak("Couldn't make FLAC directory $flac_dir_path");
 
     if ($num_discs > 1) {
         for my $disc (1 .. $num_discs) {
             my $disc_dir = "$flac_dir_path/CD$disc";
             my @mkdisc = ('mkdir', $disc_dir);
-            subsystem(@mkdisc) == 0
+            $subsystem->exec(@mkdisc) == 0
                 or croak("Couldn't make CD$disc directory.");
         }
     }
@@ -97,16 +99,6 @@ sub main{
 ########################################################################
 # SUPPORTING SUBROUTINES
 ########################################################################
-
-sub subsystem {
-    if ($opt{'--verbose'} or $opt{'--dry-run'}) {
-        print "@_\n"
-    }
-    if (not $opt{'--dry-run'}) {
-        return system @_;
-    }
-    return 0;
-}
 
 # Finally, kickstart the script
 main();
