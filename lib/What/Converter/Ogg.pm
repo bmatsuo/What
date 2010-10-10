@@ -43,7 +43,7 @@ sub program_description { return `oggenc --version`; }
 # Type: INSTANCE METHOD
 # Returns: 
 #   A list of command line options used that control quality (bitrate).
-sub audio_quality_options { return (); }
+sub audio_quality_options { return ('-q', '8'); }
 
 # Subroutine: $converter->tag_options(flac => $flac_path)
 # Type: INSTANCE METHOD
@@ -62,7 +62,14 @@ sub tag_options { return (); }
 #   so they can go here.
 # Returns: 
 #   A list of other command line options used in converting.
-sub options { return (); }
+sub other_options { 
+    my %arg = @_;
+    my $output = $arg{output};
+    if (!defined $output) {
+        croak(".ogg output path not specified.");
+    }
+    return ('-Q', '-o', $output); 
+}
 
 1;
 __END__
