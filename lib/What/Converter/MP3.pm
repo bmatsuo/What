@@ -7,6 +7,7 @@ use Carp;
 use File::Basename;
 use What::Utils;
 use What::Subsystem;
+use What::Format;
 
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
@@ -22,6 +23,19 @@ our $VERSION = '0.0_1';
 
 use Moose;
 extends 'What::Converter::base';
+
+has 'bitrate' => (isa => 'Str', is => 'rw', required => 1);
+
+# Subroutine: is_valid_bitrate($bitrate)
+# Type: INTERNAL UTILITY
+# Purpose: Determine if a given bitrate is valid (320, V0, or V2).
+# Returns: A true context if the given bitrate string is valid. False otherwise.
+sub is_valid_bitrate {
+    my $self = shift;
+    my $bitrate = shift;
+    return 1 if (format_extension($bitrate) eq 'mp3');
+    return;
+}
 
 # Subroutine: $converter->needs_wav()
 # Type: INSTANCE METHOD

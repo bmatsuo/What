@@ -63,6 +63,7 @@ sub tag_options { return (); }
 # Returns: 
 #   A list of other command line options used in converting.
 sub other_options { 
+    my $self = shift;
     my %arg = @_;
     my $output = $arg{output};
     if (!defined $output) {

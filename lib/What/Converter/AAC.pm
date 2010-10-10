@@ -1,4 +1,4 @@
-package What::Converter::Ogg;
+package What::Converter::AAC;
 
 use 5.008009;
 use strict;
@@ -43,7 +43,7 @@ sub program_description { return `faac --help | head -n 2 | tail -n 1`; }
 # Type: INSTANCE METHOD
 # Returns: 
 #   A list of command line options used that control quality (bitrate).
-sub audio_quality_options { return (); }
+sub audio_quality_options { return qw{-c 22050 -b 256}; }
 
 # Subroutine: $converter->tag_options(flac => $flac_path)
 # Type: INSTANCE METHOD
@@ -62,7 +62,15 @@ sub tag_options { return (); }
 #   so they can go here.
 # Returns: 
 #   A list of other command line options used in converting.
-sub other_options { return (); }
+sub other_options { 
+    my $self = shift;
+    my %arg = @_;
+    my $output = $arg{output};
+    if (!defined $output) {
+        croak(".m4a output path not specified.");
+    }
+    return ('-w', '-o', $arg{output}); 
+}
 
 1;
 __END__

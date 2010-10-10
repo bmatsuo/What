@@ -62,7 +62,7 @@ sub tag_options { return (); }
 #   so they can go here.
 # Returns: 
 #   A list of other command line options used in converting.
-sub other_options { return ('-d'); }
+sub other_options { return ('--decode', '--silent'); }
 
 1;
 __END__

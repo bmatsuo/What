@@ -415,6 +415,7 @@ sub faac_bitrate_options {
 # Returns: 
 #   Return general setting the AAC files.
 sub faac_other_options {
+    my $self = shift;
     my %arg = @_;
     return ('-w', '-o', $arg{output});
 }
