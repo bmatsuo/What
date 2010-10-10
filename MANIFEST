@@ -37,8 +37,9 @@ lib/What/Discogs/Search.pm
 lib/What/Discogs/Query.pm
 lib/What/Converter/Base.pm
 lib/What/Converter/MP3.pm
-lib/What/Converter/OGG.pm
+lib/What/Converter/Ogg.pm
 lib/What/Converter/AAC.pm
+lib/What/Converter/WAVE.pm
 scripts/snatch-inspect
 scripts/release-import
 scripts/release-scaffold

@@ -59,7 +59,7 @@ sub describe {
 # Subroutine: $converter->convert(
 #   flac => $flac_path,
 #   wav => $wav_path,
-#   output => $lossy_path,
+#   output => $output_path,
 # )
 # Type: INSTANCE METHOD
 # Purpose: 
@@ -108,15 +108,15 @@ sub convert {
         dry_run => $self->dry_run(),);
 
     # Destroy the WAVE if necessary.
-    if ($self->needs_wav()) {
-        my $rm_res = subsystem(
-            cmd => ['rm', $wav],
-            verbose => $self->verbose(),
-            dry_run => $self->dry_run(),);
-        if ($rm_res != 0) {
-            croak("Couldn't remove temporary WAVE file; $wav");
-        }
-    }
+    #if ($self->needs_wav()) {
+    #    my $rm_res = subsystem(
+    #        cmd => ['rm', $wav],
+    #        verbose => $self->verbose(),
+    #        dry_run => $self->dry_run(),);
+    #    if ($rm_res != 0) {
+    #        croak("Couldn't remove temporary WAVE file; $wav");
+    #    }
+    #}
     
     # Check that the conversion went smoothly.
     if ($res != 0) {
