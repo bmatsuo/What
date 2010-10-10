@@ -3,21 +3,22 @@ use warnings;
 use Carp;
 use What::Discogs::Discography;
 use What::Discogs::Release;
+use What::XMLLib;
 
 package What::Discogs::Label::Release;
 use Moose;
 extends 'What::Discogs::Release::Reference::Base';
 
-has 'catno' => ('isa' => 'Str', 'is' => 'rw', 'required' => 1);
+has 'catno' => ('isa' => 'Str', 'is' => 'rw', 'required' => 0);
 has 'artist' => ('isa' => 'Str', 'is' => 'rw', 'required' => 1);
 
-package Label;
+package What::Discogs::Label;
 use Moose;
 extends 'What::Discogs::Discography';
 
-has 'parent_label' => (isa => 'Str', is => 'rw', 'required' => 0);
+has 'parent' => (isa => 'Str', is => 'rw', 'required' => 0);
 has 'sublabels' => (isa => 'Str', is => 'rw', 'required' => 0);
-has 'contact_info' => (isa => 'Str', is => 'rw', 'required' => 0);
+has 'contact' => (isa => 'Str', is => 'rw', 'required' => 0);
 has 'profile' => (isa => 'Str', is => 'rw', 'required' => 0);
 has 'releases' 
     => (isa => 'ArrayRef[What::Discogs::Label::Release]', 'is' => 'rw', 'required' => 0,

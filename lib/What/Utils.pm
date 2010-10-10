@@ -27,6 +27,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
+    format_args
     glob_safe
     find_file_pattern
     find_hierarchy
@@ -148,6 +149,16 @@ sub glob_safe {
     $str =~ s/(\[|\]|\\|[{}*?])/\\$1/gxms;
 
     return $str;
+}
+
+sub format_args {
+    my %arg_val = @_;
+
+    for (values %arg_val) { $_ =~ s/\s+/+/xms }
+
+    my $arg_string = join "&", map {"$_=$arg_val{$_}"} keys %arg_val;
+
+    return $arg_string;
 }
 
 # Preloaded methods go here.

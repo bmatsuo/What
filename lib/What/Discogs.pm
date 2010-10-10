@@ -4,6 +4,12 @@ use 5.008009;
 use strict;
 use warnings;
 use Carp;
+use LWP::UserAgent;
+use What::Discogs::Artist;
+use What::Discogs::Label;
+use What::Discogs::Query;
+use What::Discogs::Release;
+use What::Discogs::Search;
 
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
@@ -21,13 +27,100 @@ our %EXPORT_TAGS = ( 'all' => [ qw() ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-our @EXPORT = qw();
+our @EXPORT = qw(
+    get_release
+    get_artist
+    get_label
+    search
+);
 
 our $VERSION = '0.00_01';
 
-# Preloaded methods go here.
+my $agent = LWP::UserAgent->new(agent => 'Mozilla/5.0');
 
-# Autoload methods go after =cut, and are processed by the autosplit program.
+# Subroutine: get_artist(
+#   name => $artist_name,
+#   api => $api_key,
+# )
+# Type: INTERFACE SUB
+# Purpose: Fetch and parse a Discogs artist page.
+# Returns: 
+#   A What::Discogs::Artist object for the artist if the page is found.
+#   Returns undef if the page is not found.
+sub get_artist {
+    my %arg = @_;
+    my $name = $arg{name};
+    my $api = $arg{api};
+
+    my $q = What::Discogs::Query::Artist->new(
+        name => $name,
+        api => $api,);
+
+    return $q->artist();
+}
+
+# Subroutine: get_release(
+#   id => $release_id,
+#   api => $api_key,
+# )
+# Type: INTERFACE SUB
+# Purpose: Fetch and parse a Discogs release page.
+# Returns: 
+#   A What::Discogs::Release object for the release if the page is found.
+#   Returns undef if the page is not found.
+sub get_release {
+    my %arg = @_;
+    my $id = $arg{id};
+    my $api = $arg{api};
+
+    my $q = What::Discogs::Query::Release->new(
+        id => $id,
+        api => $api,);
+
+    return $q->release();
+}
+
+# Subroutine: get_label(
+#   name => $label_name,
+#   api => $api_key,
+# )
+# Type: INTERFACE SUB
+# Purpose: Fetch and parse a Discogs label page.
+# Returns: 
+#   A What::Discogs::Label object for the label if the page is found.
+#   Returns undef if the page is not found.
+sub get_label {
+    my %arg = @_;
+    my $name = $arg{name};
+    my $api = $arg{api};
+
+    my $q = What::Discogs::Query::Label->new(
+        name => $name,
+        api => $api,);
+
+    return $q->label();
+}
+
+# Subroutine: search(
+#   qstr => $query_string,
+#   api => $api_key,
+# )
+# Type: INTERFACE SUB
+# Purpose: Fetch and parse a Discogs search results page.
+# Returns: 
+#   A What::Discogs::Search object for the results if the page is found.
+#   Returns undef if the page is not found.
+sub search {
+    my %arg = @_;
+    my $qstr = $arg{qstr};
+    my $api = $arg{api};
+
+    my $q = What::Discogs::Query::Search->new(
+        qstr => $qstr,
+        api => $api,);
+
+    return $q->results();
+}
 
 1;
 __END__

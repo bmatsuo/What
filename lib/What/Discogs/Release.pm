@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use Carp;
+use What::XMLLib;
 
 package What::Discogs::Release::Reference::Base;
 # A base class for objects referring to a Whad::Discogs::Release
@@ -14,7 +15,7 @@ package What::Discogs::Release::Label;
 use Moose;
 
 has 'name' => (isa => 'Str', is => 'rw', 'required' => 1);
-has 'catno' => (isa => 'Str', is => 'rw', 'required' => 1);
+has 'catno' => (isa => 'Str', is => 'rw', 'required' => 0);
 
 package What::Discogs::Release::ExtraArtist::Base;
 use Moose;
@@ -71,6 +72,14 @@ has 'note' => (isa => 'Str', is => 'rw', 'required' => 0);
 has 'tracks' 
     => (isa => 'ArrayRef[What::Discogs::Release::Track]', is => 'rw', 'required' => 0,
         default => sub { [] });
+
+# Subroutine: $release->num_tracks()
+# Type: INSTANCE METHOD
+# Returns: The number of tracks belonging to $release.
+sub num_tracks {
+    my $self = shift;
+    return scalar @{$self->tracks};
+}
 
 1;
 __END__

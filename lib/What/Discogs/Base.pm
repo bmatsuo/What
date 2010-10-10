@@ -2,6 +2,7 @@ package What::Discogs::Base;
 use strict;
 use warnings;
 use Carp;
+use What::XMLLib;
 
 # Private Modules
 use Moose;

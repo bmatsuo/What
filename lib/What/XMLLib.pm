@@ -27,13 +27,17 @@ our @ISA = qw(Exporter);
 # This allows declaration use What::XMLLib ':all';
 # If you do not need this, 
 # moving things directly into @EXPORT or @EXPORT_OK will save memory.
-our %EXPORT_TAGS = ( 'all' => [ qw(
-    get_first_text 
-    get_node_list 
-    get_text_list
+our %EXPORT_TAGS =  ( 'all' => [ qw(
+	
 ) ] );
 
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+our @EXPORT_OK = ( @{$EXPORT_TAGS{all}} );
+
+our @EXPORT = qw{
+    get_first_text
+    get_node_list
+    get_text_list
+};
 
 # Subroutine: get_first_text($tag, $node)
 # Type: INTERFACE SUB

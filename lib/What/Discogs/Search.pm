@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use Carp;
+use What::XMLLib;
 
 package What::Discogs::Search::Result;
 use Moose;
@@ -13,7 +14,7 @@ has 'summary' => ('isa' => 'Str', 'is' => 'rw');
 
 sub dup {
     my $self = shift;
-    return SearchResult->new(
+    return What::Discogs::Search::Result->new(
         number=>$self->number, type=>$self->type, 
         title=>$self->title, uri=>$self->uri, summary=>$self->summary);
 }
@@ -21,9 +22,14 @@ sub dup {
 package What::Discogs::Search::ResultList;
 use Moose;
 
-has 'query' => ('isa' => 'QueryBase', 'is' => 'rw', 'required' => 1);
-has 'results' => ('isa' => 'ArrayRef[What::Discogs::Search::Result]', 
-                    'is' => 'rw', required => 1);
+has 'query' => (
+    'isa' => 'What::Discogs::Query::Base', 
+    'is' => 'rw', 'required' => 1);
+
+has 'results' => (
+    'isa' => 'ArrayRef[What::Discogs::Search::Result]', 
+    'is' => 'rw', required => 1);
+
 has 'num_results' => (isa => 'Int', is => 'rw', required => 1);
 has 'start' => ('isa' => 'Int', 'is' => 'rw', required => 1);
 has 'end' => ('isa' => 'Int', 'is' => 'rw', required => 1);
@@ -52,10 +58,9 @@ sub length {
 sub dup {
     my $self = shift;
     my @duped_results = map {$_->dup} @{$self->results};
-    return SearchResultList->new(
-        query=>$self->query, 
-        start=>$self->start, end=>$self->end, 
-        num_results=> $self->num_results,
+    return What::Discogs::Search::ResultList->new(
+        query=>$self->query, start=>$self->start, end=>$self->end, 
+        num_results=>$self->num_results,
         results=>\@duped_results,
     );
 }
@@ -71,19 +76,23 @@ sub grep {
 
     my $new_list = $self->dup;
 
-    $new_list->query(QueryBase::null_query());
+    $new_list->query(What::Discogs::Query::Base::null_query());
 
     my @matched_results 
         = grep {$sub_should_include->($_)} @{$self->results};
     my $num_matched = scalar @matched_results;
+    my @dupped_matches;
     for my $i (0 .. $num_matched - 1) {
-        $matched_results[$i]->number($i + 1);
+        my $dupped_match = $matched_results[$i]->dup();
+        push @dupped_matches, $dupped_match;
+        $dupped_match->number($i + 1);
     }
 
     $new_list->start(1);
-    $new_list->end($num_matched);
-    $new_list->num_results($num_matched);
-    $new_list->results(\@matched_results);
+    $new_list->end($#dupped_matches + 1);
+    $new_list->num_results($#dupped_matches + 1);
+    $new_list->results(\@dupped_matches);
+
     return $new_list;
 }
 

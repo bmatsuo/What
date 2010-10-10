@@ -1,9 +1,10 @@
 use strict;
 use warnings;
 use Carp;
+use What::XMLLib;
 
 package What::Discogs::Artist::Release;
-use What::Discogs::Release::Reference::Base;
+use What::Discogs::Release;
 use Moose;
 extends 'What::Discogs::Release::Reference::Base';
 
@@ -12,6 +13,25 @@ has 'type' => ('isa' => 'Str', 'is' => 'rw', 'required' => 1);
 has 'label' => ('isa' => 'Str', 'is' => 'rw', 'required' => 1);
 # Maybe should be required for featured artist releases...
 has 'track_info' => ('isa' => 'Str', 'is' => 'rw', 'required' => 0);
+
+package What::Discogs::Artist;
+use What::Discogs::Discography;
+use Moose;
+extends 'What::Discogs::Discography';
+
+# Copy number of the artist name (e.g. 'M.I.A (2)' has copy number of 2).
+has 'copy_number' => (isa => 'Int', is => 'rw', required => 0);
+has 'name_variations' 
+    => (isa => 'ArrayRef[Str]', 'is' => 'rw', 'required' => 0, 
+        default => sub { [] });
+has 'aliases' => (isa => 'ArrayRef[Str]', 'is' => 'rw', 'required' => 0,
+    default => sub { [] });
+has 'members' => (isa => 'ArrayRef[Str]', 'is' => 'rw', 'required' => 0,
+    default => sub { [] });
+has 'releases' 
+    => (isa => 'ArrayRef[What::Discogs::Artist::Release]', 
+        'is' => 'rw', 'required' => 1,
+    default => sub { [] });
 
 1;
 __END__

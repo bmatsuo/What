@@ -2,6 +2,7 @@ package What::Discogs::Discography;
 use strict;
 use warnings;
 use Carp;
+use What::XMLLib;
 
 use What::Discogs::Base;
 use Moose;

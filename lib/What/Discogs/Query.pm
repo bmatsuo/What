@@ -2,11 +2,78 @@ use strict;
 use warnings;
 use Carp;
 
-package What::Discogs::QueryBase;
+package What::Discogs::Query::Utils;
+
+use What::XMLLib;
+
+sub get_urls {
+    my ($node) = @_;
+    return get_text_list('urls','url', $node);
+}
+
+sub get_images {
+    my ($node) = @_;
+    return get_text_list('images', 'image', $node);
+}
+
+sub get_artists {
+    my ($node) = @_;
+    my @a_nodes = get_node_list('artists', 'artist', $node);
+    my @artists = map {get_first_text('name', $_)} @a_nodes;
+    my $copy_number;
+    for (@artists) {
+        $_ =~ s/\s+ [(] (\d+) [)]//xms;
+        $copy_number = $1;
+        $_ =~ s/\A (.*) , \s* [tT]he\z/The $1/xms;
+    }
+    return @artists;
+}
+
+sub get_artist_joins {
+    my ($node) = @_;
+    my @a_nodes = get_node_list('artists', 'artist', $node);
+    my @joins = map {get_first_text('join', $_)} @a_nodes;
+    return @joins;
+}
+
+sub get_artist_strings {
+    my ($node) = @_;
+
+    my @artists = get_artists($node);
+    my @joins = get_artist_joins($node);
+    #print "@joins JOIN\n";
+
+    return if @artists == 0;
+
+    my @artist_strings;
+
+    my $artist_string = q{};
+
+    while (@artists) {
+        $artist_string .= shift @artists;
+        my $join = shift @joins;
+
+        if (defined $join) {
+            $artist_string .= " $join ";
+            next;
+        }
+
+        push @artist_strings, $artist_string;
+        $artist_string = '';
+    }
+
+    push @artist_strings, $artist_string if $artist_string =~ m/./xms;
+    #print "@artist_strings! FUCK!\n";
+
+    return @artist_strings;
+}
+
+package What::Discogs::Query::Base;
 
 use LWP::UserAgent;
-use What::XMLLib;
 use XML::Twig;
+use What::XMLLib;
+use What::Utils;
 use Moose;
 
 has 'api' 
@@ -31,7 +98,7 @@ sub args {
 sub uri {
     my $self = shift;
     return join "", 
-        $self->base, $self->path, '?', MyUtils::format_args($self->args);
+        $self->base, $self->path, '?', format_args($self->args);
 }
 
 # Submit query and return the xml response
@@ -53,7 +120,7 @@ sub fetch {
     }
 }
 
-my $null = QueryBase->new(api=>'NULL');
+my $null = What::Discogs::Query::Base->new(api=>'NULL');
 
 sub null_query {
     return $null
@@ -67,6 +134,9 @@ sub is_null {
 }
 
 package What::Discogs::Query::Artist;
+use What::Discogs::Artist;
+use What::XMLLib;
+use What::Utils;
 use Moose;
 extends 'What::Discogs::Query::Base';
 
@@ -123,7 +193,7 @@ sub artist {
 
     #print {\*STDERR} "Got artist root\n";
 
-    my $db_name = MyUtils::get_first_text('name', $artist_root);
+    my $db_name = get_first_text('name', $artist_root);
 
     if ($db_name =~ s/\s+ [(] ( \d+ ) [)] \z//xms) {
         $artist{copy_number} = $1;
@@ -134,23 +204,23 @@ sub artist {
     #print {\*STDERR} "Got artist name\n";
 
     my @images 
-        = map {$_->text} MyUtils::get_list('images','image',$artist_root);
+        = map {$_->text} get_node_list('images','image',$artist_root);
 
     my @aliases 
-        = map {$_->text} MyUtils::get_list('aliases','name',$artist_root);
+        = map {$_->text} get_node_list('aliases','name',$artist_root);
 
     my @variations 
         = map {$_->text} 
-            MyUtils::get_list('namevariations','name',$artist_root);
+            get_node_list('namevariations','name',$artist_root);
 
     my @members 
-        = map {$_->text} MyUtils::get_list('members','name',$artist_root);
+        = map {$_->text} get_node_list('members','name',$artist_root);
 
     my @urls
-        = map {$_->text} MyUtils::get_list('urls','url',$artist_root);
+        = map {$_->text} get_node_list('urls','url',$artist_root);
 
     my @release_roots 
-        = MyUtils::get_list('releases','release', $artist_root);
+        = get_node_list('releases','release', $artist_root);
 
     for (@images, @aliases, @variations, 
             @urls, @members,) {
@@ -165,12 +235,12 @@ sub artist {
     for my $release_root (@release_roots) {
         my $type = $release_root->{'att'}->{'type'};
         my $id = $release_root->{'att'}->{'id'};
-        my $title = MyUtils::get_first_text('title', $release_root);
-        my $format = MyUtils::get_first_text('format', $release_root);
-        my $year = MyUtils::get_first_text('year', $release_root);
-        my $label = MyUtils::get_first_text('label', $release_root);
+        my $title = get_first_text('title', $release_root);
+        my $format = get_first_text('format', $release_root);
+        my $year = get_first_text('year', $release_root);
+        my $label = get_first_text('label', $release_root);
         my $track_info 
-            = MyUtils::get_first_text('trackinfo', $release_root);
+            = get_first_text('trackinfo', $release_root);
 
         my %artist_release = (
             ($type ? (type => $type) : ()), 
@@ -187,7 +257,7 @@ sub artist {
             $_ =~ s/ \A \s+ //xms;
         }
 
-        my $release = ArtistRelease->new(%artist_release);
+        my $release = What::Discogs::Artist::Release->new(%artist_release);
 
         push @releases, $release;
     }
@@ -202,10 +272,13 @@ sub artist {
             (@releases ? (releases => \@releases) : ()), ),
     );
 
-    return Artist->new(%artist);
+    return What::Discogs::Artist->new(%artist);
 }
 
 package What::Discogs::Query::Release;
+use What::XMLLib;
+use What::Utils;
+use What::Discogs::Release;
 use Moose;
 extends 'What::Discogs::Query::Base';
 
@@ -242,10 +315,10 @@ sub release {
     #print {\*STDERR} "Got release root\n";
 
     my $id = $self->id;
-    my $title = MyUtils::get_first_text('title', $release_root);
-    my $note = MyUtils::get_first_text('notes', $release_root);
-    my $date = MyUtils::get_first_text('released', $release_root);
-    my $country = MyUtils::get_first_text('country', $release_root);
+    my $title = get_first_text('title', $release_root);
+    my $note = get_first_text('notes', $release_root);
+    my $date = get_first_text('released', $release_root);
+    my $country = get_first_text('country', $release_root);
     
 
     %release = (%release, (
@@ -256,7 +329,7 @@ sub release {
             ( $country ? (country => $country) : ()),
         ));
 
-    #my $db_name = MyUtils::get_first_text('', $artist_root);
+    #my $db_name = get_first_text('', $artist_root);
     #if ($db_name =~ s/\s+ [(] ( \d+ ) [)] \z//xms) {
     #    $artist{copy_number} = $1;
     #}
@@ -264,25 +337,25 @@ sub release {
     
     my @genres
         = map {$_->text} 
-            MyUtils::get_list('genres','genre',$release_root);
+            get_node_list('genres','genre',$release_root);
     $release{genres} = \@genres if @genres;
 
     my @styles
         = map {$_->text} 
-            MyUtils::get_list('styles','style',$release_root);
+            get_node_list('styles','style',$release_root);
     $release{styles} = \@styles if @styles;
 
 
-    my @artists = MyUtils::get_artists($release_root);
+    my @artists = What::Discogs::Query::Utils::get_artists($release_root);
     $release{artists} = \@artists if @artists;
 
 
     my @labels;
-    my @label_nodes = MyUtils::get_list('labels','label',$release_root);
+    my @label_nodes = get_node_list('labels','label',$release_root);
     for my $label_node (@label_nodes) {
         my $name = $label_node->{'att'}->{'name'};
         my $catno = $label_node->{'att'}->{'catno'};
-        my $release_label =  Release::Label->new(
+        my $release_label =  What::Discogs::Release::Label->new(
             name => $name, 
             catno => $catno,);
         push @labels, $release_label;
@@ -292,16 +365,16 @@ sub release {
 
     my @eas;
     my @ea_nodes 
-        = MyUtils::get_list('extraartists','artist',$release_root);
+        = get_node_list('extraartists','artist',$release_root);
     for my $ea_node (@ea_nodes) {
-        my $name = MyUtils::get_first_text('name', $ea_node);
+        my $name = get_first_text('name', $ea_node);
         my $copy_number;
         if ($name =~ s/\s+ [(] (\d+) [)]//xms) {
             $copy_number = $1;
         }
-        my $role = MyUtils::get_first_text('roll', $ea_node);
-        my $tracks = MyUtils::get_first_text('tracks', $ea_node);
-        my $extra_artist =  Release::ExtraArtist->new(
+        my $role = get_first_text('roll', $ea_node);
+        my $tracks = get_first_text('tracks', $ea_node);
+        my $extra_artist =  What::Discogs::Release::ExtraArtist->new(
             ($name ? (name => $name) : ()), 
             ($role ? (role => $role) : ()),
             ($copy_number ? (copy_number => $copy_number) : ()),
@@ -313,14 +386,14 @@ sub release {
 
     my @formats;
     my @format_nodes 
-        = MyUtils::get_list('formats','format',$release_root);
+        = get_node_list('formats','format',$release_root);
     for my $format_node (@format_nodes) {
         my $type = $format_node->{'att'}->{'name'};
         my $qty = $format_node->{'att'}->{'qty'};
         my @descriptions 
-            = MyUtils::get_text_list(
+            = get_text_list(
                 'descriptions', 'description', $format_node);
-        my $format = Release::Format->new(
+        my $format = What::Discogs::Release::Format->new(
             ($type ? (type => $type) : ()),
             ($qty ? (quantity => $qty) : ()),
             (@descriptions ? (descriptions => \@descriptions) : ()),
@@ -331,26 +404,26 @@ sub release {
 
     my @tracks;
     my @track_nodes 
-        = MyUtils::get_list('tracklist','track',$release_root);
+        = get_node_list('tracklist','track',$release_root);
     for my $track_node (@track_nodes) {
-        my $pos = MyUtils::get_first_text('position', $track_node);
-        my $title = MyUtils::get_first_text('title', $track_node);
-        my $dur = MyUtils::get_first_text('duration', $track_node);
+        my $pos = get_first_text('position', $track_node);
+        my $title = get_first_text('title', $track_node);
+        my $dur = get_first_text('duration', $track_node);
         #print {\*STDERR} "$pos $title [$dur]\n";
-        my @artists = MyUtils::get_artist_strings($track_node);
+        my @artists = What::Discogs::Query::Utils::get_artist_strings($track_node);
 
         my @track_eas;
         my @ea_nodes 
-            = MyUtils::get_list('extraartists', 'artist', $track_node);
+            = get_node_list('extraartists', 'artist', $track_node);
         for my $ea_node (@ea_nodes) {
-            my $name = MyUtils::get_first_text('name', $ea_node);
+            my $name = get_first_text('name', $ea_node);
             my $copy_number;
             if ($name =~ s/\s+ [(] (\d+) [)]//xms) {
                 # TODO: Turn artists into an object and put in it.
                 $copy_number = $1;
             }
-            my $role = MyUtils::get_first_text('role', $ea_node);
-            my $extra_artist = Release::Track::ExtraArtist->new(
+            my $role = get_first_text('role', $ea_node);
+            my $extra_artist = What::Discogs::Release::Track::ExtraArtist->new(
                 ($name ? (name => $name) : ()),
                 ($role ? (role => $role) : ()),
                 ($copy_number ? (copy_number => $copy_number) : ()),
@@ -358,7 +431,7 @@ sub release {
             push @track_eas, $extra_artist;
         }
 
-        my $track = Release::Track->new(
+        my $track = What::Discogs::Release::Track->new(
             (defined $title ? (title => $title) : ()),
             (defined $dur ? (duration => $dur) : ()),
             (defined $pos ? (position => $pos) : ()),
@@ -370,10 +443,13 @@ sub release {
     }
     $release{tracks} = \@tracks if @tracks;
 
-    return Release->new(%release);
+    return What::Discogs::Release->new(%release);
 }
 
 package What::Discogs::Query::Label;
+use What::Discogs::Label;
+use What::XMLLib;
+use What::Utils;
 use Moose;
 extends 'What::Discogs::Query::Base';
 
@@ -384,7 +460,7 @@ around BUILDARGS => sub {
     my $orig = shift;
     my $class = shift;
 
-    my $rep_spaces = sub {$_[0] =~ s/\s+/+/xms};
+    my $rep_spaces = sub {$_[0] =~ s/\s+/+/xms if $_[0]};
 
     if ( @_ == 1 && !ref $_[0] ) {
         $rep_spaces->($_[0]->{name});
@@ -430,33 +506,33 @@ sub label {
 
     #print {\*STDERR} "Got label root\n";
 
-    my $name = MyUtils::get_first_text('name', $label_root);
-    my $parent = MyUtils::get_first_text('parentLabel', $label_root);
-    my $contact = MyUtils::get_first_text('contactinfo', $label_root);
-    my $profile = MyUtils::get_first_text('profile', $label_root);
+    my $name = get_first_text('name', $label_root);
+    my $parent = get_first_text('parentLabel', $label_root);
+    my $contact = get_first_text('contactinfo', $label_root);
+    my $profile = get_first_text('profile', $label_root);
 
     #if ($name =~ s/\s+ [(] ( \d+ ) [)] \z//xms) {
     #    $label{copy_number} = $1;
     #}
 
     $label{name} = $name if defined $name;
-    $label{parent_label} = $parent if defined $parent;
-    $label{contact_info} = $contact if defined $contact;
+    $label{parent} = $parent if defined $parent;
+    $label{contact} = $contact if defined $contact;
     $label{profile} = $profile if defined $profile;
 
     #print {\*STDERR} "Got label name\n";
 
     my @images 
-        = map {$_->text} MyUtils::get_list('images','image',$label_root);
+        = map {$_->text} get_node_list('images','image',$label_root);
 
     my @sublabels 
-        = map {$_->text} MyUtils::get_list('aliases','name',$label_root);
+        = map {$_->text} get_node_list('aliases','name',$label_root);
 
     my @urls
-        = map {$_->text} MyUtils::get_list('urls','url',$label_root);
+        = map {$_->text} get_node_list('urls','url',$label_root);
 
     my @release_roots 
-        = MyUtils::get_list('releases','release', $label_root);
+        = get_node_list('releases','release', $label_root);
 
     for (@images, @sublabels, @urls,) {
         $_ =~ s/ (?: \s | \n )+ \z //xms;
@@ -469,10 +545,10 @@ sub label {
 
     for my $release_root (@release_roots) {
         my $id = $release_root->{'att'}->{'id'};
-        my $title = MyUtils::get_first_text('title', $release_root);
-        my $format = MyUtils::get_first_text('format', $release_root);
-        my $catno = MyUtils::get_first_text('catno', $release_root);
-        my $artist = MyUtils::get_first_text('artist', $release_root);
+        my $title = get_first_text('title', $release_root);
+        my $format = get_first_text('format', $release_root);
+        my $catno = get_first_text('catno', $release_root);
+        my $artist = get_first_text('artist', $release_root);
 
         my %label_release = (
             ($title ? (title => $title) : ()), 
@@ -487,7 +563,7 @@ sub label {
             $_ =~ s/ \A \s+ //xms;
         }
 
-        my $release = LabelRelease->new(%label_release);
+        my $release = What::Discogs::Label::Release->new(%label_release);
 
         push @releases, $release;
     }
@@ -500,10 +576,13 @@ sub label {
             (@releases ? (releases => \@releases) : ()), ),
     );
 
-    return Label->new(%label);
+    return What::Discogs::Label->new(%label);
 }
 
 package What::Discogs::Query::Search;
+use What::Discogs::Search;
+use What::XMLLib;
+use What::Utils;
 use Moose;
 extends 'What::Discogs::Query::Base';
 
@@ -553,26 +632,26 @@ sub results {
     $result_list{end} = $res_list_node->{'att'}->{'end'};
 
     my @result_nodes
-        = MyUtils::get_list('searchresults', 'result', $res_root);
+        = get_node_list('searchresults', 'result', $res_root);
 
     for my $node (@result_nodes) {
         my $num = $node->{'att'}->{'num'};
         my $type = $node->{'att'}->{'type'};
-        my $title = MyUtils::get_first_text('title', $node);
-        my $uri = MyUtils::get_first_text('uri', $node);
-        my $summary = MyUtils::get_first_text('summary', $node);
+        my $title = get_first_text('title', $node);
+        my $uri = get_first_text('uri', $node);
+        my $summary = get_first_text('summary', $node);
         my %result = (
             number => $num,
             type => $type,
             title => $title,
             uri => $uri,
             (defined $summary ? (summary => $summary) : ()),);
-        push @results, SearchResult->new(%result);
+        push @results, What::Discogs::Search::Result->new(%result);
     }
 
     $result_list{results} = \@results;
 
-    return SearchResultList->new(%result_list);
+    return What::Discogs::Search::ResultList->new(%result_list);
 }
 
 1;
