@@ -25,6 +25,7 @@ WriteMakefile(
         scripts/release-mktorrent
         scripts/release-mkm3u
         scripts/release-link
+        scripts/release-mkinfo
         scripts/release-ok
         scripts/mkrelease
     }],
