@@ -54,6 +54,7 @@ sub main{
     my @flac_files = grep {$_ =~ / \.flac \z/xms} @rip_files;
     my %disc = map {(dirname($_) => {})} @flac_files;
 
+    # Find info about all the present discs.
     my $release_artist;
     my $release_title;
     my $release_year;
@@ -63,8 +64,8 @@ sub main{
         croak("No FLAC files found in $disc_dir. This is unexpected...\n")
             if (!@disc_files);
 
-        my $get_position_from_file
-            = sub {
+        # Help subroutine to parse track position from the filename.
+        my $get_position_from_file = sub {
                 my $file = shift; 
                 $file =~ s/(\s | -) .* \z//xms; 
                 return $file; };
@@ -73,12 +74,13 @@ sub main{
         my $disc_artist;
         my $disc_title;
         my $disc_year;
-        for my $song ($disc_files) {
-            # Read the tags of each song.
+        # Read the tags of each song.
+        for my $song (@disc_files) {
             my $info = Audio::FLAC::Header->new($song);
             my %tags = %{$info->{tags}};
 
-            my $pos = $get_postition_from_file->($song);
+            # Fetch the important tags.
+            my $pos = $get_position_from_file->($song);
             my $title = $tags{TITLE} || $tags{title};
             my $artist = $tags{ARTIST} || $tags{artist};
             my $album_artist = $tags{ALBUMARTIST} || $tags{albumartist};
@@ -101,7 +103,10 @@ sub main{
                 }
             }
 
-            my $dur = $song_info->{trackTotalLengthSeconds};
+            # find the track duration.
+            my $dur = $info->{trackTotalLengthSeconds};
+
+            # Construct a 'track object'.
             my %track = {
                 artist => $artist,
                 ($album_artist ? (album_artist => $album_artist) : ()),
@@ -113,6 +118,7 @@ sub main{
             push @tracks, \%track;
         }
 
+        # Find an artist for the disc.
         if (!defined $disc_artist) {
             my @artists = map {$_->{artist}} @tracks;
             if (all_equal(@artists)) {
@@ -126,9 +132,10 @@ sub main{
             }
         }
 
+        # Find a title for the disc.
         my @release_titles = map {$_->{release}} @tracks;
         if (all_equal(@release_titles)) {
-            $disc_title = @release_titles[0];
+            $disc_title = $release_titles[0];
         }
         else {
             croak("Inconsistency: "
@@ -136,6 +143,7 @@ sub main{
                 . basename($disc_dir) . ".");
         }
 
+        # Find a year for the disc.
         my @years = map {$_->{year}} @tracks;
         if (!all_equal(@years)) {
             croak("Inconsistency: Years for disc "
@@ -143,6 +151,7 @@ sub main{
         }
         $disc_year = $years[0];
 
+        # Create a 'disc' object.
         my %disc_info = (
             title => $disc_title,
             artist => $disc_artist,
@@ -151,12 +160,14 @@ sub main{
         $disc{$disc_dir} = \%disc_info;
     }
 
+    # Figure out the year of the whole release.
     my @disc_years = map {$_->{year}} values %disc;
     if (!all_equal(@disc_years)) {
         croak("Inconsistency: Varying disc years.")
     }
     $release_year = $disc_years[0];
 
+    # Figure out the title for the whole release.
     my @disc_titles = map {$_->{title}} values %disc;
     if (!all_equal(@disc_titles)) {
         $release_title = common_prefix(@disc_titles);
@@ -168,15 +179,17 @@ sub main{
         croak("Couldn't find a release title common to all discs.");
     }
 
+    # Find the artist for the whole release.
     my @disc_artists = map {$_->{artist}} values %disc;
     if (!all_equal(@disc_artists)) {
-        my @non_various = grep {$_ !~ /Various(?: Artists)?/};
+        my @non_various = grep {$_ !~ /Various(?:\sArtists)?/xms} @disc_artists;
         if (all_equal(@non_various) && @non_various > 0) {
             $release_artist = $non_various[0];
         }
         elsif (@non_various > 0) {
             if (all_equal(@non_various)) {
                 $release_artist = $non_various[0];
+            }
             else {
                 $release_artist = common_prefix(@non_various);
                 if ($release_artist == '') {
@@ -191,6 +204,7 @@ sub main{
         }
     }
 
+    print "I think that this release should be labelled...\n";
     print "$release_artist - $release_title [$release_year]\n";
 
     exit $exitcode;
@@ -238,7 +252,7 @@ sub common_prefix {
 # Returns: 
 #   Returns the longest prefix string. 
 #   If no non-trivial prefix exists then an empty string is returned.
-sub common_prefix {
+sub common_prefix_pair {
     my ($s1, $s2) = @_;
     my ($len1, $len2) = map {length $_} ($s1, $s2);
     my $max_len = $len1 > $len2 ? $len1 : $len2;
