@@ -62,6 +62,8 @@ has 'title' => (isa => 'Str', is => 'rw', 'required' => 1);
 has 'artists' => (isa => 'ArrayRef[Str]', is => 'rw', 'required' => 1);
 has 'formats' 
     => (isa => 'ArrayRef[What::Discogs::Release::Format]', is => 'rw', 'required' => 1);
+has 'labels' => (isa => 'ArrayRef[What::Discogs::Release::Label]', is => 'rw',
+    default => sub { [] });
 has 'country' => (isa => 'Str', is => 'rw', 'required' => 1);
 has 'genres' => (isa => 'ArrayRef[Str]', is => 'rw', 'required' => 0,
     default => sub { [] });

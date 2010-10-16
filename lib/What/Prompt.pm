@@ -6,6 +6,7 @@ package What::Prompt;
 # include some core modules
 use strict;
 use warnings;
+use IO::Handle;
 
 our $VERSION = '0.0_3';
 

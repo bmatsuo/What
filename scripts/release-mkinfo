@@ -11,6 +11,7 @@ use strict;
 use warnings;
 use File::Basename;
 use Carp;
+use POSIX;
 
 # Include CPAN modules.
 use Getopt::Euclid qw{ :vars<opt_> };
@@ -55,11 +56,16 @@ sub main{
     my @rip_files = find_hierarchy($whatrc->{rip_dir});
     my @flac_files = grep {$_ =~ / \.flac \z/xms} @rip_files;
     my %disc = map {($_ ? (dirname($_) => {}) : ())} @flac_files;
+    my @disc_dirs = sort keys %disc;
+    my @disc_folder_names = map {basename($_)} @disc_dirs;
 
     # Find info about all the present discs.
     my $release_artist;
     my $release_title;
     my $release_year;
+    my $release_label;
+    my $release_catno;
+    my $release_edition;
     for my $disc_dir (keys %disc) {
         print {\*STDERR} $disc_dir, "\n";
         next if !defined $disc_dir || !-d $disc_dir;
@@ -71,7 +77,7 @@ sub main{
 
         # Help subroutine to parse track position from the filename.
         my $get_position_from_file = sub {
-                my $file = shift; 
+                my $file = basename(shift); 
                 $file =~ s/(\s | -) .* \z//xms; 
                 return $file; };
 
@@ -241,17 +247,83 @@ sub main{
         # When unsuccessful w/ artist search; try a release search.
     }
     # TODO: When Discogs search fails, search Musicbrainz if possible.
-    
+
     # When the all searches failed to find a release. 
+    if (!defined $release) {
         # TODO: Ask the user for a musicbrainz release identifier.
         # Ask the user for a discogs release id 
-    
-    # When the user can't find a release id, create info from tags.
-    if (!defined $release) {
-        # Prompt user for label and catno.
-        
+        $prompt->text('Enter a discogs release ID (check format/edition):');
+        $prompt->validator(sub {my $id = shift; $id =~ m/\A \d* \z/xms});
+        my $discogs_id = $prompt->prompt_user();
+        chomp $discogs_id;
+        $release = get_release($discogs_id) if $discogs_id =~ m/\d+/xms;
     }
+
     
+    if (defined $release) {
+        # TODO: Handle a Musicbrainz release.
+        $release_label = join ", ", (map {$_->name()} @{$release->labels()});
+        $release_catno = join ", ", (map {$_->catno()} @{$release->catnos()});
+        $release_format
+            = join ", ",
+                (map {$_->quantity() > 1 ? $_->quantity() ."x".$_->type()} 
+                    @{$release->formats()});
+        $release_edition 
+            = join ", ",
+                (map {join " ", @{$_->descriptions()}}
+                    @{$release->formats()});
+    }
+    else {
+        # When the user can't find a release id, create info from tags.
+        print "'Manual' info creation...\n";
+        # Prompt user for label and catno.
+        $prompt->text("Enter the label:");
+        $prompt->validator(sub {my $r = shift; chomp $r; $r =~ /.\z/xms});
+        $release_label = $prompt->prompt_user();
+        $prompt->text("Enter the category number (on CD side):");
+        $release_catno = $prompt->prompt_user();
+        $prompt->text("Enter any edition information(none for original release):");
+        $prompt->reset_validator();
+        $release_edition = $prompt->prompt_user();
+        if ($release_edition =~ s/\A \s*\n? \z//xms) {
+            $release_edition = "Original Release";
+        }
+    }
+
+    my $info =<<EOIHEAD;
+Title.........$release_title
+Artist........$release_artist
+Edition.......$release_edition
+Released......$release_year 
+Label.........$release_label
+Category No...$release_catno
+
+EOIHEAD
+
+    for my $disc_d (@disc_dirs) {
+        if (@disc_dirs > 1) {
+            my $disc_name = basename($disc_d);
+            $info .= "$disc_name\n";
+        }
+
+        my $disc = $disc{$disc_d};
+        my @tracks = @{$disc->{tracks}};
+        for my $track (@tracks) {
+            my $dur = $track->{duration};
+            my ($min, $sec) = (floor($dur / 60), floor($dur % 60));
+            $info .= "$track->{position} $track->{title} [$min:$sec]";
+            if ($release_artist eq 'Various Artists') {
+                $info .= " ($track->{artist})";
+            }
+            $info .= "\n";
+        }
+
+        if (@disc_dirs > 1) {
+            $info .= "\n";
+        }
+    }
+
+    print $info;
 
     exit $exitcode;
 }
@@ -289,6 +361,18 @@ sub common_prefix {
     my $prefix = shift @strings || '';
     for my $s (@strings) { $prefix = common_prefix_pair($prefix, $s) }
     return $prefix;
+}
+
+# Subroutine: suffixes(@strings)
+# Type: INTERNAL UTILITY
+# Purpose: Remove the common prefix from all argument strings.
+# Returns: A list of strings with the common prefix removed.
+sub suffixes {
+    my @strings = @_;
+    my $prefix = common_prefix(@strings);
+    my $rm_len = length $prefix;
+    map {substr $_, 0, $rm_len, q()} @strings;
+    return @strings;
 }
 
 
