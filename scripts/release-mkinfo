@@ -21,6 +21,7 @@ use Audio::FLAC::Header;
 use What::Discogs;
 use What::Utils;
 use What::WhatRC;
+use What::Prompt;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -42,6 +43,7 @@ my $exitcode = 0;
 ########################################################################
 
 my $whatrc = read_whatrc('~/.whatrc');
+my $prompt = What::Prompt->new();
 
 ########################################################################
 # MAIN FUNCTION
@@ -52,15 +54,18 @@ sub main{
     # Find all the disc directories/FLAC files.
     my @rip_files = find_hierarchy($whatrc->{rip_dir});
     my @flac_files = grep {$_ =~ / \.flac \z/xms} @rip_files;
-    my %disc = map {(dirname($_) => {})} @flac_files;
+    my %disc = map {($_ ? (dirname($_) => {}) : ())} @flac_files;
 
     # Find info about all the present discs.
     my $release_artist;
     my $release_title;
     my $release_year;
     for my $disc_dir (keys %disc) {
+        print {\*STDERR} $disc_dir, "\n";
+        next if !defined $disc_dir || !-d $disc_dir;
         # Get the song files.
-        my @disc_files = sort find_file_pattern('*.flac', $disc_dir);
+        my @disc_files = find_file_pattern('*.flac', $disc_dir);
+        @disc_files = sort @disc_files;
         croak("No FLAC files found in $disc_dir. This is unexpected...\n")
             if (!@disc_files);
 
@@ -107,14 +112,14 @@ sub main{
             my $dur = $info->{trackTotalLengthSeconds};
 
             # Construct a 'track object'.
-            my %track = {
+            my %track = (
                 artist => $artist,
-                ($album_artist ? (album_artist => $album_artist) : ()),
+                (defined $album_artist ? (album_artist => $album_artist) : ()),
                 release => $release_title,
                 position => $pos,
                 duration => $dur,
                 year => $year,
-                title   => $title,};
+                title   => $title,);
             push @tracks, \%track;
         }
 
@@ -182,30 +187,71 @@ sub main{
     # Find the artist for the whole release.
     my @disc_artists = map {$_->{artist}} values %disc;
     if (!all_equal(@disc_artists)) {
-        my @non_various = grep {$_ !~ /Various(?:\sArtists)?/xms} @disc_artists;
+        my @non_various = grep {$_ !~ /Various(?:\sArtists)?/ixms} @disc_artists;
         if (all_equal(@non_various) && @non_various > 0) {
             $release_artist = $non_various[0];
         }
         elsif (@non_various > 0) {
             if (all_equal(@non_various)) {
+                # All the discs by a single artist are by the same artist.
+                # That artist is probably the release artist
+                # TODO: Prompt user to make sure.
                 $release_artist = $non_various[0];
             }
             else {
+                # Multiple discs produced by a single artist.
+                # However, not all the disc artists are the same.
+                
+                # Attempt to salvage
                 $release_artist = common_prefix(@non_various);
                 if ($release_artist == '') {
                     # TODO: Prompt user about which artists to use.
                     $release_artist = 'Various Artists';
                 }
+                else {
+                    # If each disc is featuring other artsists, 
+                    #  hopefully they got filtered.
+                    # TODO: Prompt user to make sure $release_artist is good.
+                }
             }
         }
         else {
-            # TODO: Prompt user about which artists to use.
+            # Looks like all the discs are by various artists
+            # TODO: Prompt user to make sure.
             $release_artist = "Various Artists";
         }
+    }
+    else {
+        # In this case, all discs are by the same artist.
+        $release_artist = $disc_artists[0];
     }
 
     print "I think that this release should be labelled...\n";
     print "$release_artist - $release_title [$release_year]\n";
+
+    #-------------------------#
+    # BEGIN SEARCHING DISCOGS #
+    #-------------------------#
+    my $release; # A pointer to the release when we find it.
+    if ($release_artist eq "Various Artists") {
+        # All we can do is a release search.
+    }
+    else {
+        # First, try an artist search.
+        # When unsuccessful w/ artist search; try a release search.
+    }
+    # TODO: When Discogs search fails, search Musicbrainz if possible.
+    
+    # When the all searches failed to find a release. 
+        # TODO: Ask the user for a musicbrainz release identifier.
+        # Ask the user for a discogs release id 
+    
+    # When the user can't find a release id, create info from tags.
+    if (!defined $release) {
+        # Prompt user for label and catno.
+        
+    }
+    
 
     exit $exitcode;
 }

@@ -132,7 +132,12 @@ sub search_hierarchy {
 sub find_file_pattern {
     my ($patt, $dir) = @_;
 
-    croak("Given non-directory as second argument $dir") if (!-d $dir);
+    croak("Directory not given or not defined.") 
+        if !defined $dir;
+    croak("File pattern not given or not defined.") 
+        if !defined $patt;
+    croak("Given non-directory as second argument $dir.") 
+        if !-d $dir;
 
     return bsd_glob(glob_safe($dir)."/$patt");
 }
