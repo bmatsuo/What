@@ -18,7 +18,7 @@ BEGIN { use_ok('What::Discogs') };
 # Release Query Tests #
 #######################
 my $release 
-    = What::Discogs::get_release(id => 59180, api => $key);
+    = get_release(id => 59180, api => $key);
 
 # TEST parsing seems succesful
 ok($release->num_tracks() == 6);
@@ -27,7 +27,7 @@ ok($release->num_tracks() == 6);
 # Artist Query Tests #
 ######################
 my $artist 
-    = What::Discogs::get_artist(name=>"Lady Gaga", api => $key);
+    = get_artist(name=>"Lady Gaga", api => $key);
 
 # TEST parsing seems succesful
 ok(@{$artist->releases} > 1);
@@ -36,7 +36,7 @@ ok(@{$artist->releases} > 1);
 # Label Query Tests #
 #####################
 my $label 
-    = What::Discogs::get_label(name=>"Interscope Records", api => $key);
+    = get_label(name=>"Interscope Records", api => $key);
 
 # TEST parsing seems succesful
 ok($label->parent eq "Universal Music Group");
@@ -45,7 +45,7 @@ ok($label->parent eq "Universal Music Group");
 # Search Query Tests #
 ######################
 my $result_list 
-    = What::Discogs::search(qstr=>"Lady Gaga", api => $key);
+    = search(qstr=>"Lady Gaga", api => $key);
 
 # TEST $result_list->all_results
 ok($result_list->num_results > 20);

@@ -407,10 +407,75 @@ sub release {
     my @tracks;
     my @track_nodes 
         = get_node_list('tracklist','track',$release_root);
+    my @discs;
+    my $disc_name = undef;
+    my @disc_tracks;
+    my $disc_num = 1;
+    my $disc_title = undef;
+    my %created_disc;
+    my %disc_args;
+    my $new_disc;
+    TRACKPARSE:
     for my $track_node (@track_nodes) {
         my $pos = get_first_text('position', $track_node);
         my $title = get_first_text('title', $track_node);
         my $dur = get_first_text('duration', $track_node);
+
+        if ($pos =~ /\A \s* \z/xms) {
+            if (defined $disc_name) { 
+                # If the discname was defined,  we finished parsing that disc.
+
+                # Create a disc.
+                %disc_args = (
+                    (defined $disc_name ? (title => $disc_name) : ()),
+                    tracks => \@disc_tracks,
+                    number => $disc_num,);
+                $new_disc = What::Discogs::Release::Disc->new(%disc_args);
+
+                push @discs, $new_disc;
+
+                # Mark that the disc has been created.
+                $created_disc{$disc_num} = $new_disc;
+            }
+            $disc_name = $title;
+            next TRACKPARSE;
+        }
+        elsif ($pos =~ /\A (\d+) - (\d+) \z/xms) {
+            # Fetch the disc number.
+            my $dno = $1;
+
+            # Compare to the last seen disc number, $disc_num.
+            if (defined $disc_num && $dno != $disc_num) {
+                # Disc number just changed.
+                # Create and add the last disc.
+                if (!defined $created_disc{$disc_num}) {
+                    # Create a disc.
+                    %disc_args = (
+                        (defined $disc_name ? (title => $disc_name) : ()),
+                        tracks => \@disc_tracks,
+                        number => $disc_num,);
+                    $new_disc = What::Discogs::Release::Disc->new(%disc_args);
+                    push @discs, $new_disc;
+
+                    # Mark that the disc has been created.
+                    $created_disc{$disc_num} = $new_disc;
+
+                    # Disc $dno has no title if we hadn't made disc $disc_num yet.
+                    $disc_name = undef;
+                }
+
+                # Accept the change if it is a valid one.
+                croak("Invalid disc number increase; $disc_num -> $dno")
+                    if $dno != $disc_num + 1;
+                $disc_num = $dno; 
+            }
+        } 
+        elsif ($pos !~ m/\A\d+\z/xms && $pos !~ m/\A [A-Z]+\d+ \z/xms) {
+            # $pos should just be a number or a vinyl side+num.
+            # This is mostly for debugging failure.
+            croak("Can't understand track position '$pos'.");
+        }
+
         #print {\*STDERR} "$pos $title [$dur]\n";
         my @artists = What::Discogs::Query::Utils::get_artist_strings($track_node);
 
@@ -440,10 +505,25 @@ sub release {
             (@artists ? (artists => \@artists) : ()),
             (@track_eas ? (extra_artists => \@track_eas) : ()),
         );
+        push @disc_tracks, $track;
 
         push @tracks, $track;
     }
+    if (@disc_tracks && !defined $created_disc{$disc_num}) {
+        # Create a disc.
+        %disc_args = (
+            (defined $disc_name ? (title => $disc_name) : ()),
+            tracks => \@disc_tracks,
+            number => $disc_num,);
+        $new_disc = What::Discogs::Release::Disc->new(%disc_args);
+        push @discs, $new_disc;
+
+        # Mark that the disc has been created.
+        $created_disc{$disc_num} = $new_disc;
+    }
+
     $release{tracks} = \@tracks if @tracks;
+    $release{discs} = \@discs;
 
     return What::Discogs::Release->new(%release);
 }

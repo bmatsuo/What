@@ -54,6 +54,43 @@ has 'quantity' => (isa => 'Int', is => 'rw', required => 1);
 has 'descriptions' => (isa => 'ArrayRef[Str]', is => 'rw', required => 0,
     default => sub { [] },);
 
+package What::Discogs::Release::Disc;
+use Moose;
+
+has 'title'
+    => (isa => 'Str',
+        is => 'rw',
+        required => 0,);
+has 'number'
+    => (isa => 'Int',
+        is => 'rw',
+        default => 1,);
+has 'tracks'
+    => (isa => 'ArrayRef[What::Discogs::Release::Track]', 
+        is => 'rw',
+        default => sub { [] });
+
+# Subroutine: $disc->num_tracks()
+# Type: INSTANCE METHOD
+# Purpose: Easily find the number of tracks on the disc.
+# Returns: The size of the tracks array.
+sub num_tracks {
+    my $self = shift;
+    return scalar @{$self->tracks()};
+}
+
+# Subroutine: $disc->track($track_number)
+# Type: INSTANCE METHOD
+# Purpose: Retrieve tracks by their number (1 through #tracks)
+# Returns: 
+#   A What::Discogs::Release::Track object; or undef for an invalid track number.
+sub track {
+    my $self = shift;
+    my $track_num = shift;
+    return if $track_num > $self->num_tracks();
+    return $self->tracks()->[$track_num - 1];
+}
+
 package What::Discogs::Release;
 use Moose;
 extends 'What::Discogs::Base';
@@ -69,7 +106,7 @@ has 'artists'
 has 'artist_joins' 
     => (isa => 'ArrayRef[Str]', 
         is => 'rw', 
-        default => sub {[]});
+        default => sub {[]}),;
 has 'formats' 
     => (isa => 'ArrayRef[What::Discogs::Release::Format]', 
         is => 'rw', 
@@ -77,7 +114,7 @@ has 'formats'
 has 'labels' 
     => (isa => 'ArrayRef[What::Discogs::Release::Label]', 
         is => 'rw',
-        default => sub { [] });
+        default => sub { [] },);
 has 'country' 
     => (isa => 'Str', 
         is => 'rw', 
@@ -85,17 +122,21 @@ has 'country'
 has 'genres' 
     => (isa => 'ArrayRef[Str]', 
         is => 'rw', 
-        default => sub { [] });
+        default => sub { [] },);
 has 'styles' 
     => ( isa => 'ArrayRef[Str]', 
         is => 'rw', 
-        default => sub { [] });
+        default => sub { [] },);
 has 'date' => (isa => 'Str', is => 'rw', 'required' => 1);
 has 'note' => (isa => 'Str', is => 'rw', default => q{} );
-has 'tracks' 
-    => (isa => 'ArrayRef[What::Discogs::Release::Track]', 
+has 'discs' 
+    => (isa => 'ArrayRef[What::Discogs::Release::Disc]',
         is => 'rw',
-        default => sub { [] });
+        default => sub { [] },);
+# has 'tracks' 
+#     => (isa => 'ArrayRef[What::Discogs::Release::Track]', 
+#         is => 'rw',
+#         default => sub { [] },);
 
 # Subroutine: $release->artist_string()
 # Type: INTERFACE SUB
@@ -117,12 +158,42 @@ sub artist_string {
     return $str;
 }
 
+# Subroutine: $release->num_discs()
+# Type: INSTANCE METHOD
+# Returns: The number of discs belonging to $release.
+sub num_discs {
+    my $self = shift;
+    return scalar @{$self->discs()};
+}
+
 # Subroutine: $release->num_tracks()
 # Type: INSTANCE METHOD
-# Returns: The number of tracks belonging to $release.
+# Returns: The total number of tracks belonging to $release.
 sub num_tracks {
     my $self = shift;
-    return scalar @{$self->tracks};
+    my $sum = 0;
+    for (map {$_->num_tracks()} @{$self->discs()}) { $sum += $_; }
+    return $sum;
+}
+
+# Subroutine: $release->tracks()
+# Type: INSTANCE METHOD
+# Purpose: Aggregate tracks of all discs into a single array.
+sub tracks {
+    my $self = shift;
+    return (map { @{$_->tracks()} } @{$self->discs()});
+}
+
+# Subroutine: $release->disc($disc_number)
+# Type: INSTANCE METHOD
+# Purpose: Retrieve discs by their number (1 through #discs)
+# Returns: 
+#   A What::Discogs::Release::Disc object; or undef for an invalid disc number.
+sub disc {
+    my $self = shift;
+    my $disc_num = shift;
+    return if $disc_num > $self->num_discs();
+    return $self->discs()->[$disc_num - 1];
 }
 
 1;
