@@ -392,8 +392,6 @@ sub release_agrees {
 sub release_title_agrees {
     my ($release, $title) = @_;
     return 1 if ($release->title() eq $title);
-    $title =~ s/\AThe\s+(\S.*\S)\z/$1, The/xms;
-    return 1 if ($release->title() eq $title);
     return 0;
 }
 
@@ -451,7 +449,9 @@ sub release_tracks_agree {
 sub release_artist_agrees {
     my ($release, $artist) = @_;
     for my $a (@{$release->artists()}) {
-        return 0 if index ($artist, $a) == -1
+        return 0 if index ($artist, $a) == -1;
+        $a =~ s/\AThe\s+(\S.*\S)\z/$1, The/xms;
+        return 0 if index ($artist, $a) == -1;
     }
     return 1;
 }
