@@ -58,22 +58,64 @@ package What::Discogs::Release;
 use Moose;
 extends 'What::Discogs::Base';
 
-has 'title' => (isa => 'Str', is => 'rw', 'required' => 1);
-has 'artists' => (isa => 'ArrayRef[Str]', is => 'rw', 'required' => 1);
+has 'title' 
+    => (isa => 'Str', 
+        is => 'rw', 
+        required => 1);
+has 'artists' 
+    => ( isa => 'ArrayRef[Str]', 
+        is => 'rw', 
+        required => 1);
+has 'artist_joins' 
+    => (isa => 'ArrayRef[Str]', 
+        is => 'rw', 
+        default => sub {[]});
 has 'formats' 
-    => (isa => 'ArrayRef[What::Discogs::Release::Format]', is => 'rw', 'required' => 1);
-has 'labels' => (isa => 'ArrayRef[What::Discogs::Release::Label]', is => 'rw',
-    default => sub { [] });
-has 'country' => (isa => 'Str', is => 'rw', 'required' => 1);
-has 'genres' => (isa => 'ArrayRef[Str]', is => 'rw', 'required' => 0,
-    default => sub { [] });
-has 'styles' => (isa => 'ArrayRef[Str]', is => 'rw', 'required' => 0,
-    default => sub { [] });
-has 'date' => (isa => 'Str', is => 'rw', 'required' => 1);
-has 'note' => (isa => 'Str', is => 'rw', 'required' => 0);
-has 'tracks' 
-    => (isa => 'ArrayRef[What::Discogs::Release::Track]', is => 'rw', 'required' => 0,
+    => (isa => 'ArrayRef[What::Discogs::Release::Format]', 
+        is => 'rw', 
+        required => 1);
+has 'labels' 
+    => (isa => 'ArrayRef[What::Discogs::Release::Label]', 
+        is => 'rw',
         default => sub { [] });
+has 'country' 
+    => (isa => 'Str', 
+        is => 'rw', 
+        required => 1);
+has 'genres' 
+    => (isa => 'ArrayRef[Str]', 
+        is => 'rw', 
+        default => sub { [] });
+has 'styles' 
+    => ( isa => 'ArrayRef[Str]', 
+        is => 'rw', 
+        default => sub { [] });
+has 'date' => (isa => 'Str', is => 'rw', 'required' => 1);
+has 'note' => (isa => 'Str', is => 'rw', default => q{} );
+has 'tracks' 
+    => (isa => 'ArrayRef[What::Discogs::Release::Track]', 
+        is => 'rw',
+        default => sub { [] });
+
+# Subroutine: $release->artist_string()
+# Type: INTERFACE SUB
+# Purpose: Create a string from the artist list.
+# Returns: Return the list of artists as the string.
+sub artist_string {
+    my $self = shift;
+    my @artists = @{$self->artists()};
+    my @joins = @{$self->joins()};
+    my $str = '';
+    for my $i (0 .. $#artists) {
+        my $artist = $artists[$i];
+        my $join = $joins[$i];
+        $str .= (defined $join and $join =~ /./xms) ? "$artist $join " : $artist;
+        if ($i < $#artists) {
+            $str .= ', ';
+        }
+    }
+    return $str;
+}
 
 # Subroutine: $release->num_tracks()
 # Type: INSTANCE METHOD

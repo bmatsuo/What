@@ -18,5 +18,7 @@ my $WhatCDConfig = {
 # Favorite text editor.
 'editor'  => 'nano',
 
+# API key for Discogs searches (https://www.discogs.com/users/api_key).
+'discogs_api_key'  => 'xxxxxxxxxx',
 };
 

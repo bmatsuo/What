@@ -31,7 +31,6 @@ sub reset_validator {
     return;
 }
 
-
 1
 
 __END__

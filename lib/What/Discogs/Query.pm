@@ -348,6 +348,8 @@ sub release {
 
     my @artists = What::Discogs::Query::Utils::get_artists($release_root);
     $release{artists} = \@artists if @artists;
+    my @joins = What::Discogs::Query::Utils::get_artist_joins($release_root);
+    $release{artist_joins} = \@joins if @joins;
 
 
     my @labels;

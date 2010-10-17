@@ -65,6 +65,7 @@ sub main{
     my $release_year;
     my $release_label;
     my $release_catno;
+    my $release_format;
     my $release_edition;
     for my $disc_dir (keys %disc) {
         print {\*STDERR} $disc_dir, "\n";
@@ -240,11 +241,11 @@ sub main{
     #-------------------------#
     my $release; # A pointer to the release when we find it.
     if ($release_artist eq "Various Artists") {
-        # All we can do is a release search.
+        # TODO: Do is a release search.
     }
     else {
-        # First, try an artist search.
-        # When unsuccessful w/ artist search; try a release search.
+        # TODO: First, try an artist search.
+        # TODO: When unsuccessful w/ artist search; try a release search.
     }
     # TODO: When Discogs search fails, search Musicbrainz if possible.
 
@@ -256,22 +257,39 @@ sub main{
         $prompt->validator(sub {my $id = shift; $id =~ m/\A \d* \z/xms});
         my $discogs_id = $prompt->prompt_user();
         chomp $discogs_id;
-        $release = get_release($discogs_id) if $discogs_id =~ m/\d+/xms;
+        $release = get_release(
+                id => $discogs_id, 
+                api => $whatrc->{discogs_api_key})
+            if $discogs_id =~ m/\d+/xms;
+
+        my $is_consistent 
+            = release_agrees(
+                release => $release, 
+                title => $release_title,
+                artist => $release_artist,
+                year => $release_year,
+                discs => \%disc,);
+        if (!$is_consistent) {
+            # Die if the discsogs release is not conistent with the files.
+            print {\*STDERR} "Inconsistent release info and tag info.\n";
+            exit 1;
+        }
     }
 
     
     if (defined $release) {
         # TODO: Handle a Musicbrainz release.
         $release_label = join ", ", (map {$_->name()} @{$release->labels()});
-        $release_catno = join ", ", (map {$_->catno()} @{$release->catnos()});
+        $release_catno = join ", ", (map {$_->catno()} @{$release->labels()});
         $release_format
             = join ", ",
-                (map {$_->quantity() > 1 ? $_->quantity() ."x".$_->type()} 
+                (map {$_->quantity() > 1 ? 
+                        $_->quantity() ."x".$_->type()
+                        : $_->type() }
                     @{$release->formats()});
         $release_edition 
             = join ", ",
-                (map {join " ", @{$_->descriptions()}}
-                    @{$release->formats()});
+                (map {join " ", @{$_->descriptions()}} @{$release->formats()});
     }
     else {
         # When the user can't find a release id, create info from tags.
@@ -331,6 +349,112 @@ EOIHEAD
 ########################################################################
 # SUPPORTING SUBROUTINES
 ########################################################################
+
+# Subroutine: release_agrees(
+#   release => $release, 
+#   artist => $artist,
+#   title => $title,
+#   year => $year,
+#   discs => \@discs)
+# Type: INTERNAL UTILITY
+# Purpose: Check a discogs release, and given release info for consistency.
+# Returns:
+#   1 if the discogs release contains consistent release information.
+#   0 otherwise.
+sub release_agrees {
+    my %arg = @_;
+    my $release = $arg{release};
+    return 
+        release_title_agrees($release, $arg{title}) 
+        && release_artist_agrees($release, $arg{artist}) 
+        && release_year_agrees($release, $arg{year});
+        # Can't check tracks right now.
+        #&& release_tracks_agree($release, $arg{discs});
+}
+
+# Release test template.
+# Subroutine: release_xxxx_agrees($discogs_release, $release_xxxx)
+# Type: INTERNAL UTILITY
+# Purpose: Compare the xxxx of a discogs release to a given string.
+# Returns: 
+#   1 if the title of the discogs release is equal to $release_xxxx.
+#   0 otherwise.
+#sub release_xxxx_agrees {
+#    return 0;
+#}
+
+# Subroutine: release_title_agrees($discogs_release, $release_title)
+# Type: INTERNAL UTILITY
+# Purpose: Compare the title of a discogs release to a given string.
+# Returns: 
+#   1 if the title of the discogs release is equal to $release_title.
+#   0 otherwise.
+sub release_title_agrees {
+    my ($release, $title) = @_;
+    return 1 if ($release->title() eq $title);
+    $title =~ s/\AThe\s+(\S.*\S)\z/$1, The/xms;
+    return 1 if ($release->title() eq $title);
+    return 0;
+}
+
+# Subroutine: release_year_agrees($discogs_release, $release_year)
+# Type: INTERNAL UTILITY
+# Purpose: Compare the year of a discogs release to a given string.
+# Returns: 
+#   1 if the title of the discogs release is equal to $release_year.
+#   0 otherwise.
+sub release_year_agrees {
+    my ($release, $year) = @_;
+    my $date = $release->date();
+    return 1;
+}
+
+# Subroutine: release_tracks_agree($discogs_release, \@discs)
+# Type: INTERNAL UTILITY
+# Purpose: Compare the tracks of a discogs release to a given array of track info.
+# Returns: 
+#   1 if the title of the discogs release is equal to $release_tracks.
+#   0 otherwise.
+sub release_tracks_agree {
+    my ($release, $discs_ref) = @_;
+    my @rel_tracks = @{$release->tracks()};
+    my @discs = @{$discs_ref};
+    my @tracks = (map {@{$_->tracks()}} @discs);
+
+    # Return false if the number of tracks differ.
+    return 0 if (@{$release->tracks} != @tracks);
+
+    # Iterate over corresponding tracks.
+    for my $i (0 .. $#tracks) {
+        my ($rel_ti, $ti) = ($rel_tracks[$i], $tracks[$i]);
+
+        # Find the duration of the discogs track in seconds.
+        my $rel_dur = $rel_ti->duration();
+        if ($rel_dur =~ m/(\d+):(\d{2})/xms) {
+            $rel_dur = 60 * $1 + $2;
+        }
+        # Return false if discogs duration is more than the possed duration.
+        return 0 if $rel_dur > $ti->{duration};
+    }
+    # Track names might be subtly misspelled. Are not checked currently.
+
+    # No reason can be found for the tracks to disagree.
+    return 1;
+}
+
+# Subroutine: release_artist_agrees($discogs_release, $release_artist)
+# Type: INTERNAL UTILITY
+# Purpose: Compare the artist of a discogs release to a given string.
+# Returns: 
+#   1 if the title of the discogs release is equal to $release_artist.
+#   0 otherwise.
+sub release_artist_agrees {
+    my ($release, $artist) = @_;
+    for my $a (@{$release->artists()}) {
+        return 0 if index ($artist, $a) == -1
+    }
+    return 1;
+}
 
 # Subroutine: all_equal(@strings)
 # Type: INTERNAL UTILITY

@@ -54,6 +54,8 @@ my %default_whatrc = (
     watch   => "$ENV{'HOME'}/Downloads",
     # Favorite text editor.
     editor  => 'nano',
+    # Discogs API key (https://www.discogs.com/users/api_key).
+    discogs_api_key  => 'xxxxxxxxx',
 );
 
 my @rc_paths = qw{rip_dir pager upload_root};
@@ -67,7 +69,8 @@ my $dumper = Data::Dumper->new([\%default_whatrc],['WhatCDConfig']);
 #       upload_root => $upload_root_dir,
 #       pager   => $default_terminal_pager,
 #       watch   => $torrent_watch_directory,
-#       editor  => $text_editor,)
+#       editor  => $text_editor,
+#       discogs_api_key => $discogs_api,)
 # Type: CLASS METHOD
 # Purpose: 
 #   What::WhatRC constructor.
