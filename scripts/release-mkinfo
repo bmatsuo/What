@@ -268,7 +268,7 @@ sub main{
                 title => $release_title,
                 artist => $release_artist,
                 year => $release_year,
-                discs => \%disc,);
+                discs => [values %disc],);
         if (!$is_consistent) {
             # Die if the discsogs release is not conistent with the files.
             print {\*STDERR} "Inconsistent release info and tag info.\n";
@@ -416,12 +416,12 @@ sub release_year_agrees {
 #   0 otherwise.
 sub release_discs_agree {
     my $release = shift;
-    my @discs = @{shift};
+    my @discs = @{shift @_};
     return 0 if $release->num_discs != scalar @discs;
     for my $i (0 .. $#discs) {
         my $di = $discs[$i];
         my $rel_di = $release->disc($i + 1);
-        return 0 if !disc_tracks_agree($rel_di, $di->tracks);
+        return 0 if !disc_tracks_agree($rel_di, $di->{tracks});
     }
     return 1;
     # TODO: Implement this method as a permutation search. 
@@ -435,7 +435,7 @@ sub release_discs_agree {
 # Returns: 
 #   1 if the tracks of the disc agree with $release_tracks.
 #   0 otherwise.
-sub release_tracks_agree {
+sub disc_tracks_agree {
     my ($release, $tracks_ref) = @_;
     my @rel_tracks = @{$release->tracks()};
     my @tracks = @{$tracks_ref};
@@ -470,9 +470,9 @@ sub release_tracks_agree {
 sub release_artist_agrees {
     my ($release, $artist) = @_;
     for my $a (@{$release->artists()}) {
-        return 0 if index ($artist, $a) == -1;
+        return 0 if index ($artist, $a->name) == -1;
         $a =~ s/\AThe\s+(\S.*\S)\z/$1, The/xms;
-        return 0 if index ($artist, $a) == -1;
+        return 0 if index ($artist, $a->name) == -1;
     }
     return 1;
 }
