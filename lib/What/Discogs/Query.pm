@@ -5,6 +5,7 @@ use Carp;
 package What::Discogs::Query::Utils;
 
 use What::XMLLib;
+use What::Discogs::Artist;
 
 sub get_urls {
     my ($node) = @_;
@@ -22,9 +23,11 @@ sub get_artists {
     my @artists = map {get_first_text('name', $_)} @a_nodes;
     my $copy_number;
     for (@artists) {
-        $_ =~ s/\s+ [(] (\d+) [)]//xms;
-        $copy_number = $1;
+        $copy_number = $_ =~ s/\s+ [(] (\d+) [)]//xms ? $1 : undef;
         $_ =~ s/\A (.*) , \s* [tT]he\z/The $1/xms;
+        $_ = What::Discogs::Artist::Name->new(
+            name=>$_,
+            (defined $copy_number ? (copy=>$copy_number) : ()),);
     }
     return @artists;
 }
@@ -195,11 +198,12 @@ sub artist {
 
     my $db_name = get_first_text('name', $artist_root);
 
+    my %copy_arg;
     if ($db_name =~ s/\s+ [(] ( \d+ ) [)] \z//xms) {
-        $artist{copy_number} = $1;
+        %copy_arg = (copy=>$1)
     }
 
-    $artist{name} = $db_name;
+    $artist{name} = What::Discogs::Artist::Name->new(name=>$db_name,%copy_arg);
 
     #print {\*STDERR} "Got artist name\n";
 
@@ -279,6 +283,7 @@ package What::Discogs::Query::Release;
 use What::XMLLib;
 use What::Utils;
 use What::Discogs::Release;
+use What::Discogs::Artist;
 use Moose;
 extends 'What::Discogs::Query::Base';
 
@@ -371,15 +376,17 @@ sub release {
     for my $ea_node (@ea_nodes) {
         my $name = get_first_text('name', $ea_node);
         my $copy_number;
+        my %copy_arg;
         if ($name =~ s/\s+ [(] (\d+) [)]//xms) {
             $copy_number = $1;
+            %copy_arg = (copy => $copy_number);
         }
+        my $ea_name = What::Discogs::Artist::Name->new(name => $name, %copy_arg);
         my $role = get_first_text('roll', $ea_node);
         my $tracks = get_first_text('tracks', $ea_node);
         my $extra_artist =  What::Discogs::Release::ExtraArtist->new(
-            ($name ? (name => $name) : ()), 
+            name => $ea_name,
             ($role ? (role => $role) : ()),
-            ($copy_number ? (copy_number => $copy_number) : ()),
             ($tracks ? (tracks => $tracks) : ()),);
         push @eas, $extra_artist;
     }
@@ -428,9 +435,10 @@ sub release {
                 # Create a disc.
                 %disc_args = (
                     (defined $disc_name ? (title => $disc_name) : ()),
-                    tracks => \@disc_tracks,
+                    tracks => [@disc_tracks],
                     number => $disc_num,);
                 $new_disc = What::Discogs::Release::Disc->new(%disc_args);
+                @disc_tracks = ();
 
                 push @discs, $new_disc;
 
@@ -452,9 +460,10 @@ sub release {
                     # Create a disc.
                     %disc_args = (
                         (defined $disc_name ? (title => $disc_name) : ()),
-                        tracks => \@disc_tracks,
+                        tracks => [@disc_tracks],
                         number => $disc_num,);
                     $new_disc = What::Discogs::Release::Disc->new(%disc_args);
+                    @disc_tracks = ();
                     push @discs, $new_disc;
 
                     # Mark that the disc has been created.
@@ -485,13 +494,14 @@ sub release {
         for my $ea_node (@ea_nodes) {
             my $name = get_first_text('name', $ea_node);
             my $copy_number;
+            my %copy_arg;
             if ($name =~ s/\s+ [(] (\d+) [)]//xms) {
-                # TODO: Turn artists into an object and put in it.
-                $copy_number = $1;
+                %copy_arg = (copy=>$1);
             }
+            my $ea_name = What::Discogs::Artist::Name->new(name=>$name, %copy_arg);
             my $role = get_first_text('role', $ea_node);
             my $extra_artist = What::Discogs::Release::Track::ExtraArtist->new(
-                ($name ? (name => $name) : ()),
+                name => $ea_name,
                 ($role ? (role => $role) : ()),
                 ($copy_number ? (copy_number => $copy_number) : ()),
             );
@@ -513,8 +523,9 @@ sub release {
         # Create a disc.
         %disc_args = (
             (defined $disc_name ? (title => $disc_name) : ()),
-            tracks => \@disc_tracks,
+            tracks => [@disc_tracks],
             number => $disc_num,);
+        @disc_tracks = ();
         $new_disc = What::Discogs::Release::Disc->new(%disc_args);
         push @discs, $new_disc;
 

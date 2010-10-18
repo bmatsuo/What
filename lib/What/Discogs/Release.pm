@@ -18,10 +18,13 @@ has 'name' => (isa => 'Str', is => 'rw', 'required' => 1);
 has 'catno' => (isa => 'Str', is => 'rw', 'required' => 0);
 
 package What::Discogs::Release::ExtraArtist::Base;
+use What::Discogs::Artist;
 use Moose;
 
-has 'name' => (isa => 'Str', is => 'rw', 'required' => 1);
-has 'copy_number' => (isa => 'Int', is => 'rw', 'required' => 0);
+has 'name' 
+    => (isa => 'What::Discogs::Artist::Name', 
+        is => 'rw', 
+        required => 1);
 has 'role' => (isa => 'Str', is => 'rw', 'required' => 0);
 
 package What::Discogs::Release::ExtraArtist;
@@ -37,14 +40,29 @@ extends 'What::Discogs::Release::ExtraArtist::Base';
 package What::Discogs::Release::Track;
 use Moose;
 
-has 'artists' => (isa => 'ArrayRef[Str]', is => 'rw', 'required' => 0,
-    default => sub { [] });
+has 'artists' 
+    => (isa => 'ArrayRef[What::Discogs::Artist::Name]', 
+        is => 'rw', 
+        required => 0,
+        default => sub { [] });
 has 'position' => (isa => 'Str', is => 'rw', required => 0);
 has 'title' => (isa => 'Str', is => 'rw', required => 0);
 has 'duration' => (isa => 'Str', is => 'rw', required => 0);
 has 'extra_artists' 
     => (isa => 'ArrayRef[What::Discogs::Release::Track::ExtraArtist]', is => 'rw',
         default => sub { [] }, required => 0);
+
+# Subroutine: $track->disc_pos()
+# Type: INSTANCE METHOD
+# Purpose: Remove the disc number from the track position (if disc number exists).
+# Returns: The position of the track on it's disc.
+#   Does nothing for vinyl releases.
+sub pos_on_disc {
+    my $self = shift;
+    my $pos = $self->position();
+    $pos =~ s/.*-([A-Z]*\d+)\z/$1/xms;
+    return $pos;
+}
 
 package What::Discogs::Release::Format;
 use Moose;
@@ -100,7 +118,7 @@ has 'title'
         is => 'rw', 
         required => 1);
 has 'artists' 
-    => ( isa => 'ArrayRef[Str]', 
+    => ( isa => 'ArrayRef[What::Discogs::Artist::Name]', 
         is => 'rw', 
         required => 1);
 has 'artist_joins' 
@@ -148,7 +166,7 @@ sub artist_string {
     my @joins = @{$self->joins()};
     my $str = '';
     for my $i (0 .. $#artists) {
-        my $artist = $artists[$i];
+        my $artist = $artists[$i]->name();
         my $join = $joins[$i];
         $str .= (defined $join and $join =~ /./xms) ? "$artist $join " : $artist;
         if ($i < $#artists) {
@@ -172,7 +190,7 @@ sub num_discs {
 sub num_tracks {
     my $self = shift;
     my $sum = 0;
-    for (map {$_->num_tracks()} @{$self->discs()}) { $sum += $_; }
+    for (map {$_->num_tracks} @{$self->discs}) { $sum += $_; }
     return $sum;
 }
 

@@ -3,6 +3,26 @@ use warnings;
 use Carp;
 use What::XMLLib;
 
+package What::Discogs::Artist::Name;
+use Moose;
+
+has 'name'
+    => (isa => 'Str', is => 'rw', required => 1,);
+has 'copy'
+    => (isa => 'Int', is => 'rw', required => 0);
+
+# Subroutine: $name->discogs_name()
+# Type: INSTANCE METHOD
+# Purpose: Combine the name and copy number for using in a Discogs query.
+# Returns: "$name ($copy_number)"
+sub discogs_name {
+    my $self = shift;
+    my $cp_num = $self->copy();
+    my $is_dup = defined $cp_num && $cp_num > 0;
+    my $copy_suffix = $is_dup ? qq{ ($cp_num)} : q{};
+    return $self->name() . $copy_suffix;
+}
+
 package What::Discogs::Artist::Release;
 use What::Discogs::Release;
 use Moose;
@@ -15,23 +35,33 @@ has 'label' => ('isa' => 'Str', 'is' => 'rw', 'required' => 1);
 has 'track_info' => ('isa' => 'Str', 'is' => 'rw', 'required' => 0);
 
 package What::Discogs::Artist;
-use What::Discogs::Discography;
 use Moose;
-extends 'What::Discogs::Discography';
 
 # Copy number of the artist name (e.g. 'M.I.A (2)' has copy number of 2).
-has 'copy_number' => (isa => 'Int', is => 'rw', required => 0);
+has 'name' 
+    => (isa => 'What::Discogs::Artist::Name',
+        is => 'rw',
+        required => 1);
 has 'name_variations' 
-    => (isa => 'ArrayRef[Str]', 'is' => 'rw', 'required' => 0, 
+    => (isa => 'ArrayRef[Str]', 
+        is => 'rw', 
         default => sub { [] });
-has 'aliases' => (isa => 'ArrayRef[Str]', 'is' => 'rw', 'required' => 0,
-    default => sub { [] });
-has 'members' => (isa => 'ArrayRef[Str]', 'is' => 'rw', 'required' => 0,
-    default => sub { [] });
+has 'urls' 
+    => (isa => 'ArrayRef[Str]', 
+        is => 'rw', 
+        default => sub { [] });
+has 'aliases' 
+    => (isa => 'ArrayRef[Str]', 
+        'is' => 'rw', 
+        default => sub { [] });
+has 'members' 
+    => (isa => 'ArrayRef[Str]', 
+        is => 'rw',
+        default => sub { [] });
 has 'releases' 
     => (isa => 'ArrayRef[What::Discogs::Artist::Release]', 
-        'is' => 'rw', 'required' => 1,
-    default => sub { [] });
+        is => 'rw', 
+        default => sub { [] });
 
 1;
 __END__

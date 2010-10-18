@@ -5,23 +5,30 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 7;
+
+use Test::More tests => 9;
 use XML::Twig;
+
+# Get a discogs API key from the user.
 print {\*STDERR} "Please enter a valid discogs api key:";
 my $key = <STDIN>;
-chomp $key;
+die "Couldn't parse API key (must be alphanumeric); $key"
+    if ($key !~ s/\A \s* ([a-z0-9]+) \s*\n? \z/$1/xms);
+
 BEGIN { use_ok('What::Discogs') };
 
-#########################
+#######################
 
 #######################
 # Release Query Tests #
 #######################
-my $release 
-    = get_release(id => 59180, api => $key);
+my $release = get_release(id => 59180, api => $key);
+ok($release->num_tracks == 6);
 
-# TEST parsing seems succesful
-ok($release->num_tracks() == 6);
+# Get a two disc release and check the number of tracks.
+$release = get_release(id => 2043326, api => $key);
+ok($release->num_tracks == 22);
+ok($release->disc(1)->title eq 'The Fame Monster');
 
 ######################
 # Artist Query Tests #
