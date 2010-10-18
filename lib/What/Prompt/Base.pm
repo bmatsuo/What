@@ -95,10 +95,6 @@ sub prompt_user {
         print "$preprompt\n";
         STDOUT->flush();
     }
-    else {
-        print "no preprompt\n";
-        STDOUT->flush();
-    }
 
     # Read user response.
     my $rline;

@@ -24,6 +24,7 @@ use What::Utils;
 use What::WhatRC;
 use What::Prompt;
 use What::Prompt::Choose;
+use What::Prompt::YesNo;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -242,9 +243,16 @@ sub main{
     #-------------------------#
     my $release; # A pointer to the release when we find it.
     if ($release_artist eq "Various Artists") {
-        # TODO: Do a release search.
-        print {\*STDERR} "Various Artist release search is not implemented\n";
-        exit 1;
+        my $release_search = search (
+            qstr => $release_title,
+            type => 'release',
+            api => $whatrc->{discogs_api_key},);
+        $release = find_release_in_search_results(
+            results => $release_search,
+            artist => $release_artist,
+            title => $release_title,
+            year => $release_year,
+            discs => [values %disc]);
     }
     else {
         # First, try an artist query.
@@ -362,6 +370,66 @@ EOIHEAD
 # SUPPORTING SUBROUTINES
 ########################################################################
 
+# Subroutine: find_release_in_search_results(
+#   results => $results,
+#   artist => $artist,
+#   title => $title,
+#   year => $edition_year,
+#   discs => \@discs)
+# Type: INTERNAL UTILITY
+# Purpose: 
+# Returns: 
+sub find_release_in_search_results {
+    shift;
+    my $results = shift;
+    my %r = @_;
+
+    my $title = $r{title};
+    my $artist = $r{artist};
+    $artist =~ s/\AVarious\s+Artists\z/Various/xms;
+
+    my @exact_results 
+        = grep {uc "$artist - $title" eq uc $_->title} @{$results->results};
+
+    if (@exact_results > 0) {
+        my @release_ids = map {$_->uri_identifier} @exact_results;
+        my @exacts
+            = map { get_release(id => $_, api => $whatrc->{discogs_api_key})} 
+            @release_ids;
+        my @exact_fits 
+            = grep { release_agrees(release=> $_, %r)} @exacts;
+        my @exact_choices = map {summarize_perfect_match($_)} @exact_fits;
+        if (@exact_fits > 1) {
+            my $exact_choice_p = What::Prompt::Choose->new(
+                text => "Which release has the most accurate info?",
+                choices => \@exact_choices);
+            my $exact_choice = $exact_choice_p->prompt_user;
+            return $exact_fits[$exact_choice];
+        }
+        elsif (@exact_fits) {
+            return $exact_fits[0];
+        }
+    }
+
+    my @result_scores 
+        = map {align("$artist - $title", $_->title)} @{$results->results};
+    my @sorted_indices 
+        = sort {$result_scores[$a] <=> $result_scores[$b]} (0 .. $#result_scores);
+    my @narrowed_indices = grep {$result_scores[$_] > 0.82} @sorted_indices;
+
+    for my $i (@narrowed_indices) {
+        my $result = $results->get_result($i);
+        print "\n";
+        print join q{}, $result->title, " [", $result->type, "]\n";
+        my $yn_prompt = What::Prompt::YesNo->new(
+            question => "Do you want to investigate this result?");
+        my $should_investigate = $yn_prompt->prompt_user();
+        $should_investigate = $should_investigate =~ /\A y/ixms;
+    }
+    
+    return;
+}
+
 # Subroutine: find_release_in_artist_page(
 #   artist => $artist,
 #   title => $title,
@@ -475,11 +543,14 @@ sub summarize_perfect_match {
 sub release_agrees {
     my %arg = @_;
     my $release = $arg{release};
-    return 
-        release_title_agrees($release, $arg{title}) 
-        && release_artist_agrees($release, $arg{artist}) 
-        && release_year_agrees($release, $arg{year})
-        && release_discs_agree($release, $arg{discs});
+    return if !release_title_agrees($release, $arg{title});
+    print "Title agrees\n";
+    return if !release_artist_agrees($release, $arg{artist});
+    print "Artist agrees\n";
+    return if !release_year_agrees($release, $arg{year});
+    print "Year agrees\n";
+    return if !release_discs_agree($release, $arg{discs});
+    print "Discs agree\n";
 }
 
 # Release test template.
@@ -547,12 +618,17 @@ sub release_discs_agree {
 #   1 if the tracks of the disc agree with $release_tracks.
 #   0 otherwise.
 sub disc_tracks_agree {
-    my ($release, $tracks_ref) = @_;
-    my @rel_tracks = @{$release->tracks()};
+    my ($disc, $tracks_ref) = @_;
+    my @rel_tracks = @{$disc->tracks()};
     my @tracks = @{$tracks_ref};
 
     # Return false if the number of tracks differ.
-    return 0 if (@{$release->tracks} != @tracks);
+    if ($disc->num_tracks != @tracks) {
+        print {\*STDERR} 
+            "Discs with different numbers of tracks; ",
+            $disc->num_tracks, " and ", scalar @tracks;
+        return 0;
+    }
 
     # Iterate over corresponding tracks.
     for my $i (0 .. $#tracks) {
@@ -564,7 +640,7 @@ sub disc_tracks_agree {
             $rel_dur = 60 * $1 + $2;
         }
         # Return false if discogs duration is more than the possed duration.
-        return 0 if $rel_dur > $ti->{duration};
+        return 0 if $rel_dur > $ti->{duration} + 1;
     }
     # Track names might be subtly misspelled. Are not checked currently.
 

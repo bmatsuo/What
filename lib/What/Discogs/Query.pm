@@ -488,7 +488,8 @@ sub release {
         }
 
         #print {\*STDERR} "$pos $title [$dur]\n";
-        my @artists = What::Discogs::Query::Utils::get_artist_strings($track_node);
+        my @artists = What::Discogs::Query::Utils::get_artists($track_node);
+        my @joins = What::Discogs::Query::Utils::get_artist_joins($track_node);
 
         my @track_eas;
         my @ea_nodes 
@@ -515,6 +516,7 @@ sub release {
             (defined $dur ? (duration => $dur) : ()),
             (defined $pos ? (position => $pos) : ()),
             (@artists ? (artists => \@artists) : ()),
+            (@joins ? (joins => \@joins) : ()),
             (@track_eas ? (extra_artists => \@track_eas) : ()),
         );
         push @disc_tracks, $track;

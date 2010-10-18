@@ -19,6 +19,20 @@ sub dup {
         title=>$self->title, uri=>$self->uri, summary=>$self->summary);
 }
 
+sub uri_type {
+    my $self = shift;
+    my @elements = split "/", $self->uri();
+    return $elements[-2];
+}
+
+sub uri_identifier {
+    my $self = shift;
+    my @elements = split '/', $self->uri();
+    my $id = $elements[-1];
+    $id =~ s/[+]/ /gxms;
+    return $id;
+}
+
 package What::Discogs::Search::ResultList;
 use Moose;
 
