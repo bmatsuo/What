@@ -42,15 +42,24 @@ sub default {
     return 0;
 }
 
-# Subroutine: $choice_prompt->text()
+# Subroutine: $choice_prompt->preprompt_text()
 # Type: INSTANCE METHOD
 # Purpose: Create a string of the list choices, and prompt text
-sub text {
+sub preprompt_text {
     my $self = shift;
     my @choices = @{$self->choices};
-    my $text = join "\n", (map {"[$_] " . $choices[$_]} (0 .. $#choices));
+    my $text = "\n";
+    $text .= join "\n", (map {"[$_] " . $choices[$_] . "\n"} (0 .. $#choices));
     $text .= "\n\n";
-    $text .= "Please enter a choice [" . $self->default() . "]:";
+    return $text;
+}
+
+# Subroutine: $choice_prompt->text()
+# Type: INSTANCE METHOD
+# Purpose: Get text for prompt choice.
+sub text {
+    my $self = shift;
+    my $text = "Please enter a choice [" . $self->default() . "]:";
     return $text;
 }
 

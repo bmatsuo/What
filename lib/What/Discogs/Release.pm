@@ -67,6 +67,7 @@ sub pos_on_disc {
 package What::Discogs::Release::Format;
 use Moose;
 
+has 'name' => (isa => 'Str', is => 'rw', required => 0);
 has 'type' => (isa => 'Str', is => 'rw', required => 1);
 has 'quantity' => (isa => 'Int', is => 'rw', required => 1);
 has 'descriptions' => (isa => 'ArrayRef[Str]', is => 'rw', required => 0,

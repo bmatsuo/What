@@ -38,6 +38,7 @@ use Moose;
 
 my $prompt_count = 0;
 
+sub preprompt_text { return "" };
 sub text { return "Please enter some text:" };
 sub validator { return sub {1} };
 sub default { return q{} };
@@ -72,6 +73,7 @@ sub _retry_prompt_user {
 #   Choice index.
 sub prompt_user {
     my $self = shift;
+    my $preprompt = $self->preprompt_text();
     my $text = $self->text();
     my $default = $self->default();
     my $input_is_multiline = $self->is_multiline;
@@ -88,6 +90,15 @@ sub prompt_user {
         = $text.($input_is_multiline ? "$/$terminate_help$/" : q{});
 
     my $line_count = 0;
+
+    if ($preprompt =~ m/./xms) {
+        print "$preprompt\n";
+        STDOUT->flush();
+    }
+    else {
+        print "no preprompt\n";
+        STDOUT->flush();
+    }
 
     # Read user response.
     my $rline;

@@ -153,11 +153,13 @@ around BUILDARGS => sub {
     my $rep_spaces = sub {$_[0] =~ s/\s+/+/xms};
 
     if ( @_ == 1 && !ref $_[0] ) {
+        $_[0]->{name} =~ s/\AThe\s+(.*)\z/$1, The/xms;
         $rep_spaces->($_[0]->{name});
         return $class->$orig(@_);
     }
     elsif ( @_ % 2 == 0 ) {
         my %arg = @_;
+        $arg{name} =~ s/\AThe\s+(.*)\z/$1, The/xms;
         $rep_spaces->($arg{name});
         return $class->$orig(%arg);
     }

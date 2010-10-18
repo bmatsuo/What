@@ -23,6 +23,7 @@ use What::Discogs;
 use What::Utils;
 use What::WhatRC;
 use What::Prompt;
+use What::Prompt::Choose;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -241,11 +242,22 @@ sub main{
     #-------------------------#
     my $release; # A pointer to the release when we find it.
     if ($release_artist eq "Various Artists") {
-        # TODO: Do is a release search.
+        # TODO: Do a release search.
+        print {\*STDERR} "Various Artist release search is not implemented\n";
+        exit 1;
     }
     else {
-        # TODO: First, try an artist search.
-        # TODO: When unsuccessful w/ artist search; try a release search.
+        # First, try an artist query.
+        $release = find_release_in_artist_page(
+            artist => $release_artist,
+            title => $release_title,
+            year => $release_year,
+            discs => [values %disc]);
+
+        if (!defined $release) {
+            # TODO: When unsuccessful w/ artist query; try an artist search.
+            # my $artist_search_results = search(qstr => $release_artist);
+        }
     }
     # TODO: When Discogs search fails, search Musicbrainz if possible.
 
@@ -349,6 +361,105 @@ EOIHEAD
 ########################################################################
 # SUPPORTING SUBROUTINES
 ########################################################################
+
+# Subroutine: find_release_in_artist_page(
+#   artist => $artist,
+#   title => $title,
+#   year => $edition_year,
+#   discs => \@discs)
+# Type: INTERNAL UTILITY
+# Purpose: Perform an artist query and find a matching release.
+#   Can fail if there's an inconsistency in artist naming between discogs and tags.
+#   Can also fail when the proper artist has an unknown copy number.
+# Returns: A What::Discogs::Release object when a matching release is found.
+#   Returns a void otherwise.
+sub find_release_in_artist_page {
+    # The arguments act as a 'release' object.
+    my @checked_releases;
+    my %r = @_;
+    my $artist = $r{artist};
+    my $title = $r{title};
+    my $artist_discog;
+    eval { $artist_discog = get_artist(
+            name => $artist, api => $whatrc->{discogs_api_key}); };
+    return if !defined $artist_discog;
+
+    my @releases = @{$artist_discog->releases};
+
+    # Look for releases that have the same title.
+    my @exact_matches = grep { $title eq $_->title } @releases;
+
+    if (@exact_matches) {
+        print "Exact matches found in artist discography.\n";
+        print "Fetching releases...\n";
+        my @exacts
+            = map {get_release(
+                    id => $_->id, api => $whatrc->{discogs_api_key})} 
+            @exact_matches;
+        my @perfect_fits
+            = grep {release_agrees(release=>$_, %r)} @exacts;
+        if (@perfect_fits) {
+            if (@perfect_fits > 1) {
+                # Have the user select the proper release.
+                my @perfect_choices 
+                    = map {summarize_perfect_match($_)} @perfect_fits;
+                my $pp = What::Prompt::Choose->new(
+                    text => "Multiple release with matching info found\n"
+                        . "Which release has the most accurate info?",
+                    choices => \@perfect_choices);
+                return @perfect_fits[$pp->prompt_user()];
+            }
+            else {
+                return $perfect_fits[0];
+            }
+        }
+        else {
+            print {\*STDERR} "Non of the exact matches fit properly.\n";
+            return;
+        }
+    }
+
+    # Look for releases that have most of the words in the title.
+    my @near_matches = grep {words_fit($title, $_->title) > .81} @releases;
+
+    if (@near_matches) {
+        print {\*STDERR} "Near matches found in the artist discography.\n";
+        print {\*STDERR} "This logic has not been implemented yet.\n";
+    }
+
+    return;
+}
+
+# Subroutine: summarize_perfect_match($discogs_release)
+# Type: INTERNAL UTILITY
+# Purpose: 
+#   Make a short summary of the most important information for perfect matches.
+# Returns: 
+#   A string listing the labels, catnos, country, formats of a release
+sub summarize_perfect_match {
+    my $dr = shift;
+    my $label_str = join ", ", (map {$_->name} reverse @{$dr->labels});
+    my $catno_str = join ", ", (map {$_->catno} reverse @{$dr->labels});
+    my @format_descs = map {join ", ", @{$_->descriptions}} @{$dr->formats};
+    my @format_strs;
+    for my $i ($#format_descs) {
+        my $f = $dr->formats->[$i];
+        my $f_str = $f->type;
+        if ($f->quantity > 1) {
+            $f_str = join "x", $f->quantity, $f_str;
+        }
+        my $f_desc = $format_descs[$i];
+        $f_str .= " $f_desc"
+            if $f_desc =~ /./xms;
+        push @format_strs, $f_str;
+    }
+    my $formats_str = join ", ", (map {"[$_]"} @format_strs);
+    $label_str =~ s/\A (.{30}).+ \z/$1.../xms;
+    my $summ 
+        = sprintf "labels: %-33s catnos: %s\n    country: %s formats: %s",
+            $label_str, $catno_str, $dr->country, $formats_str;
+    return $summ;
+}
 
 # Subroutine: release_agrees(
 #   release => $release, 
