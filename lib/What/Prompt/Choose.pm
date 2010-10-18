@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-package What::Prompt;
+package What::Prompt::Choose;
 
 # Use perldoc to read documentation
 
@@ -7,27 +7,56 @@ package What::Prompt;
 use strict;
 use warnings;
 
-our $VERSION = '0.0_3';
+# include CPAN modules
+use Readonly;
+our $VERSION = '0.0_1';
 
+use Exception::Class (
+    'NoChoicesException'
+);
+
+# include any private modules
+use What;
 use Moose;
 extends 'What::Prompt::Base';
 
-my $prompt_count = 0;
-has 'text'
-    => (isa => 'Str', is => 'rw', default => q{Please enter text:});
-has 'validator'
-    => (isa => 'CodeRef', is => 'rw', default => sub { return sub {1} });
+has 'choices' 
+    => (isa => 'ArrayRef[Str]',
+        is => 'rw',
+        required => 1
+        trigger => \&_choices_set_,);
 
-# Subroutine: $prompt->reset_validator()
-# Type: INSTANCE METH
-# Purpose: 
-#   Reset the validator to one that accepts all input.
-# Returns: 
-#   Nothing
-sub reset_validator {
+sub _choices_set_ {
+    my ($self, $c_ref, $old_ref) = @_;
+    if (@{$c_ref} = 0) {
+        $self->choices($old_ref) if defined $old_ref && @{$old_ref} > 0;
+        NoChoiceException->throw( error=>"Empty choice list");
+    }
+}
+
+# Subroutine: $choice->default()
+# Type: INSTANCE METHOD
+# Returns: The default choice when nothing is given.
+sub default {
+    return 0;
+}
+
+# Subroutine: $choice_prompt->text()
+# Type: INSTANCE METHOD
+# Purpose: Create a string of the list choices, and prompt text
+sub text {
     my $self = shift;
-    $self->validator(sub {1});
-    return;
+    my @choices = @{$self->choices};
+    my $text = join "\n", (map {"[$_] " . $choices[$_]} (0 .. $#choices));
+    $text .= "\n\n";
+    $text .= "Please enter a choice [" . $self->default() . "]:";
+    return $text;
+}
+
+sub validator {
+    my $self = shift;
+    my @choices = @{$self->choices};
+    return sub { my $c = shift; return (0 <= $c && $c < @choices)};
 }
 
 1

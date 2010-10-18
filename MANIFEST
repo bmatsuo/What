@@ -12,6 +12,8 @@ t/What-M3U.t
 t/What-Format.t
 lib/What.pm
 lib/What/Prompt.pm
+lib/What/Prompt/Base.pm
+lib/What/Prompt/Choose.pm
 lib/What/WhatRC.pm
 lib/What/Release.pm
 lib/What/Utils.pm
