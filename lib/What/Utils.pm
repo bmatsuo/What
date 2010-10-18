@@ -34,9 +34,41 @@ our @EXPORT = qw(
     search_hierarchy
     find_subdirs
     merge_structure
+    align
+    words_fit
 );
 
 our $VERSION = '0.00_01';
+
+# Subroutine: align($str1, $str2)
+# Type: INTERFACE SUB
+# Purpose: Perform weak string comparison.
+# Returns: 
+#   A score from 0 to 1. Higher numbers meaning a better fit.
+sub align {
+    my ($s1, $s2) = @_;
+    return (words_fit($s1,$s2) + words_fit($s2,$s1)) / 2;
+}
+
+# Subroutine: words_fit($words, $string)
+# Type: INTERFACE SUB
+# Returns: The percentage of words in $string.
+sub words_fit {
+    my ($words, $string) = @_;
+    my @words = grep {$_ =~ m/./xms} (split /[^A-Za-z0-9]+/, $words);
+    my $num_words = scalar @words;
+    return 0 if $num_words == 0;
+    my $words_contained = 0;
+
+    for my $w (@words) {
+        my $i = index $string, $w;
+        if ($i >= 0) {
+            $words_contained++;
+        }
+    }
+
+    return  $word_contained / $num_words;
+}
 
 # Subroutine: merge_structure($skeleton, $body)
 # Type: INTERFACE SUB
