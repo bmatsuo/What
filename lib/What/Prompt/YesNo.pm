@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-package What::Prompt::Choose;
+package What::Prompt::YesNo;
 
 # Use perldoc to read documentation
 
@@ -12,54 +12,44 @@ use Readonly;
 our $VERSION = '0.0_1';
 
 use Exception::Class (
-    'NoChoicesException'
+    'NonBooleanDefault'
 );
 
 # include any private modules
 use What;
 use Moose;
-use Scalar::Util qw{looks_like_number};
 extends 'What::Prompt::Base';
 
-has 'choices' 
-    => (isa => 'ArrayRef[Str]',
-        is => 'rw',
-        required => 1,
-        trigger => \&_choices_set_,);
+has 'default'
+    =>(isa => 'Str', is => 'rw', default => 'yes', trigger => \&_default_set_);
+has 'question'
+    =>(isa => 'Str', is => 'rw', required => '1');
 
-sub _choices_set_ {
-    my ($self, $c_ref, $old_ref) = @_;
-    if (@{$c_ref} == 0) {
-        $self->choices($old_ref) if defined $old_ref && @{$old_ref} > 0;
-        NoChoicesException->throw( error=>"Empty choice list");
+
+sub _default_set_ {
+    my ($self, $new_def, $old_def) = @_;
+    if (!$new_def =~ /\A (?: yes | no ) \z/ixms) {
+        NonBooleanDefault->throw(
+            error => "'default' attribute $new_def is not 'yes'/'no'.");
     }
 }
 
-# Subroutine: $choice->default()
-# Type: INSTANCE METHOD
-# Returns: The default choice when nothing is given.
-sub default {
-    return 0;
-}
-
-# Subroutine: $choice_prompt->text()
-# Type: INSTANCE METHOD
-# Purpose: Create a string of the list choices, and prompt text
 sub text {
     my $self = shift;
-    my @choices = @{$self->choices};
-    my $text = join "\n", (map {"[$_] " . $choices[$_]} (0 .. $#choices));
-    $text .= "\n\n";
-    $text .= "Please enter a choice [" . $self->default() . "]:";
-    return $text;
+    my $def_is_yes = $self->default =~ /yes/ixms;
+    return $self->question . ($def_is_yes ? '[Yn]' : '[yN]');
 }
+
+my $_v_sub_ = sub {
+    my $r = shift; 
+    my $patt = qr{
+        \A (?: (?: y(?:es)? ) | (?: no? ) )? \z}ixms;
+    return $r =~ $patt; 
+};
 
 sub validator {
     my $self = shift;
-    my @choices = @{$self->choices};
-    return sub { 
-        my $c = shift; 
-        return (looks_like_number $c && 0 <= $c && $c < @choices)};
+    return $_v_sub_;
 }
 
 1

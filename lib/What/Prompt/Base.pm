@@ -74,7 +74,7 @@ sub prompt_user {
     my $self = shift;
     my $text = $self->text();
     my $default = $self->default();
-    my $input_is_multiline = $self->multiline;
+    my $input_is_multiline = $self->is_multiline;
     my $terminator = $self->terminator;
     my $is_valid = $self->validator();
     my $term = $self->terminal;
