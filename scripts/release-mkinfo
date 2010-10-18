@@ -354,7 +354,7 @@ EOIHEAD
 #   release => $release, 
 #   artist => $artist,
 #   title => $title,
-#   year => $year,
+#   year => $edition_year,
 #   discs => \@discs)
 # Type: INTERNAL UTILITY
 # Purpose: Check a discogs release, and given release info for consistency.
@@ -367,9 +367,8 @@ sub release_agrees {
     return 
         release_title_agrees($release, $arg{title}) 
         && release_artist_agrees($release, $arg{artist}) 
-        && release_year_agrees($release, $arg{year});
-        # Can't check tracks right now.
-        #&& release_tracks_agree($release, $arg{discs});
+        && release_year_agrees($release, $arg{year})
+        && release_discs_agree($release, $arg{discs});
 }
 
 # Release test template.
@@ -407,17 +406,39 @@ sub release_year_agrees {
     return 1;
 }
 
-# Subroutine: release_tracks_agree($discogs_release, \@discs)
+# Subroutine: release_discs_agree($discogs_release, \@discs)
 # Type: INTERNAL UTILITY
-# Purpose: Compare the tracks of a discogs release to a given array of track info.
+# Purpose: 
+#   Attempt to match of the the release to an array of discs' info.
+#   For now, a simple 'down-the-line' test of agreement for each disc.
 # Returns: 
-#   1 if the title of the discogs release is equal to $release_tracks.
+#   1 if the discs of the discogs release \@discs.
+#   0 otherwise.
+sub release_discs_agree {
+    my $release = shift;
+    my @discs = @{shift};
+    return 0 if $release->num_discs != scalar @discs;
+    for my $i (0 .. $#discs) {
+        my $di = $discs[$i];
+        my $rel_di = $release->disc($i + 1);
+        return 0 if !disc_tracks_agree($rel_di, $di->tracks);
+    }
+    return 1;
+    # TODO: Implement this method as a permutation search. 
+    #   There is not necessarily a guaranteed ordering.
+}
+
+# Subroutine: disc_tracks_agree($disc, \@tracks)
+# Type: INTERNAL UTILITY
+# Purpose: 
+#   Compare the tracks of a discogs release's disc to a given array of track info.
+# Returns: 
+#   1 if the tracks of the disc agree with $release_tracks.
 #   0 otherwise.
 sub release_tracks_agree {
-    my ($release, $discs_ref) = @_;
+    my ($release, $tracks_ref) = @_;
     my @rel_tracks = @{$release->tracks()};
-    my @discs = @{$discs_ref};
-    my @tracks = (map {@{$_->tracks()}} @discs);
+    my @tracks = @{$tracks_ref};
 
     # Return false if the number of tracks differ.
     return 0 if (@{$release->tracks} != @tracks);

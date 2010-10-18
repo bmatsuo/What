@@ -67,7 +67,7 @@ sub words_fit {
         }
     }
 
-    return  $word_contained / $num_words;
+    return  $words_contained / $num_words;
 }
 
 # Subroutine: merge_structure($skeleton, $body)
