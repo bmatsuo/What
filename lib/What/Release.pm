@@ -14,23 +14,11 @@ use AutoLoader qw(AUTOLOAD);
 
 our @ISA = qw(Exporter);
 
-# Items to export into callers namespace by default. Note: do not export
-# names by default without a very good reason. Use EXPORT_OK instead.
-# Do not simply export all your public functions/methods/constants.
-
-# This allows declaration	use what ':all';
-# If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
-# will save memory.
-our %EXPORT_TAGS = ( 'all' => [ qw(
-	
-) ] );
-
+our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+our @EXPORT = qw();
 
-our @EXPORT = qw(
-);
-
-our $VERSION = '0.0_1';
+our $VERSION = '0.0_2';
 
 my %def_arg = ( 
     rip_root => "",
@@ -209,13 +197,6 @@ sub format_disc_dirs {
 
     # Reaching 'return' means at least one directory should be found.
     croak ("For some reason, no disc directory could be found.");
-
-    # Old code.
-    # my @disc_dirs = bsd_glob(glob_safe($format_dir)."/CD*/");
-    # # Remove trailing / from directories.
-    # map {chop $_} @disc_dirs;
-    # return @disc_dirs if (@disc_dirs);
-    # return $format_dir;
 }
 
 # Preloaded methods go here.

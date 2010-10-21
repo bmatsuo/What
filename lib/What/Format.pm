@@ -8,9 +8,7 @@ use warnings;
 use Carp;
 use File::Basename;
 
-# include CPAN modules
-use Readonly;
-use Audio::FLAC::Header;
+use Exception::Class ('ExtensionException');
 
 # include any private modules
 # ...
@@ -19,9 +17,10 @@ our @EXPORT = qw(
     format_normalized
     format_is_accepted
     format_extension
+    transcode_path
 );
 
-our $VERSION = '0.0_1';
+our $VERSION = '0.0_3';
 
 my %is_accepted = (
     FLAC    => 1,
@@ -31,6 +30,7 @@ my %is_accepted = (
     V0      => 1,
     V2      => 1,
 );
+
 my %ext_of = (
     FLAC    => 'flac',
     OGG     => 'ogg',
@@ -40,6 +40,8 @@ my %ext_of = (
     V2      => 'mp3',
 );
 
+
+
 # INTERFACE METHOD (no class arg);
 sub format_normalized {
     my $format = shift;
@@ -48,15 +50,33 @@ sub format_normalized {
 
 # INTERFACE METHOD (no class arg);
 sub format_is_accepted{
-    my $format = shift;
-    return if !$is_accepted{format_normalized($format)};
-    return 1;
+    my $format = format_normalized(shift @_);
+    return if !$is_accepted{$format};
+    return $format;
 }
 
 # INTERFACE METHOD (no class arg);
 sub format_extension {
     my $format = shift;
     return $ext_of{format_normalized($format)};
+}
+
+# Subroutine: transcode_path($file, $dest, $format)
+# Type: INTERFACE SUB
+# Purpose: 
+#   Create the filename for a transcode of $file to $format,
+#   placed in the directory $dest.
+# Returns: The path to the converted file.
+sub transcode_path {
+    my ($file, $dest, $format) = @_;
+    my $new_ext = format_extension($format);
+    my $name = basename($file);
+    if ($name =~ s/(.)\.\w+ \z/$1.$new_ext/xms) {
+        return "$dest/$name";
+    }
+    else {
+        ExtensionException->throw(error => "File $file has no extension.\n");
+    }
 }
 
 __END__
