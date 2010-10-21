@@ -1,0 +1,50 @@
+RELEASE (UNDER THE HOOD)
+
+The whole process is done by stringing smaller scripts together.
+When 
+
+After you rip a CD, run the command,
+    release-scaffold \
+        --artist <artist> --year <year> --title <title> \
+        [--num-discs <num-discs>]
+to create the paths to the necessary music directories.
+
+If you want, you can run
+    release-ok [--num-discs <num_discs>]
+to check that you have included things like log files and CUE files in
+the flac release directory. This will help make sure that your uploads 
+aren't trumped by others that are more complete.
+
+Move the FLAC and image files into their proper directories (see 
+UPLOAD DIRECTORY STRUCTURE). This will probably be automated soon enough.
+
+Then run 
+    release-flac-convert \
+        --artist <artist> --year <year> --title <title> \
+        [--v0] [--v2] [--320]
+to create other desired formats.
+
+Finally run
+    release-mktorrent \
+        --artist <artist> --year <year> --title <title> \
+        [--flac] [--v0] [--v2] [--320]
+to create torrents for each desired format.
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2010 by Bryan Matsuo <bryan.matsuo@gmail.com>
+
+This file is part of What.
+
+What is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+What is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with What.  If not, see <http://www.gnu.org/licenses/>.

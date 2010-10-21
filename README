@@ -3,15 +3,14 @@ what version 0.00_06
 
 ABSTRACT
 
-The goal of the What package is to be the ultimate package of command-
-line tools for What users. I stress the word users. This is not a package
-of tools for seedboxes. This is meant to help Joe Everyuser get a good
-ratio.
+What is a package of open source command-line tools for What users. 
+This is not a package of tools for seedboxes. 
+This is meant to help Joe Everyuser get a good ratio.
 
-The package currently centers around creating releases. Depending on user
-feedback, more libraries and more programs will be added.
+The package currently centers around creating releases. 
+More libraries and programs will be added depending on user feedback.
 
-CONTENTS
+README CONTENTS
     Package Features
     Package Defeciencies
     Upload Directory Structure
@@ -19,18 +18,19 @@ CONTENTS
     Rip Workflow
     Release Workflow
     Importing Workflow
-    Release (Under the Hood)
 
 PACKAGE FEATURES
 
 This package can:
     Organize your all your releases into a user navigatable hierarchy.
+    Create release descriptions.
     Create M3U playlists for release discs.
-    Convert a FLAC release to MP3 with 320, V0, or V2 bitrate settings.
-    Convert a FLAC release to OGG vorbis with -q8 quality setting.
-    Convert a FLAC release to AAC with ~256 ABR setting (don't use).
-    Rerelease FLAC / Log 100% / Cue snatches for tag trumps / better.php.
-    Convert M3U playlists.
+    Convert M3U playlists for different format releases.
+    Convert a FLAC release to:
+        MP3 with 320, V0, or V2 bitrate settings.
+        Ogg Vorbis with -q8 quality setting.
+        AAC with ~256 ABR setting (don't use; FAAC sucks).
+    Re-release FLAC / Log 100% / Cue snatches for tag trumps & better.php.
     Create torrents for releases.
     Convert release images to lower res versions for web hosting.
     Make you a sandwich, if you have permissions.
@@ -40,17 +40,17 @@ PACKAGE DEFECIENCIES
 This package will probably never:
     Rip CDs to FLAC.
     Upload torrents.
-    Score FLAC rip logs (this might be approximateable).
 
 This package can not currently:
-    Handle bandcamp.com releases (they keep getting more clever).
-    Make good MP3s w/ non-Latin-1 tags (=> mojibake (lame: L 2 utf-8)).
-    Make Apple Lossless coversions (meh).
-    Make 'perfect' AAC 320 CBR conversions (no good portable lib/app).
-    Create album descriptions.
+    Score FLAC rip logs (coming).
+    Perform multi-threaded conversions (soon hopefully).
     Create release descriptions.
+    Make good MP3s w/ non-Latin-1 tags (=> mojibake (lame: L 2 utf-8)).
+    Handle bandcamp.com releases (they keep getting more clever or something).
     Manage your personal media library.
     Manage your personal media archival/backup.
+    Make Apple Lossless coversions (meh).
+    Make 'perfect' AAC 320 CBR conversions (no good portable lib/app).
 
 The above list is pretty much a todo list.
 
@@ -60,13 +60,15 @@ The library and program suite are set up to enforce a certain directory
 structure. 
 
 There is a root directory where all uploads are placed (henceforth called 
-'the upload root'). Subdirectories of the upload root are named by 
+the *upload root*). Subdirectories of the upload root are named by 
 artists.
 
-Contained in each artist directory is one directory for each unique
-release (i.e. album, single, ...) that has been ripped. In each release 
-directory, there is a file Info.txt which should give some description
-of the individual released (to be used as an album description).
+Contained in each *artist directory* is one directory for each unique
+release (i.e. album, single, ...) that has been ripped. In each 
+*release directory*, there is a file Info.txt which should give some 
+description of the individual released.
+
+The structure described above is known as the *upload hierarchy*.
 
 In each release directory, there is one folder for each format of the
 release (FLAC, 320kbps, V0, V2, ...). Torrents for each format will also
@@ -74,12 +76,12 @@ reside in the release directory. Then the torrent's directory is the same
 as the directory the torrent should downloaded to.
 
 For releases with multiple discs, the audio files are placed in seperate 
-subdirectories of the rip directory labeled 'CDX' for disc number X.
+subdirectories.
 
-Images are all placed in the top level of a format's directory, 
-regardless of whether or not there are multiple discs in the release.
 Log and CUE files should always be in the same directory as the same
 music they describe.
+
+Images can be placed in any folder of the release.
 
 Here is an example of the directory structure needed.
 
@@ -87,6 +89,7 @@ upload_root
 |---Pop Star
 |   `---Pop Star - New Album (2010)
 |       |---Info.txt
+|       |---Pop Star - New Album (2010) [FLAC].torrent
 |       `---Pop Star - New Album (2010) [FLAC]
 |           |---Front.tiff
 |           |---Back.tiff
@@ -106,12 +109,14 @@ upload_root
 |               `---New Album - CD2.cue
 `---Indie Duo
     `---Indie Duo - Fixies EP (2009)
+        |---Indie Duo - Fixies EP (2009) [FLAC].torrent
         |---Indie Duo - Fixies EP (2009) [FLAC]
         |   |---01 Fixies.flac
         |   |---02 Fixies (Messenger Bag Remix).flac
         |   |---03 Fixed Gears in Space.flac
         |   |---Fixies.log
         |   `---Fixies.cue
+        |---Indie Duo - Fixies EP (2009) [V0].torrent
         |---Indie Duo - Fixies EP (2009) [V0]
         |   |---01 Fixies.mp3
         |   |---02 Fixies (Messenger Bag Remix).mp3
@@ -123,36 +128,43 @@ upload_root
 PACKAGE WORKFLOW
 
 The What package enforces a specific workflow for uploading.  
+
 There are two parts to uploading; ripping and releasing. 
-The term 'releasing' is used meaning checking for a complete release, 
-placing the release formats appropriately in the upload heirarchy 
-(encoding to mp3 where necessary), creating a torrent, 
-and finally adding the torrent to your preferred client.
-                   
+Ripping is, as it sounds, extracting FLAC audio from the CD and 
+placing it in the rip directory with log and cue files. 
+Releasing is when:
+    M3U playlists are created for audio files.
+    A .nfo info file is created for the release.
+    The files are moved into the upload hierarchy.
+    Files are converted to different formats (optional).
+    Torrents are made for a FLAC release and any other created formats.
+    Finally, adding the torrent to the preferred client.
+
+After this, the user must manually upload the torrent. That's it.
+
 RIP WORKFLOW
 
 All new releases should be ripped to the same directory (the 
-'rip directory'). This directory should not be in the upload hierarchy 
-(it probably could be, if placed with care). The program will check
-the release and then place it in the upload heirachy.
+*rip directory*). This directory should not be in the upload hierarchy. 
 
 For single disc rips, all flac files should be placed directly in the
-rip directory. For multidisc rips, flac files should be separated into
-subdirectorys of the form "<rip directory>/CDX/" where X is a disc number.
+rip directory. For multidisc rips each disc's audio, log, and cue files
+should be separated into subdirectories.
 
-Log and CUE files should accompany all your rips, and should be placed
+Log and cue files should accompany all your rips, and should be placed
 in the rip directory. The What package will not tolerate releases which 
 can be trumped! This actually might change later.
 
-TIFF image scans of album artwork and disc images should also be placed 
-in the rip directory before releasing. JPEG album artwork is also 
-accepted, but for an untrumpable release I think TIFF should be preferred.
-There may be a way to not require album artwork in the future...
+Images can be placed in the rip directory, or any subdirectory.
+At least one image is required to create a release. TIFF, JPEG, and PNG 
+images are recognizable by the package.
 
 A release description Info.txt must be placed in the rip directory before
-releasing. There are no required contents for Info.txt, so it can be an
-empty file. Its recommended that you use the cross-platform description
-generator (python) that is in the Laboratory forum and on github.
+releasing. There are no required contents for Info.txt, (it can be empty). 
+Its recommended that you use the program
+    "Cross-Platform Description Generator (Python)" 
+, that is in the Laboratory forum and on github, to make for Info.txt files.
+Discogs searching is coming to the What package soon though.
 
 Ensure that all the necessary files are in the rip directory before
 proceding to the releasing workflow.
@@ -165,16 +177,19 @@ following command
         --artist "Indie Duo" --title "Darkest Darkness" --year 2010 \
         --flac --320 --v0 --v2
 to release the band Indie Duo's brand new LP entitled Darkest Darkness in
-all the best formats (really just the only ones supported at the moment).
+all the most popular available formats.
 
-Then you just need to upload the 4 respective torrents from your watch
-directory (if they aren't deleted), or from in the upload hierarchy. 
+Then you just need to upload the 4 respective torrents from the upload 
+hierarchy. 
 
 Bandcamp.com releasing was recently broken. It may come back. 
 But it probably won't be as automatic because their web request system
 seems to be getting more sophisticated with this kind of stuff.
 
 This should suit most of your uploading needs. Enjoy =)
+
+If there are problems running mkrelease, see the file UNDERTHEHOOD for more
+information about recoving in the rip workflow.
 
 IMPORTING WORKFLOW
 
@@ -190,51 +205,13 @@ Then, much like releasing a rip, you use the command
         --artist Artist --title Title --year 2010 \
         --320 --v0 --v2 --ogg
         --snatch '/Users/Me/Music/DL/Artist - Title {2010} FLAC'
+
 This will add the snatch into the upload hierarchy, convert it to the 
 4 requested formats, and create 4 torrents.
 
 Before the snatch is added to the upload hierarchy, you will be
 guided through the process of checking the tags and a few spectrograms.
 This will insure that you are importing a quality release.
-
-If the spectrograms of the snatch of suspect, no actions will be taken.
-If the tags are poorly done, then a copy of the snatch is placed in the
-rip directory, so that the files can be retagged and a tag trump can be
-performed. If the spectrograms look fine and the tags are already good
-then hard-links to the release files are made in the rip directory. 
-This uses (effectively) zero extra HDD space. 
-
-RELEASE (UNDER THE HOOD)
-
-Currently, the only way to download bandcamp albums is by using mkrelease
-as described directly above.
-
-After you rip a CD, run the command,
-    release-scaffold \
-        --artist <artist> --year <year> --title <title> \
-        [--num-discs <num-discs>]
-to create the paths to the necessary music directories.
-
-If you want, you can run
-    release-ok [--num-discs <num_discs>]
-to check that you have included things like log files and CUE files in
-the flac release directory. This will help make sure that your uploads 
-aren't trumped by others that are more complete.
-
-Move the FLAC and image files into their proper directories (see 
-UPLOAD DIRECTORY STRUCTURE). This will probably be automated soon enough.
-
-Then run 
-    release-flac-convert \
-        --artist <artist> --year <year> --title <title> \
-        [--v0] [--v2] [--320]
-to create other desired formats.
-
-Finally run
-    release-mktorrent \
-        --artist <artist> --year <year> --title <title> \
-        [--flac] [--v0] [--v2] [--320]
-to create torrents for each desired format.
 
 COPYRIGHT AND LICENCE
 
