@@ -1,0 +1,112 @@
+RELEASES
+
+A proper release has the following things:
+    Audio files
+    A log file from a properly configured XLD (Mac OS X) or EAC (Windows/WINE)
+    A cue file (also made by XLD and EAC)
+    A picture (album artwork).
+
+These files are always initially gathered in the same directory. This is called
+the *rip directory*. 
+
+For a release in the rip directory, the what package creates M3U playlists 
+automatically for each disc as well as an infomation file (with .nfo extension) 
+describing the release, giving information about the audio files' lineage.
+
+The What package of programs then places the release in a hierarchical directory 
+structure, the *upload hierarchy*, for storage while it is seeded.
+
+UPLOAD HIERARCHY STRUCTURE
+
+There is a root directory where all uploads are placed (henceforth called 
+the *upload root*). Subdirectories of the upload root are named by artists. 
+These are called *artist directories*.
+
+Contained in each artist directory is one directory for each unique release 
+(i.e. album, single, ...) that has been ripped. These are called 
+*release directories*. 
+
+In each release directory, there is a file Info.txt which should give some 
+description of the individual released.
+
+The structure described above is known as the *upload hierarchy*.
+
+In each release directory, there is one folder for each format of the
+release (FLAC, 320, V0, V2, Ogg ...). These folders are called 
+*format directories*.  Torrents for each format will also reside in the 
+release directory, next to the format directory.  The torrents' names 
+will be the same as their corresponding format directory with a '.torrent' 
+extension.
+
+For releases with multiple discs, the audio files are placed in seperate 
+subdirectories (*disc directories*).
+
+Log and CUE files should always be in the same directory as the same
+disc they describe.
+
+Images can be placed in any folder of the release. At least one is required.
+
+Here is an example of the directory structure needed.
+
+Upload Root
+  |---Pop Star
+  |     `---Pop Star - New Album (2010)
+  |         |---Info.txt
+  |         |---Pop Star - New Album (2010) [FLAC].torrent
+  |         `---Pop Star - New Album (2010) [FLAC]
+  |               |---Front.tiff
+  |               |---Back.tiff
+  |               |---Disc1.tiff
+  |               |---Disc2.tiff
+  |               |---CD1
+  |               |     |---01 A love song.flac
+  |               |     |---02 A sad song.flac
+  |               |     |   ...
+  |               |     |---New Album - CD1.log
+  |               |     |---New Album - CD1.m3u
+  |               |     `---New Album - CD1.cue
+  |               `---CD2
+  |                     |---01 A love song (remix).flac
+  |                     |---02 A Dance song.flac
+  |                     |   ...
+  |                     |---New Album - CD2.log
+  |                     |---New Album - CD2.m3u
+  |                     `---New Album - CD2.cue
+  `---Indie Duo
+        `---Indie Duo - Fixies EP (2009)
+              |---Indie Duo - Fixies EP (2009) [FLAC].torrent
+              |---Indie Duo - Fixies EP (2009) [FLAC]
+              |     |---01s Fixies.flac
+              |     |---02 Fixies (Messenger Bag Remix).flac
+              |     |---03 Fixed Gears in Space.flac
+              |     |---Fixies.log
+              |     |---Fixies.m3u
+              |     `---Fixies.cue
+              |---Indie Duo - Fixies EP (2009) [V0].torrent
+              |---Indie Duo - Fixies EP (2009) [V0]
+              |     |---01 Fixies.mp3
+              |     |---02 Fixies (Messenger Bag Remix).mp3
+              |     |---03 Fixed Gears in Space.flac
+              |     |---Fixies.log
+              |     |---Fixies.m3u
+              |     `---Fixies.cue
+              `---Info.txt
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2010 by Bryan Matsuo <bryan.matsuo@gmail.com>
+
+This file is part of What.
+
+What is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+What is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with What.  If not, see <http://www.gnu.org/licenses/>.

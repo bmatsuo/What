@@ -10,21 +10,12 @@ This is meant to help Joe Everyuser get a good ratio.
 The package currently centers around creating releases. 
 More libraries and programs will be added depending on user feedback.
 
-README CONTENTS
-    Package Features
-    Package Defeciencies
-    Upload Directory Structure
-    Workflow
-    Rip Workflow
-    Release Workflow
-    Importing Workflow
-
 PACKAGE FEATURES
 
 This package can:
     Organize your all your releases into a user navigatable hierarchy.
     Create release descriptions.
-    Create M3U playlists for release discs.
+    Create M3U playlists for releases.
     Convert M3U playlists for different format releases.
     Convert a FLAC release to:
         MP3 with 320, V0, or V2 bitrate settings.
@@ -54,164 +45,14 @@ This package can not currently:
 
 The above list is pretty much a todo list.
 
-UPLOAD DIRECTORY STRUCTURE
+DOCUMENTATION
 
-The library and program suite are set up to enforce a certain directory
-structure. 
+For help installing, read 'INSTALL'.
 
-There is a root directory where all uploads are placed (henceforth called 
-the *upload root*). Subdirectories of the upload root are named by 
-artists.
+For general information about what a release is and the upload hierarchy,
+read 'docs/RELEASE'.
 
-Contained in each *artist directory* is one directory for each unique
-release (i.e. album, single, ...) that has been ripped. In each 
-*release directory*, there is a file Info.txt which should give some 
-description of the individual released.
-
-The structure described above is known as the *upload hierarchy*.
-
-In each release directory, there is one folder for each format of the
-release (FLAC, 320kbps, V0, V2, ...). Torrents for each format will also
-reside in the release directory. Then the torrent's directory is the same
-as the directory the torrent should downloaded to.
-
-For releases with multiple discs, the audio files are placed in seperate 
-subdirectories.
-
-Log and CUE files should always be in the same directory as the same
-music they describe.
-
-Images can be placed in any folder of the release.
-
-Here is an example of the directory structure needed.
-
-upload_root
-|---Pop Star
-|   `---Pop Star - New Album (2010)
-|       |---Info.txt
-|       |---Pop Star - New Album (2010) [FLAC].torrent
-|       `---Pop Star - New Album (2010) [FLAC]
-|           |---Front.tiff
-|           |---Back.tiff
-|           |---Disc1.tiff
-|           |---Disc2.tiff
-|           |---CD1
-|           |   |---01 A love song.flac
-|           |   |---02 A sad song.flac
-|           |   |   ...
-|           |   |---New Album - CD1.log
-|           |   `---New Album - CD1.cue
-|           `---CD2
-|               |---01 A love song (remix).flac
-|               |---02 A Dance song.flac
-|               |   ...
-|               |---New Album - CD2.log
-|               `---New Album - CD2.cue
-`---Indie Duo
-    `---Indie Duo - Fixies EP (2009)
-        |---Indie Duo - Fixies EP (2009) [FLAC].torrent
-        |---Indie Duo - Fixies EP (2009) [FLAC]
-        |   |---01 Fixies.flac
-        |   |---02 Fixies (Messenger Bag Remix).flac
-        |   |---03 Fixed Gears in Space.flac
-        |   |---Fixies.log
-        |   `---Fixies.cue
-        |---Indie Duo - Fixies EP (2009) [V0].torrent
-        |---Indie Duo - Fixies EP (2009) [V0]
-        |   |---01 Fixies.mp3
-        |   |---02 Fixies (Messenger Bag Remix).mp3
-        |   |---03 Fixed Gears in Space.flac
-        |   |---Fixies.log
-        |   `---Fixies.cue
-        `---Info.txt
-
-PACKAGE WORKFLOW
-
-The What package enforces a specific workflow for uploading.  
-
-There are two parts to uploading; ripping and releasing. 
-Ripping is, as it sounds, extracting FLAC audio from the CD and 
-placing it in the rip directory with log and cue files. 
-Releasing is when:
-    M3U playlists are created for audio files.
-    A .nfo info file is created for the release.
-    The files are moved into the upload hierarchy.
-    Files are converted to different formats (optional).
-    Torrents are made for a FLAC release and any other created formats.
-    Finally, adding the torrent to the preferred client.
-
-After this, the user must manually upload the torrent. That's it.
-
-RIP WORKFLOW
-
-All new releases should be ripped to the same directory (the 
-*rip directory*). This directory should not be in the upload hierarchy. 
-
-For single disc rips, all flac files should be placed directly in the
-rip directory. For multidisc rips each disc's audio, log, and cue files
-should be separated into subdirectories.
-
-Log and cue files should accompany all your rips, and should be placed
-in the rip directory. The What package will not tolerate releases which 
-can be trumped! This actually might change later.
-
-Images can be placed in the rip directory, or any subdirectory.
-At least one image is required to create a release. TIFF, JPEG, and PNG 
-images are recognizable by the package.
-
-A release description Info.txt must be placed in the rip directory before
-releasing. There are no required contents for Info.txt, (it can be empty). 
-Its recommended that you use the program
-    "Cross-Platform Description Generator (Python)" 
-, that is in the Laboratory forum and on github, to make for Info.txt files.
-Discogs searching is coming to the What package soon though.
-
-Ensure that all the necessary files are in the rip directory before
-proceding to the releasing workflow.
-
-RELEASE WORKFLOW
-
-This is more-or-less automated this point. You need only run the
-following command
-    mkrelease \
-        --artist "Indie Duo" --title "Darkest Darkness" --year 2010 \
-        --flac --320 --v0 --v2
-to release the band Indie Duo's brand new LP entitled Darkest Darkness in
-all the most popular available formats.
-
-Then you just need to upload the 4 respective torrents from the upload 
-hierarchy. 
-
-Bandcamp.com releasing was recently broken. It may come back. 
-But it probably won't be as automatic because their web request system
-seems to be getting more sophisticated with this kind of stuff.
-
-This should suit most of your uploading needs. Enjoy =)
-
-If there are problems running mkrelease, see the file UNDERTHEHOOD for more
-information about recoving in the rip workflow.
-
-IMPORTING WORKFLOW
-
-If you've downloaded a FLAC / Log (100%) / Cue torrent and want to both
-categorize it in the upload hierarchy and possibly reencode it for 
-better.php; then you need to use the program release-import
-
-Say the snatch directory is at path 
-    '/Users/Me/Music/DL/Artist - Title {2010} FLAC'
-
-Then, much like releasing a rip, you use the command
-    release-import \
-        --artist Artist --title Title --year 2010 \
-        --320 --v0 --v2 --ogg
-        --snatch '/Users/Me/Music/DL/Artist - Title {2010} FLAC'
-
-This will add the snatch into the upload hierarchy, convert it to the 
-4 requested formats, and create 4 torrents.
-
-Before the snatch is added to the upload hierarchy, you will be
-guided through the process of checking the tags and a few spectrograms.
-This will insure that you are importing a quality release.
+For help uploading, read 'docs/UPLOADING'.
 
 COPYRIGHT AND LICENCE
 

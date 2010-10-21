@@ -3,6 +3,9 @@ Makefile.PL
 MANIFEST
 README
 INSTALL
+docs/RELEASE
+docs/UPLOADING
+docs/UNDERTHEHOOD
 whatrc
 t/What.t
 t/What-Prompt.t
