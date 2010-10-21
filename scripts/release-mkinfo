@@ -329,12 +329,12 @@ sub main{
     }
 
     my $info =<<EOIHEAD;
-Title.........$release_title
-Artist........$release_artist
-Edition.......$release_edition
-Released......$release_year 
-Label.........$release_label
-Category No...$release_catno
+Title.....$release_title
+Artist....$release_artist
+Edition...$release_edition
+Released..$release_year 
+Label.....$release_label
+Catno.....$release_catno
 
 EOIHEAD
 
@@ -361,7 +361,16 @@ EOIHEAD
         }
     }
 
-    print $info;
+    my $info_path = "$whatrc->{rip_dir}/$release_title.nfo";
+    die "Info file exists at $info_path." 
+        if -e $info_path;
+
+    open my $ifh, ">", $info_path
+        or die "counld't open $info_path.";
+
+    print {$ifh} $info;
+
+    close $ifh;
 
     exit $exitcode;
 }
@@ -753,18 +762,6 @@ release-mkinfo [options]
 =head1 REQUIRED ARGUMENTS
 
 =over
-
-=item --artist [=] <artist>
-
-Release artist.
-
-=item --title [=] <title>
-
-Release title.
-
-=item --year [=] <year>
-
-Release year.
 
 =back
 
