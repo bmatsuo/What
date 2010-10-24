@@ -164,7 +164,7 @@ has 'discs'
 sub artist_string {
     my $self = shift;
     my @artists = @{$self->artists()};
-    my @joins = @{$self->joins()};
+    my @joins = @{$self->artist_joins()};
     my $str = '';
     for my $i (0 .. $#artists) {
         my $artist = $artists[$i]->name();

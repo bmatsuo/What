@@ -282,6 +282,7 @@ sub artist {
 }
 
 package What::Discogs::Query::Release;
+use Carp;
 use What::XMLLib;
 use What::Utils;
 use What::Discogs::Release;
@@ -481,7 +482,7 @@ sub release {
                 $disc_num = $dno; 
             }
         } 
-        elsif ($pos !~ m/\A\d+\z/xms && $pos !~ m/\A [A-Z]+\d+ \z/xms) {
+        elsif ($pos !~ m/\A(?: [a-zA-Z0-9]+- )? \d+\w*\z/xms && $pos !~ m/\A (?: [a-zA-Z0-9]+-)? [A-Z]+\d*\w* \z/xms) {
             # $pos should just be a number or a vinyl side+num.
             # This is mostly for debugging failure.
             croak("Can't understand track position '$pos'.");

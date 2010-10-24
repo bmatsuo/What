@@ -253,7 +253,8 @@ sub main{
             discs => [values %disc]);
 
         if (!defined $release) {
-            print {\*STDERR} "Artist query failed.\n";
+            print {\*STDERR} "Initial artist query failed. ";
+            print {\*STDERR} "Attempting an artist search.\n";
             # TODO: When unsuccessful w/ artist query; try an artist search.
             my $artist_search_results = search(
                 qstr => $release_artist, 
@@ -270,6 +271,7 @@ sub main{
                         year => $release_year,
                         discs => [values %disc]);
                     last if defined $release;
+                    #$release = undef;
                 }
             }
             else {
@@ -280,8 +282,10 @@ sub main{
 
     if (!defined $release) {
         # Either artist search failed or artist is "Various Artists"
+        print {\*STDERR} "Attempting general search.\n";
         my $release_search = search (
-            qstr => $release_title,
+            qstr => $release_artist eq "Various Artists" ? $release_title 
+                : "$release_artist - $release_title",
             type => 'release',
             api => $whatrc->{discogs_api_key},);
         $release = find_release_in_search_results(
@@ -452,17 +456,26 @@ sub find_release_in_search_results {
     my @sorted_indices 
         = sort {$result_scores[$a] <=> $result_scores[$b]} (0 .. $#result_scores);
     my @narrowed_indices = grep {$result_scores[$_] > 0.82} @sorted_indices;
-
-    for my $i (@narrowed_indices) {
-        my $result = $results->get_result($i);
-        print "\n";
-        print join q{}, $result->title, " [", $result->type, "]\n";
-        my $yn_prompt = What::Prompt::YesNo->new(
-            question => "Do you want to investigate this result?");
-        my $should_investigate = $yn_prompt->prompt_user();
-        $should_investigate = $should_investigate =~ /\A y/ixms;
+    my @narrowed_releases 
+        = map {
+            get_release(id => $results->get_result($_)->uri_identifier, api => $whatrc->{discogs_api_key})} 
+        @sorted_indices;
+    my @matching_releases = grep {release_agrees(release => $_, %r)} @narrowed_releases;
+    if (@matching_releases) {
+        if (@matching_releases > 1) {
+            my @match_choices = map {summarize_match($_)} @matching_releases;
+            my $matching_p = What::Prompt::Choose->new(
+                text => "Which release has the most accurate info?",
+                choices => \@match_choices);
+            my $choice = $matching_p->prompt_user;
+            #print {\*STDERR} "Chose $choice.\n";
+            return $matching_releases[$choice];
+        }
+        else {
+            return $matching_releases[0];
+        }
     }
-    
+
     return;
 }
 
@@ -494,7 +507,7 @@ sub find_release_in_artist_page {
     my @exact_matches = grep { $title eq $_->title } @releases;
 
     if (@exact_matches) {
-        print "Exact matches found in artist discography.\n";
+        print "Exact matches found in artist discography. ";
         print "Fetching releases...\n";
         my @exacts
             = map {get_release(
@@ -512,7 +525,7 @@ sub find_release_in_artist_page {
                         . "Which release has the most accurate info?",
                     choices => \@perfect_choices);
                 my $choice = $pp->prompt_user();
-                print {\*STDERR} "Chose $choice.\n";
+                #print {\*STDERR} "Chose $choice.\n";
                 return $perfect_fits[$choice];
             }
             else {
@@ -529,12 +542,26 @@ sub find_release_in_artist_page {
     my @near_matches = grep {words_fit($title, $_->title) > .81} @releases;
 
     if (@near_matches) {
-        print {\*STDERR} "Near matches found in the artist discography.\n";
-        print {\*STDERR} "This logic has not been implemented yet.\n";
+        print {\*STDERR} "Near matches found in the artist discography.";
+        print {\*STDERR} "(This logic has not been implemented yet).\n";
     }
 
     return;
 }
+
+# Subroutine: summarize_match($discogs_release)
+# Type: INTERNAL UTILITY
+# Purpose: Make a short summary of a matching release.
+# Returns: Nothing
+sub summarize_match {
+    my ($dr) = @_;
+    my $short_summ = summarize_perfect_match($dr);
+    my $summ = join q{}, 
+        $dr->artist_string, " - ", $dr->title, " [", $dr->date, "]\n", 
+        $short_summ;
+    return $summ;
+}
+
 
 # Subroutine: summarize_perfect_match($discogs_release)
 # Type: INTERNAL UTILITY
@@ -582,13 +609,15 @@ sub release_agrees {
     my %arg = @_;
     my $release = $arg{release};
     return if !release_title_agrees($release, $arg{title});
-    print "Title agrees\n";
+    #print "Title agrees\n";
     return if !release_artist_agrees($release, $arg{artist});
-    print "Artist agrees\n";
+    #print "Artist agrees\n";
     return if !release_year_agrees($release, $arg{year});
-    print "Year agrees\n";
+    #print "Year agrees\n";
     return if !release_discs_agree($release, $arg{discs});
-    print "Discs agree\n";
+    #print "Discs agree\n";
+    print "Found an agreeing release...\n";
+    return 1;
 }
 
 # Release test template.
