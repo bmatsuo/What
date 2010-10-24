@@ -152,6 +152,9 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
+This does not work, is not called by any other program, and should
+not be called by the user.
+
 =head1 BUGS
 
 =over

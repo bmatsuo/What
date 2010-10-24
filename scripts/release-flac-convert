@@ -916,7 +916,7 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
-Convert FLAC files comprising an entire music release.
+Convert the FLAC release directory to a release directory of another format. 
 
 =head1 BUGS
 

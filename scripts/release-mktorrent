@@ -230,6 +230,11 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
+Given a specified release, and at least one format, release-mktorrent
+creates torrent files for each format of the release.
+
+Fails with a non-zero exitcode when a specified format does not exist.
+
 =head1 BUGS
 
 =over

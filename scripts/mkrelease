@@ -25,6 +25,8 @@ use What::WhatRC;
 use What::Release;
 use What::Subsystem;
 
+our $VERSION = "0.0_7";
+
 ########################################################################
 # GENERAL GLOBAL VARIABLES
 ########################################################################
@@ -250,11 +252,11 @@ __END__
 =head1 NAME
 
 mkrelease
--- short description
+-- Move a rip to the upload hierarchy and create desired formats/torrents.
 
 =head1 VERSION
 
-Version 0.0_1
+Version 0.0_7
 Originally created on 08/03/10 22:02:39
 
 =head1 USAGE
@@ -322,6 +324,7 @@ Create an AAC ~256kbps ABR torrent.
 
 Create torrents for all possible formats and bitrates (not working yet).
 Also not a recommended thing to do in general (no multi-threading yet).
+ALSO, the free cross-platform AAC encoder FAAC kinda sucks.
 
 =item --bandcamp
 
@@ -353,6 +356,16 @@ Print the usual program information
 =back
 
 =head1 DESCRIPTION
+
+This program coordinates several other programs. It does the following things.
+    Checks the rip directory for a proper release (release-ok).
+    Create any missing M3U playlists (release-mkm3u).
+    Create a place in the upload directory for the release (release-scaffold).
+    Move the release files into a newly created FLAC release directory.
+    Convert the FLAC files to any desired format (release-flac-convert).
+    Create torrent files for any desired formats (release-mktorrents).
+Because of this, mkrelease accepts any options of the programs mentioned above. 
+Some may be slightly altered for clarity
 
 =head1 BUGS
 

@@ -159,8 +159,7 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
-Find all disc directories in the rip directory, 
-and make m3u playlists for them.
+Find all disc directories in the rip directory, and make m3u playlists for them.
 
 Playlists are stored in the respective disc directories.
 

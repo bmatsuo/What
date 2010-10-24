@@ -190,7 +190,7 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
-Inspects tags (and soon hopefully spectros) of snatched perfect FLAC 
+Inspects tags and soon hopefully spectros of snatched perfect FLAC 
 releases.
 
 This program is currently Mac OS X only due to reliance on 'open' for
@@ -199,6 +199,12 @@ way to inspect tags in the terminal is.
 
 The user must set the systems default program to open FLAC files as one
 which can properly inspect their tags (for instance, Tag.app for OS X).
+
+This program also requires that 'spek' be installed and visible via the
+command
+    which spek
+Search the forums for more information and spek, and install/compilation
+instructions. Mac OS X users have to compile spek from source.
 
 =head1 BUGS
 

@@ -182,6 +182,11 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
+Create a place in the upload hierarchy for a specified release.
+
+If the release directory exists already, release-scaffold fails
+with a non-zero exitcode.
+
 =head1 BUGS
 
 =over

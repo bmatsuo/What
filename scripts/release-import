@@ -265,6 +265,30 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
+This program attempts to add a recent snatch into the upload hierarchy.
+There, it can be transcoded to another format missing from What.CD.
+If the tags are bad, you
+
+This program first uses the program snatch-inspect to look at the
+snatch specified in the command line arguments.
+
+If the snatch looks perfect (including tags and spectrals) the 
+files in the snatch are hard-linked into the release directory
+(this saves substantial memory w/ FLAC files). The program
+mkrelease is then called to add the release into the upload hierarchy,
+convert FLACs and make torrents for any desired formats.
+
+If the tags of the program do not look ok, then the release is copied
+into the rip directory so they can be changed manually (**this should
+be automated**). Since this is not currently automated, the user
+must then call mkrelease to continue the importing process =\
+
+If the spectrograms do not look good (manual verification needed). 
+Then the program does nothing with the files.
+
+This programs excepts all the implemented options of snatch-inspect 
+and mkrelease.
+
 =head1 BUGS
 
 =over
