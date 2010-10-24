@@ -846,8 +846,17 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
-Search for latest rip in online databases and create a release description 
-(.nfo file).
+Search for latest rip in online databases (currently only discogs) and 
+create a release description (.nfo file).
+
+This programs need more testing, or at least more options,
+before it's included in the mkrelease workflow.
+
+For now, it's performance can't be guaranteed but, I have gotten it working 
+in all the test cases I have thought to choose for their special properties.
+
+Let me know if it fails on a particular release. I will try to remedy the 
+problem as quickly as possible.
 
 =head1 BUGS
 
