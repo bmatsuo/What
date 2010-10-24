@@ -267,7 +267,8 @@ Print the usual program information
 
 This program attempts to add a recent snatch into the upload hierarchy.
 There, it can be transcoded to another format missing from What.CD.
-If the tags are bad, you
+If the tags are bad, you can alter copied files, then re-upload a
+FLAC torrent for a tag trump.
 
 This program first uses the program snatch-inspect to look at the
 snatch specified in the command line arguments.
