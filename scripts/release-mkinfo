@@ -95,10 +95,10 @@ sub main{
 
             # Fetch the important tags.
             my $pos = $get_position_from_file->($song);
-            my $title = $tags{TITLE} || $tags{title};
-            my $artist = $tags{ARTIST} || $tags{artist};
-            my $album_artist = $tags{ALBUMARTIST} || $tags{albumartist};
-            my $date = $tags{date} || $tags{DATE};
+            my $title = $tags{TITLE} || $tags{title} || $tags{Title};
+            my $artist = $tags{ARTIST} || $tags{artist} || $tags{Artist};
+            my $album_artist = $tags{ALBUMARTIST} || $tags{albumartist} || $tags{Albumartist};
+            my $date = $tags{date} || $tags{DATE} || $tags{Date};
             my $year;
             if ($date =~ m/(\d{4})/xms) {
                 $year = $1;
@@ -107,7 +107,7 @@ sub main{
                 print {\*STDERR}
                     "Warning: Can't find year in release\n";
             }
-            my $release_title = $tags{ALBUM} || $tags{album};
+            my $release_title = $tags{ALBUM} || $tags{album} || $tags{Album};
             if (defined $album_artist) { 
                 $disc_artist = $album_artist if (!defined $disc_artist);
                 if (not $disc_artist eq $album_artist) {
@@ -188,6 +188,7 @@ sub main{
     }
     else {
         $release_title = $disc_titles[0];
+        print {\*STDERR} "Using title $release_title.\n";
     }
     if (!defined $release_title || 0 == length $release_title) {
         croak("Couldn't find a release title common to all discs.");
@@ -242,7 +243,43 @@ sub main{
     # BEGIN SEARCHING DISCOGS #
     #-------------------------#
     my $release; # A pointer to the release when we find it.
-    if ($release_artist eq "Various Artists") {
+    my @artists_checked;
+    if (not $release_artist eq "Various Artists"){
+        # First, try an artist query.
+        $release = find_release_in_artist_page(
+            artist => $release_artist,
+            title => $release_title,
+            year => $release_year,
+            discs => [values %disc]);
+
+        if (!defined $release) {
+            print {\*STDERR} "Artist query failed.\n";
+            # TODO: When unsuccessful w/ artist query; try an artist search.
+            my $artist_search_results = search(
+                qstr => $release_artist, 
+                type => 'artist', 
+                api => $whatrc->{discogs_api_key});
+            my $matching_result_list 
+                = $artist_search_results->grep(
+                    sub {my $a = shift; align($a->title, $release_artist) > 0.83});
+            if ($matching_result_list->num_results > 0) {
+                for my $r (@{$matching_result_list->results()}) {
+                    $release = find_release_in_artist_page(
+                        artist => $r->title(),
+                        title => $release_title,
+                        year => $release_year,
+                        discs => [values %disc]);
+                    last if defined $release;
+                }
+            }
+            else {
+                print {\*STDERR} "Can not find a matching result in the artist query.\n";
+            }
+        }
+    }
+
+    if (!defined $release) {
+        # Either artist search failed or artist is "Various Artists"
         my $release_search = search (
             qstr => $release_title,
             type => 'release',
@@ -253,19 +290,6 @@ sub main{
             title => $release_title,
             year => $release_year,
             discs => [values %disc]);
-    }
-    else {
-        # First, try an artist query.
-        $release = find_release_in_artist_page(
-            artist => $release_artist,
-            title => $release_title,
-            year => $release_year,
-            discs => [values %disc]);
-
-        if (!defined $release) {
-            # TODO: When unsuccessful w/ artist query; try an artist search.
-            # my $artist_search_results = search(qstr => $release_artist);
-        }
     }
     # TODO: When Discogs search fails, search Musicbrainz if possible.
 
@@ -361,12 +385,14 @@ EOIHEAD
         }
     }
 
-    my $info_path = "$whatrc->{rip_dir}/$release_title.nfo";
+    my $info_filename = "$release_artist - $release_title ($release_year).nfo";
+    $info_filename =~ s![/:]!_!gxms;
+    my $info_path = "$whatrc->{rip_dir}/$info_filename";
     die "Info file exists at $info_path." 
         if -e $info_path;
 
     open my $ifh, ">", $info_path
-        or die "counld't open $info_path.";
+        or die "couldn't open $info_path.";
 
     print {$ifh} $info;
 
@@ -413,6 +439,7 @@ sub find_release_in_search_results {
                 text => "Which release has the most accurate info?",
                 choices => \@exact_choices);
             my $exact_choice = $exact_choice_p->prompt_user;
+            print {\*STDERR} "Chose $exact_choice.\n";
             return $exact_fits[$exact_choice];
         }
         elsif (@exact_fits) {
@@ -484,7 +511,9 @@ sub find_release_in_artist_page {
                     text => "Multiple release with matching info found\n"
                         . "Which release has the most accurate info?",
                     choices => \@perfect_choices);
-                return @perfect_fits[$pp->prompt_user()];
+                my $choice = $pp->prompt_user();
+                print {\*STDERR} "Chose $choice.\n";
+                return $perfect_fits[$choice];
             }
             else {
                 return $perfect_fits[0];
@@ -635,7 +664,7 @@ sub disc_tracks_agree {
     if ($disc->num_tracks != @tracks) {
         print {\*STDERR} 
             "Discs with different numbers of tracks; ",
-            $disc->num_tracks, " and ", scalar @tracks;
+            $disc->num_tracks, " and ", scalar @tracks, "\n";
         return 0;
     }
 
@@ -649,7 +678,12 @@ sub disc_tracks_agree {
             $rel_dur = 60 * $1 + $2;
         }
         # Return false if discogs duration is more than the possed duration.
-        return 0 if $rel_dur > $ti->{duration} + 1;
+        if ($rel_dur > $ti->{'duration'} + 10) {
+            print {\*STDERR} 
+                "Track ",$ti->{'position'}," has disagreeing length; ", 
+                $rel_dur, " <= ", $ti->{'duration'} + 10, "\n";
+            return 0;
+        }
     }
     # Track names might be subtly misspelled. Are not checked currently.
 
