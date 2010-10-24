@@ -1,3 +1,9 @@
+PREREQUISITES
+
+In order to run the package tests when installing, you must have a 
+free account and API key for www.discogs.com. The tests prompt you 
+to enter this key, and it must be placed in your ~/.whatrc file. 
+
 INSTALLATION
 
 To install this module, with the included scripts, type the following:
@@ -24,6 +30,7 @@ to allow these programs to work under gnome in the future.
 
 I highly doubt that it will work on Microsoft Windows. Some kind MS Perl
 hacker would need to come along and fix things that cause problems.
+
 
 PERL DEPENDENCIES
 
