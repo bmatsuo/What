@@ -1,6 +1,5 @@
 package What;
 
-use 5.008009;
 use strict;
 use warnings;
 use Carp;
