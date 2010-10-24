@@ -811,7 +811,7 @@ __END__
 =head1 NAME
 
 release-mkinfo
--- short description
+-- Create and nfo file for a rip, backed up by online databases.
 
 =head1 VERSION
 

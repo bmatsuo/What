@@ -148,7 +148,7 @@ __END__
 =head1 NAME
 
 snatch-inspect
--- short description
+-- Inspect a perfect FLAC snatch for proper tagging and good spectrograms.
 
 =head1 VERSION
 
