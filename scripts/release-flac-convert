@@ -108,10 +108,7 @@ sub main{
 
     my $release_is_multidisc = @flac_dirs > 1 ? 1 : 0;
 
-    my $flac_dir_name
-            = release_root_name(
-                %release_info,
-                audio_format => 'flac');
+    my $flac_dir_name = $release->format_dir($whatrc->{upload_root},'flac');
 
     my $flac_source_dir = "$release_path/$flac_dir_name";
 
