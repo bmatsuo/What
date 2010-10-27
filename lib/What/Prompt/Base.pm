@@ -131,7 +131,7 @@ sub prompt_user {
     return $self->_retry_prompt_user($resp);
 }
 
-1
+1;
 __END__
 
 =head1 NAME

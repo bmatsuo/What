@@ -130,6 +130,7 @@ sub get_flac_tag {
     return $tag{uc $tag_name} || $tag{lc $tag_name};
 }
 
+1;
 __END__
 
 =head1 NAME

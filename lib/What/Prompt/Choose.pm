@@ -71,7 +71,7 @@ sub validator {
         return (looks_like_number $c && 0 <= $c && $c < @choices)};
 }
 
-1
+1;
 __END__
 
 =head1 NAME

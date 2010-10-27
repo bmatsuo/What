@@ -52,7 +52,7 @@ sub validator {
     return $_v_sub_;
 }
 
-1
+1;
 __END__
 
 =head1 NAME

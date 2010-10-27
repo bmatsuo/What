@@ -29,8 +29,8 @@ use Exception::Class (
 use What::Utils;
 use What::WhatRC;
 use What::Release;
-use What::Subsystem;
 use What::Format;
+use What::Subsystem;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -61,6 +61,7 @@ sub main{
     my $artist = $opt{'--artist'};
     my $title = $opt{'--title'};
     my $year = $opt{'--year'};
+
     my %release_info
         = (artist => $artist, title => $title, year => $year);
 
