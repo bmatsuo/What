@@ -570,7 +570,7 @@ sub lame_tag_options {
         album => '--tl',
         title => '--tt',
         date => '--ty',
-        genre => '--tg',
+        #genre => '--tg',
         comment => '--tc',
         # The rest of the tags need to be handled as the were...
         #tracknumber => '--tn',
@@ -587,6 +587,8 @@ sub lame_tag_options {
 
         my $tag_opt = $lame_tag{$uniform_tag};
         next if !defined $tag_opt;
+
+        $tag_val =~ s/.*\d{4}.*//xms if ($uniform_tag eq 'date');
 
         push @tag_options, $tag_opt, $tag_val;
     }
@@ -743,7 +745,7 @@ sub copy_tags_to_mp3 {
         #'ARTIST'=> 'TPE1', # Handled in MP3 Creation
         #'TITLE' => 'TIT2', # Handled in MP3 Creation
         #'DATE' => 'TDRC', # Handled in MP3 Creation
-        #'GENRE' => 'TCON', # Handled in MP3 Creation
+        'GENRE' => 'TCON', # Handled in MP3 Creation
         # HANDLE TRACKNUMBER SPECIALLY,
         #'TRACKNUMBER' => 'TRCK',
         #'TRACKTOTAL' => 'TRCK',
@@ -763,7 +765,7 @@ sub copy_tags_to_mp3 {
             my $tag_val = $song_tag{$flac_tag};
             my $id3_tag = $id3v2_tag{uc $flac_tag};
             if (defined $tag_val and defined $id3_tag) {
-                print {\*STDERR} "\nSetting $flac_tag: $tag_val";
+                #print {\*STDERR} "\nSetting $flac_tag: $tag_val";
                 $mp3->set_id3v2_frame($id3_tag, $tag_val);
             }
         }
