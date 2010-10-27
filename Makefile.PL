@@ -11,6 +11,7 @@ WriteMakefile(
         Term::Readline => 0,
         Data::Dumper => 0,
         MP3::Tag => 0,
+        LWP::UserAgent => 0,
         Moose => 0,
         Audio::FLAC::Header => 0,
         XML::Twig => 0,

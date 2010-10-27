@@ -34,7 +34,7 @@ ok($release->disc(1)->title eq 'The Fame Monster');
 # Artist Query Tests #
 ######################
 my $artist 
-    = get_artist(name=>"Lady Gaga", api => $key);
+    = get_artist(name=>"Dr. Dre", api => $key);
 
 # TEST parsing seems succesful
 ok(@{$artist->releases} > 1);

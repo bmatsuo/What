@@ -38,6 +38,7 @@ What requires these non-standard modules and libraries from the CPAN:
     Getopt::Euclid
     Exception::Class
     Class::InsideOut
+    LWP::UserAgent
     Moose
     Term::Readline
     Data::Dumper

@@ -1,6 +1,5 @@
 use strict;
 use warnings;
-use Carp;
 
 package What::Discogs::Query::Utils;
 
@@ -78,6 +77,7 @@ use XML::Twig;
 use What::XMLLib;
 use What::Utils;
 use Moose;
+use Carp;
 
 has 'api' 
     => ( is => 'rw', 
@@ -140,6 +140,7 @@ package What::Discogs::Query::Artist;
 use What::Discogs::Artist;
 use What::XMLLib;
 use What::Utils;
+use Carp;
 use Moose;
 extends 'What::Discogs::Query::Base';
 
@@ -190,10 +191,12 @@ sub artist {
     $artist_parser->parse($artist_xml);
 
     my $resp_root = $artist_parser->root;
+    
+    my @artist_nodes = $resp_root->descendants('artist');
 
-    my $artist_root = $resp_root->first_child('artist');
+    my $artist_root = shift @artist_nodes;
 
-    croak ("Can't find artist in response; ".$self->url) 
+    croak ("Can't find artist in response; ".$self->uri."\n$artist_xml\n") 
         if !defined($artist_root);
 
     #print {\*STDERR} "Got artist root\n";
@@ -315,9 +318,11 @@ sub release {
 
     my $resp_root = $release_parser->root;
 
-    my $release_root = $resp_root->first_child('release');
+    my @release_nodes = $resp_root->descendants('release');
 
-    croak ("Can't find release in response; ".$self->uri) 
+    my $release_root = shift @release_nodes;
+
+    croak ("Can't find release in response; ".$self->uri."\n$release_xml\n") 
         if !defined($release_root);
 
     #print {\*STDERR} "Got release root\n";
@@ -548,6 +553,7 @@ package What::Discogs::Query::Label;
 use What::Discogs::Label;
 use What::XMLLib;
 use What::Utils;
+use Carp;
 use Moose;
 extends 'What::Discogs::Query::Base';
 
@@ -599,7 +605,7 @@ sub label {
 
     my $label_root = $resp_root->first_child('label');
 
-    croak ("Can't find artist in response; ".$self->url) 
+    croak ("Can't find artist in response; ".$self->uri) 
         if !defined($label_root);
 
     #print {\*STDERR} "Got label root\n";
@@ -681,6 +687,7 @@ package What::Discogs::Query::Search;
 use What::Discogs::Search;
 use What::XMLLib;
 use What::Utils;
+use Carp;
 use Moose;
 extends 'What::Discogs::Query::Base';
 
