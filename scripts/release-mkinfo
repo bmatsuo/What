@@ -19,6 +19,7 @@ use Readonly;
 use Audio::FLAC::Header;
 
 # Include private modules.
+use What::Subsystem;
 use What::Discogs;
 use What::Utils;
 use What::WhatRC;
@@ -401,6 +402,11 @@ EOIHEAD
     print {$ifh} $info;
 
     close $ifh;
+
+    if ($opt{'--nfo-as-info'}) {
+        subsystem(
+            cmd => ['cp', $info_filename, "$whatrc->{rip_dir}/Info.txt"]);
+    }
 
     exit $exitcode;
 }
@@ -831,6 +837,11 @@ release-mkinfo [options]
 =head1 OPTIONS
 
 =over
+
+=item --nfo-as-info
+
+Copy the .nfo file to Info.txt. This will likely be replaced when templating is implemented, 
+as Info.txt should be BBCode enhanced.
 
 =item --version
 
