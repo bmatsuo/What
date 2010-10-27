@@ -291,7 +291,7 @@ sub main{
         for my $format (@desired_formats) {
             my $format_ext = format_extension($format);
             my $format_dir = $release->format_dir($upload_root, $format);
-            my $flac_root = $release->format_dir( $upload_root, 'flac')
+            my $flac_root = $release->format_dir( $upload_root, 'flac');
             my $flac_root_name = basename($flac_root);
 
             # Name the disc directory for the given format.
