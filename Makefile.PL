@@ -6,12 +6,12 @@ WriteMakefile(
     VERSION_FROM      => 'lib/What.pm', # finds $VERSION
     PREREQ_PM         => {
         Getopt::Euclid => 0,
-        Readonly => 0,
         Exception::Class => 0,
         Class::InsideOut => 0,
         Term::Readline => 0,
         Data::Dumper => 0,
         MP3::Tag => 0,
+        Moose => 0,
         Audio::FLAC::Header => 0,
         XML::Twig => 0,
     }, # e.g., Module::Name => 1.1

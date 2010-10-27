@@ -36,9 +36,9 @@ PERL DEPENDENCIES
 
 What requires these non-standard modules and libraries from the CPAN:
     Getopt::Euclid
-    Readonly
     Exception::Class
     Class::InsideOut
+    Moose
     Term::Readline
     Data::Dumper
     MP3::Tag
