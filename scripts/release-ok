@@ -219,6 +219,7 @@ sub main{
         elsif ($ext eq 'log') {}
         elsif ($ext eq 'cue') {}
         elsif ($ext eq 'm3u') {}
+        elsif ($ext eq 'nfo') {}
         elsif ($ext =~ m/\A(?: tiff | jpg | png )\z/xms) {}
         elsif ($file eq "$rip_dir/Info.txt") {}
         elsif (-d $file) {} # Ignore directories.
