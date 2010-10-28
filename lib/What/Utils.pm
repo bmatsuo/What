@@ -27,6 +27,7 @@ my @INTERFACE_SUBS = qw{
     has_bad_chars
     bad_chars
     glob_safe
+    expand_home
     find_file_pattern
     search_hierarchy
     find_hierarchy
@@ -39,7 +40,8 @@ our %EXPORT_TAGS = (
     'all' => [ @INTERFACE_SUBS ], 
     'http' => [ qw( format_args ) ],
     'flac' => [qw(  get_flac_tag    get_flac_tags )], 
-    'files' => [ qw(glob_safe       find_file_pattern   search_hierarchy 
+    'files' => [ qw(glob_safe       expand_home
+                    find_file_pattern   search_hierarchy 
                     has_bad_chars   bad_chars           replace_bad_chars )],
     'dirs' => [ qw( find_subdirs    find_hierarchy      merge_structure) ],
     'align' => [ qw(    align   words_fit ) ], );
@@ -215,6 +217,17 @@ sub find_hierarchy {
 ################
 # FILE METHODS #
 ################
+
+# Subroutine: expand_home($path)
+# Type: INTERFACE SUB
+# Returns: Expand '~' at the beginning of a path for the home directory.
+sub expand_home {
+    my $path = shift;
+    my @path = bsd_glob(glob_safe($path));
+    return if !@path;
+    return $path[0];
+}
+
 
 # Subroutine: replace_bad_chars($filename);
 # Type: INTERFACE SUB

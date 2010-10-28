@@ -1,16 +1,6 @@
 #!/usr/bin/env perl
-#
-# THIS SCRIPT HAS SERIOUS PROBLEMS, DOES NOT WORK CORRECTLY, 
-# IS NOT IN THE MKRELEASE WORKFLOW, AND IS NOT INSTALLED.
 
-# There are issues with the encodings used in filenames.
-# For example the slash character '/' is searched for, 
-#   but there is a fatter unicode slash (often used by XLD) 
-#   that is totally missed and unchecked. 
-# Until this is fixed, 
-# searching for illegal chars will continue to work incorrectly.
-# Replacing illegal chars will still be postponed until after 
-#   all illegal chars can be found.
+# THIS SCRIPT IS IN ALPHA. DO NOT USE IT WITHOUT CAUTION.
 
 # Use perldoc or option --man to read documentation
 
@@ -30,6 +20,8 @@ use Readonly;
 
 # Include private modules.
 use What::WhatRC;
+use What::Utils qw{:files :dirs};
+use What::Subsystem;
 
 
 ########################################################################
@@ -51,12 +43,8 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $illegal_chars = qr{([/?:])}xms;
-my %replacement = (
-    '/' => '[slash]',
-    '?' => '[question]',
-    ':' => '[colon]',);
 my $whatrc = What::WhatRC->new('~/.whatrc');
+my $subsystem = What::Subsystem->new();
 
 ########################################################################
 # MAIN FUNCTION
@@ -64,6 +52,28 @@ my $whatrc = What::WhatRC->new('~/.whatrc');
 
 # main() - main program execution 
 sub main{
+    my $release_dir = $whatrc->{rip_dir};
+
+    # Sort files by decreasing directory depth.
+    my @files = find_hierarchy($release_dir);
+    my %depth;
+    for (@files) {$depth{$_} = scalar(@{[$a =~ m!/!g]}) + 1};
+    @files = sort { $depth{$a} <=> $depth{$a} } find_hierarchy($release_dir);
+
+    for my $path (@files) {
+        my $ext;
+        if ($ext =~ /[^/] \.(\w+) \z/xms) {
+            $ext = $1;
+        }
+        if ($ext eq 'm3u') {
+            fix_m3u($path);
+        }
+        elsif ($ext eq 'cue') {
+            fix_cue($path);
+        }
+        fix_file($path);
+    }
+
     exit($exitcode);
 }
 
@@ -71,41 +81,63 @@ sub main{
 # SUPPORTING SUBROUTINES
 ########################################################################
 
-sub has_illegals { $_[0] =~ $illegal_chars; }
-
-sub illegals_replaced {
-    my $s = shift;
-    $s =~ s/$illegal_chars/$replacement{$1}/gexms;
-    return $s;
-}
-
 sub fix_file {
     my $path = shift;
-    my $fixed = illegals_replaced($path);
-    return if ($fixed eq $path);
+    my $fixed = join '/', dirname($path), replace_bad_chars(basename($path));
+    return 0 if ($fixed eq $path);
     croak("Destination file exists. $fixed ") if -e  $fixed;
+    $subsystem->exec('mv', $path, $fixed) == 0
+        or croak("Couldn't move '$path' to '$fixed'.\n");
+    return 1;
+}
+
+sub fix_m3u {
+    my $m3u_path = shift;
+    my $m3u;
+    open $m3u, "<", $m3u_path
+        or croak("Couldn't open $m3u_path");
+    my @m3u = <$m3u>;
+    close $m3u;
+    my $num_replaced = 0;
+
+    for (@m3u) {
+        next if $_ !~ m/\A [^#]/xms;
+        my $path = $_;
+        chomp $path;
+        $path = join '/', (map {replace_bad_chars($_)} split ('/', $path));
+        $_ = "$path\n";
+    }
+
+    open $m3u, ">", $m3u_path
+        or croak("Couldn't open $m3u_path");
+    print {$m3u} @m3u;
+    close $m3u;
 }
 
 sub fix_cue {
     my $cue_path = shift;
 
     open my $cue, "<", $cue_path
-        or croak("Couldn't open $cue");
-
+        or croak("Couldn't open $cue_path");
     my @cue = <$cue>;
-
-    for (@cue) { 
-        $_ = illegals_replaced($_) 
-            if $_ =~ m/\A
-                \s* FILE \s+ " (?: [^"] | \\" )* .wav" \s+ WAVE \s* \n? 
-                \z/xms}
-
     close $cue;
 
+    my $num_replaced = 0;
+
+    for (@cue) { 
+        next if 
+            $_ !~ 
+                /\A 
+                \s* FILE \s+ " ( [^"] | \\" )* .wav" \s+ WAVE \s* \n? 
+                \z/xms;
+        my $path = $1;
+        $path = join '/', (map {replace_bad_chars($_)} split ('/', $path));
+        $_ = qq{FILE "$path.wav" WAVE \n};
+        ++$num_replaced;
+    }
+
     open $cue, ">", $cue_path;
-
     print {$cue} @cue;
-
     close $cue;
 }
 
