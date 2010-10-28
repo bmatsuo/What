@@ -23,6 +23,9 @@ my @INTERFACE_SUBS = qw{
     format_args
     get_flac_tag
     get_flac_tags
+    replace_bad_chars
+    has_bad_chars
+    bad_chars
     glob_safe
     find_file_pattern
     search_hierarchy
@@ -36,7 +39,8 @@ our %EXPORT_TAGS = (
     'all' => [ @INTERFACE_SUBS ], 
     'http' => [ qw( format_args ) ],
     'flac' => [qw(  get_flac_tag    get_flac_tags )], 
-    'files' => [ qw(    glob_safe   find_file_pattern   search_hierarchy ) ],
+    'files' => [ qw(glob_safe       find_file_pattern   search_hierarchy 
+                    has_bad_chars   bad_chars           replace_bad_chars )],
     'dirs' => [ qw( find_subdirs    find_hierarchy      merge_structure) ],
     'align' => [ qw(    align   words_fit ) ], );
 
@@ -208,9 +212,51 @@ sub find_hierarchy {
     return (@files, (map {find_hierarchy($_, $find_hidden)} @subdirs));
 }
 
-#######################
-# FILE SEARCH METHODS #
-#######################
+################
+# FILE METHODS #
+################
+
+# Subroutine: replace_bad_chars($filename);
+# Type: INTERFACE SUB
+# Purpose: 
+#   Replace characters in song/album/artist names that the tracker will not accept.
+# Returns: A copy of $filename with the illegal characters removed.
+sub replace_bad_chars {
+    my $file = shift;
+    $file =~ tr{?:/}{_};
+    return $file;
+}
+
+# Subroutine: has_bad_chars($filename)
+# Type: INTERFACE SUB
+# Returns: 
+#   In a Boolean context value true iff $filename has illegal characters.
+#   If there are illegal chars, a string of the ones found is returned.
+#   The illegal characters, as far as I know, are "?:/"
+sub has_bad_chars {
+    my $filename = shift;
+    my $illegal = qr{(?: [?:/] )}xms;
+    return if $filename !~ /$illegal/xms;
+    return 1;
+}
+
+# Subroutine: bad_chars($filename)
+# Type: INTERFACE SUB
+# Returns: 
+#   In a Boolean context value true iff $filename has illegal characters.
+#   If there are illegal chars, a string of the ones found is returned.
+#   The illegal characters, as far as I know, are "?:/"
+sub bad_chars {
+    my $filename = shift;
+    my $illegal = qr{(?: [?:/] )}xms;
+    my $legal = qr{(?: [^?:/] )}xms;
+    my %char_set;
+    while ($filename =~ /\G (?:$legal)* ($illegal)/gcxms) {
+        $char_set{$1} = 1;
+    }
+    return join q{}, keys %char_set;
+}
+
 
 # Subroutine: search_hierarchy($pattern, $dir)
 # Type: INTERFACE SUB

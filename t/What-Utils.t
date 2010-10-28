@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 3;
+use Test::More tests => 6;
 BEGIN { use_ok('What::Utils', qw{ :all }) };
 
 #########################
@@ -24,3 +24,8 @@ my $fake_flac = {
         'Title' => 'Right Thru Me',
         'Year' => '2010',},
 };
+
+my $illegal_name = "AC/DC?";
+ok(has_bad_chars($illegal_name));
+ok('AC_DC_' eq replace_bad_chars($illegal_name));
+ok(bad_chars($illegal_name) eq '/?');
