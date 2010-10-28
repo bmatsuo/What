@@ -93,7 +93,7 @@ sub get_flac_tag {
     my %tag_val = %{ $flac->{tags} };
 
     # Create lower case, upper case, and standardly capitilized tag name.
-    my @possible_names = (lc $tag, uc $tag, ucfirst lc $tag);
+    my @possible_names = (lc ($tag), uc ($tag), ucfirst (lc $tag));
 
     # Look for any value defined for one of the possible names.
     my @tag_vals = grep {defined $_} map {$tag_val{$_}} @possible_names;

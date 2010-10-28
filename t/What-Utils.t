@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 6;
+use Test::More tests => 9;
 BEGIN { use_ok('What::Utils', qw{ :all }) };
 
 #########################
@@ -24,8 +24,14 @@ my $fake_flac = {
         'Title' => 'Right Thru Me',
         'Year' => '2010',},
 };
+my $artist = get_flac_tag($fake_flac, 'ARTIST');
+ok($artist eq 'Nicki Minaj');
+my ($title, $album) = get_flac_tags($fake_flac, qw{title album});
+ok($title eq 'Right Thru Me');
+ok($album eq 'Pink Friday');
 
 my $illegal_name = "AC/DC?";
 ok(has_bad_chars($illegal_name));
 ok('AC_DC_' eq replace_bad_chars($illegal_name));
-ok(bad_chars($illegal_name) eq '/?');
+my $bad_chars = bad_chars($illegal_name);
+ok($bad_chars eq '/?' || $bad_chars eq '?/');
