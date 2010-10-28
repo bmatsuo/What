@@ -47,11 +47,13 @@ The above list is pretty much a todo list.
 
 DOCUMENTATION
 
-For help installing, read 'INSTALL'.
+The best documentation currently is the What wiki on github 
+    http://github.com/bmatsuo/What/wiki
 
+Otherwise, you can refer to the documentation in the package.
+For help installing, read 'INSTALL'.  
 For general information about what a release is and the upload hierarchy,
-read 'docs/RELEASE'.
-
+read 'docs/RELEASE'.  
 For help uploading/releasing, re-releasing/importing, and converting to other formats,
 read 'docs/UPLOADING'.
 
