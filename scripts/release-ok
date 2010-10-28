@@ -140,17 +140,17 @@ sub main{
             push @discs_w_cue, $cue_disc;
         }
     }
-    if (@discs_w_cue < @disc_dirs && !$opt{'--no-cue'}) {
+    if (@discs_w_cue < @disc_dirs) {
         my @discs_wo_cue = do {
             %good_disc = (map {($_ => 1)} @discs_w_cue);
             @bad_discs = grep {!defined $good_disc{$_}} @disc_dirs;
             @bad_discs;
         };
         my $num_wo_cue = scalar @discs_wo_cue;
-        print {\*STDERR} 
+        print {\*STDERR} ($opt{'--no-cue'} ? "Warning: " : q{}),
             "Found $num_wo_cue discs w/o a cue file;\n",
             join ("\n\t", @discs_wo_cue), "\n";
-        $exitcode = 1;
+        $exitcode = 1 if !$opt{'--no-cue'};
     }
 
     my @m3u_files = grep {m/\.m3u\z/xms} @release_files;
@@ -324,9 +324,10 @@ sub check_music_dir {
 
     my @cue_files = bsd_glob("$dir/*.log");
 
-    if (!@cue_files && !$opt{'--no-cue'}) {
-        print {\*STDERR} "No CUE file found in $dir.\n";
-        $exitcode = 1;
+    if (!@cue_files) {
+        print {\*STDERR} ($opt{'--no-cue'} ? "Warning: " : q{}),
+            "No CUE file found in $dir.\n";
+        $exitcode = 1 if !$opt{'--no-cue'};
         $music_dir_ok = 0;
     }
 
@@ -377,6 +378,8 @@ release-ok [options]
 =over
 
 =item --no-cue
+
+Do not require the release to have a cue file. This is not recommended.
 
 =item --verbose
 
