@@ -121,7 +121,7 @@ sub main{
         my $num_wo_log = scalar @discs_wo_log;
         print {\*STDERR} 
             "Found $num_wo_log discs w/o rip logs;\n",
-            join ("\n", @discs_wo_log);
+            join ("\n\t", @discs_wo_log), "\n";
         $exitcode = 1;
     }
 
@@ -140,7 +140,7 @@ sub main{
             push @discs_w_cue, $cue_disc;
         }
     }
-    if (@discs_w_cue < @disc_dirs) {
+    if (@discs_w_cue < @disc_dirs && !$opt{'--no-cue'}) {
         my @discs_wo_cue = do {
             %good_disc = (map {($_ => 1)} @discs_w_cue);
             @bad_discs = grep {!defined $good_disc{$_}} @disc_dirs;
@@ -149,7 +149,7 @@ sub main{
         my $num_wo_cue = scalar @discs_wo_cue;
         print {\*STDERR} 
             "Found $num_wo_cue discs w/o a cue file;\n",
-            join ("\n", @discs_wo_cue);
+            join ("\n\t", @discs_wo_cue), "\n";
         $exitcode = 1;
     }
 
@@ -324,7 +324,7 @@ sub check_music_dir {
 
     my @cue_files = bsd_glob("$dir/*.log");
 
-    if (!@cue_files) {
+    if (!@cue_files && !$opt{'--no-cue'}) {
         print {\*STDERR} "No CUE file found in $dir.\n";
         $exitcode = 1;
         $music_dir_ok = 0;
@@ -375,6 +375,8 @@ release-ok [options]
 =head1 OPTIONS
 
 =over
+
+=item --no-cue
 
 =item --verbose
 

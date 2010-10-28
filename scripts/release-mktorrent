@@ -63,8 +63,8 @@ sub main{
         'V2'    => $opt{'--v2'},
         '320'   => $opt{'--320'},
         'FLAC'  => $opt{'--flac'},
-        'OGG'  => $opt{'--ogg'},
-        'AAC'  => $opt{'--aac'},
+        'OGG'   => $opt{'--ogg'},
+        'AAC'   => $opt{'--aac'},
     );
 
     my $announce = $whatrc->announce();
@@ -81,6 +81,19 @@ sub main{
 
         $subsystem->exec(@mktorrent_cmd) == 0
             or croak("Couldn't create torrent file.");
+
+
+        # Add the torrents to the watch directory.
+        if ($opt{'--add-to-watch'}) {
+            my $torrent_name = $format_dir;
+            if ($torrent_name !~ s!/?\z!.torrent!xms) {
+                print {\*STDERR} "Unexpected error before copying torrent file; ",
+                    "'$torrent_name'. Attempting to continue.\n"
+                next;
+            }
+            $subsystem->exec('cp', $torrent_name, $whatrc->{watch}) == 0
+                or croak("Couldn't copy torrent file.");
+        }
     }
 
     exit($exitcode);
@@ -211,6 +224,11 @@ Create an AAC ~256kbps ABR torrent.
 =item --all
 
 Create torrents for all present formats and bitrates (not working yet).
+
+=item --add-to-watch | -w
+
+Copy newly created torrents to your clients watched directory.
+This is configurable via the file '~/.whatrc'.
 
 =item --dry-run
 

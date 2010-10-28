@@ -5,13 +5,22 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 2;
-BEGIN { use_ok('What::Utils') };
+use Test::More tests => 3;
+BEGIN { use_ok('What::Utils', qw{ :all }) };
 
 #########################
 
 ok(glob_safe('/blah*/what? [FLAC]') eq '/blah\*/what\? \[FLAC\]');
 
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
+my @files = find_hierarchy('.');
 
+# As of writing this test, there were 46 files in MANIFEST
+ok(@files > 40);
+
+my $fake_flac = {
+    tags => { # I'm thinking about this one a lot lately.
+        'ALBUM' => 'Pink Friday',
+        'artist' => 'Nicki Minaj',
+        'Title' => 'Right Thru Me',
+        'Year' => '2010',},
+};

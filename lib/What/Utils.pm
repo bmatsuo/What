@@ -19,25 +19,87 @@ our @ISA = qw(Exporter);
 # This allows declaration	use what ':all';
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
 # will save memory.
-our %EXPORT_TAGS = ( 'all' => [ qw(
-	
-) ] );
-
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-
-our @EXPORT = qw(
+my @INTERFACE_SUBS = qw{
     format_args
+    get_flac_tag
+    get_flac_tags
     glob_safe
     find_file_pattern
-    find_hierarchy
     search_hierarchy
+    find_hierarchy
     find_subdirs
     merge_structure
     align
     words_fit
+};
+our %EXPORT_TAGS = ( 
+    'all' => [ @INTERFACE_SUBS ], 
+    'http' => [ qw( format_args ) ],
+    'flac' => [qw(  get_flac_tag    get_flac_tags )], 
+    'files' => [ qw(    glob_safe   find_file_pattern   search_hierarchy ) ],
+    'dirs' => [ qw( find_subdirs    find_hierarchy      merge_structure) ],
+    'align' => [ qw(    align   words_fit ) ], );
+
+our @EXPORT_OK = ( 
+    @{ $EXPORT_TAGS{'all'} }, 
+    # The rest are redundant as long as :all includes all methods.
+    # :all may be removed though... There are a diverse array of methods here.
+    #@{ $EXPORT_TAGS{'http'} }, 
+    #@{ $EXPORT_TAGS{'flac'} },
+    #@{ $EXPORT_TAGS{'files'} },
+    #@{ $EXPORT_TAGS{'dirs'} },
+    #@{ $EXPORT_TAGS{'align'} }, 
 );
 
-our $VERSION = '0.00_01';
+# TODO: In all programs, add import only necessary tags to 'use What::Utils'.
+our @EXPORT = (@INTERFACE_SUBS);
+
+our $VERSION = '0.00_02';
+
+################
+# FLAC METHODS #
+################
+
+# Subroutine: get_flac_tags($flac_info, @tags)
+# Type: INTERFACE SUB
+# Purpose: 
+#   Get a list of tag values for a list of tags in a given order.
+# Returns: 
+#   The value of get_flac_tag($flac_info, $t) for $t in @tags.
+#   Tags which are not present in the FLAC are represented by the value undef;
+#   Returns and undefined value (empty list) if not given any tags.
+sub get_flac_tags {
+    my ($flac, @tags) = @_;
+    return if !@tags;
+    return map {get_flac_tag($flac, $_) || undef} @tags;
+}
+
+
+# Subroutine: get_flac_tag($flac_info, $tag)
+# Type: INTERFACE SUB
+# Purpose: 
+#   Find the value of the $tag tag in $flac_info, 
+#   an Audio::FLAC::Header object.
+# Returns: 
+#   The string value of the tag, or undef if the tag does not exist.
+sub get_flac_tag {
+    my ($flac, $tag) = @_;
+    my %tag_val = %{ $flac->{tags} };
+
+    # Create lower case, upper case, and standardly capitilized tag name.
+    my @possible_names = (lc $tag, uc $tag, ucfirst lc $tag);
+
+    # Look for any value defined for one of the possible names.
+    my @tag_vals = grep {defined $_} map {$tag_val{$_}} @possible_names;
+    my $val = shift @tag_vals;
+
+    return if !defined $val;
+    return $val;
+}
+
+#####################
+# ALIGNMENT METHODS #
+#####################
 
 # Subroutine: align($str1, $str2)
 # Type: INTERFACE SUB
@@ -68,6 +130,10 @@ sub words_fit {
 
     return  $words_contained / $num_words;
 }
+
+#####################
+# DIRECTORY METHODS #
+#####################
 
 # Subroutine: merge_structure($skeleton, $body)
 # Type: INTERFACE SUB
@@ -142,6 +208,10 @@ sub find_hierarchy {
     return (@files, (map {find_hierarchy($_, $find_hidden)} @subdirs));
 }
 
+#######################
+# FILE SEARCH METHODS #
+#######################
+
 # Subroutine: search_hierarchy($pattern, $dir)
 # Type: INTERFACE SUB
 # Purpose: Search the hierarchy of $dir for files matching $pattern.
@@ -186,6 +256,10 @@ sub glob_safe {
 
     return $str;
 }
+
+######################
+# HTTP REQUEST UTILS #
+######################
 
 sub format_args {
     my %arg_val = @_;

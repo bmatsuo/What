@@ -121,7 +121,8 @@ sub main{
     if (!$opt{'--bandcamp'}) {
         # The release must be in the rip_dir. So check it.
         my @check_release = ('release-ok', 
-            ($opt{'--verbose'} ? '--verbose' : ()));
+            ($opt{'--verbose'} ? '--verbose' : ()),
+            ($opt{'--no-cue'} ? '--no-cue' : ()));
         $subsystem->exec(@check_release) == 0 or die;
 
         # Create any necessary m3u files.
@@ -331,6 +332,8 @@ ALSO, the free cross-platform AAC encoder FAAC kinda sucks.
 THIS OPTION IS BROKEN FOR THE TIME BEING!
 
 Release is on bandcamp, and should be fetched.
+
+=item --no-cue
 
 =item --dry-run
 
