@@ -343,7 +343,7 @@ Release the file regardless of whether or not it has a cue file.
 
 Release the file regardless of whether or not it has a cue file.
 
-=item --add-to-watch
+=item -w | --add-to-watch
 
 Add created torrents to the watch directory specified in '~/.whatrc'.
 

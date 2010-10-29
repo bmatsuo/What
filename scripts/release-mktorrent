@@ -225,7 +225,7 @@ Create an AAC ~256kbps ABR torrent.
 
 Create torrents for all present formats and bitrates (not working yet).
 
-=item --add-to-watch | -w
+=item -w | --add-to-watch
 
 Copy newly created torrents to your clients watched directory.
 This is configurable via the file '~/.whatrc'.

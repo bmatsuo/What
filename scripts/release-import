@@ -148,6 +148,7 @@ sub main{
             '--title', $release->{title},
             '--year', $release->{year},
             (grep {$opt{$_}} qw{--flac --ogg --aac --320 --v0 --v2}),
+            ($opt{'--add-to-watch'} ? qw{--add-to-watch}, ()),
             ($opt{'--no-cue'} ? qw{--no-cue}, ()),
             ($opt{'--no-log'} ? qw{--no-log}, ()), );
         $subsys->exec(@mkrelease) == 0
@@ -260,6 +261,10 @@ Import a snatch regardless of the presence of a cue file.
 =item --no-log
 
 Import a snatch regardless of the presence of a log file.
+
+=item -w | --add-to-watch
+
+Add created torrents to the watch directory specified in '~/.whatrc'.
 
 =item --version
 
