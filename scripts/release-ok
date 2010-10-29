@@ -119,10 +119,10 @@ sub main{
             @bad_discs;
         };
         my $num_wo_log = scalar @discs_wo_log;
-        print {\*STDERR} 
+        print {\*STDERR} ($opt{'--no-log'} ? "Warning: " : q{}),
             "Found $num_wo_log discs w/o rip logs;\n",
             join ("\n\t", @discs_wo_log), "\n";
-        $exitcode = 1;
+        $exitcode = 1 if !$opt{'--no-log'};
     }
 
     my @cue_files = grep {m/\.cue\z/xms} @release_files;
@@ -317,8 +317,9 @@ sub check_music_dir {
     my @log_files = bsd_glob("$dir/*.log");
 
     if (!@log_files) {
-        print {\*STDERR} "No rip log found in $dir.\n";
-        $exitcode = 1;
+        print {\*STDERR} ($opt{'--no-log'} ? "Warning: " : q{}),
+            "No rip log found in $dir.\n";
+        $exitcode = 1 if !$opt{'--no-log'};
         $music_dir_ok = 0;
     }
 
@@ -380,6 +381,11 @@ release-ok [options]
 =item --no-cue
 
 Do not require the release to have a cue file. This is not recommended.
+
+=item --no-log
+
+Do not require the release to have a log file. 
+This is not recommended for CD rips.
 
 =item --verbose
 

@@ -122,7 +122,8 @@ sub main{
         # The release must be in the rip_dir. So check it.
         my @check_release = ('release-ok', 
             ($opt{'--verbose'} ? '--verbose' : ()),
-            ($opt{'--no-cue'} ? '--no-cue' : ()));
+            ($opt{'--no-cue'} ? '--no-cue' : ()),
+            ($opt{'--no-log'} ? '--no-log' : ()), );
         $subsystem->exec(@check_release) == 0 or die;
 
         # Create any necessary m3u files.
@@ -228,7 +229,8 @@ sub main{
             '--year', $opt{'--year'},
             (grep {$opt{$_}} qw{--flac --v0 --v2 --320 --ogg --aac}),
             ($opt{'--verbose'} ? '--verbose' : ()),
-            ($opt{'--dry-run'} ? '--dry-run' : ()));
+            ($opt{'--dry-run'} ? '--dry-run' : ()),
+            ($opt{'--add-to-watch'} ? '--add-to-watch' : ()), );
         $subsystem->exec(@mktorrent ) == 0 or die;
     }
     else {
@@ -334,6 +336,16 @@ THIS OPTION IS BROKEN FOR THE TIME BEING!
 Release is on bandcamp, and should be fetched.
 
 =item --no-cue
+
+Release the file regardless of whether or not it has a cue file.
+
+=item --no-log
+
+Release the file regardless of whether or not it has a cue file.
+
+=item --add-to-watch
+
+Add created torrents to the watch directory specified in '~/.whatrc'.
 
 =item --dry-run
 
