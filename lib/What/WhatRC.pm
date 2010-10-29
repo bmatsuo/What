@@ -57,7 +57,7 @@ my %default_whatrc = (
     discogs_api_key  => 'xxxxxxxxx',
 );
 
-my @rc_paths = qw{rip_dir pager upload_root};
+my @rc_paths = qw{rip_dir pager upload_root watch};
 
 my $dumper = Data::Dumper->new([\%default_whatrc],['WhatCDConfig']);
 
@@ -145,6 +145,32 @@ sub passkey {
         return $self->{passkey};
     }
     ValueException->throw(error=>"Invalid passkey $new_passkey");
+}
+
+# Subroutine:   $whatrc->watch()
+#               $whatrc->watch($new_watch_dir)
+# Type: INSTANCE METHOD
+# Purpose: 
+#   Setter/Accessor method for the watch field.
+# Returns: 
+#   The configuration watch_dir (after setting, when given an argument).
+# Throws:
+#   ValueException if $new_watch_dir is not an existing writeable
+#   directory.
+sub watch_dir {
+    my $self = shift;
+    my $new_watch_dir = shift;
+    return $self->{watch} if !defined $new_watch_dir;
+    $new_watch_dir = safe_path($new_watch_dir);
+    my $is_valid_watch_dir = sub {-d $_[0] && -w $_[0]};
+    if ($is_valid_watch_dir->($new_watch_dir)) {
+        $self->{watch_dir} = $new_watch_dir;
+        return $self->{watch_dir};
+    }
+    ValueException->throw(error=>"No directory $new_watch_dir")
+        if (!-d $new_watch_dir);
+    ValueException->throw(error=>"Directory $new_watch_dir not writable.")
+        if (!-w $new_watch_dir);
 }
 
 # Subroutine:   $whatrc->rip_dir()

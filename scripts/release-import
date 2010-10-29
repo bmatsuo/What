@@ -148,9 +148,9 @@ sub main{
             '--title', $release->{title},
             '--year', $release->{year},
             (grep {$opt{$_}} qw{--flac --ogg --aac --320 --v0 --v2}),
-            ($opt{'--add-to-watch'} ? qw{--add-to-watch}, ()),
-            ($opt{'--no-cue'} ? qw{--no-cue}, ()),
-            ($opt{'--no-log'} ? qw{--no-log}, ()), );
+            ($opt{'--add-to-watch'} ? qw{--add-to-watch} : ()),
+            ($opt{'--no-cue'} ? qw{--no-cue} : ()),
+            ($opt{'--no-log'} ? qw{--no-log} : ()), );
         $subsys->exec(@mkrelease) == 0
             or die "Import failed. ",
                 "Fix specified problems then try running mkrelease.\n";
