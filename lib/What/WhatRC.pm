@@ -14,6 +14,7 @@ use Exception::Class (
 );
 
 use What;
+use What::Format;
 
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
@@ -43,33 +44,43 @@ our $VERSION = '0.0_4';
 my %default_whatrc = (
     # Don't actually put your announce url in this file. Use ~/.whatrc.
     passkey => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    # Root directory where uploaded files/torrents go.
-    upload_root => "$ENV{'HOME'}/Music/Rips",
-    # The folder where music rips are stored.
-    rip_dir => "$ENV{'HOME'}/Music/Last Rip",
-    # Pager used for long documents.
-    pager   => '/usr/bin/more',
-    # The directory watched by the bit torrent client for new torrents.
-    watch   => "$ENV{'HOME'}/Downloads",
-    # Favorite text editor.
-    editor  => 'nano',
     # Discogs API key (https://www.discogs.com/users/api_key).
     discogs_api_key  => 'xxxxxxxxx',
+    # The folder where music rips are placed initially.
+    rip_dir => "$ENV{'HOME'}/Music/Last Rip",
+    # Root directory where uploaded files/torrents go.
+    upload_root => "$ENV{'HOME'}/Music/Rips",
+    # The directory watched by your bit torrent client for new torrents.
+    watch   => "$ENV{'HOME'}/Downloads",
+    # Music library root folder.
+    library => "$ENV{'HOME'}/Music/Converted",
+    # If should_link_to_library is 1 hard-links are added to your music library.
+    should_link_to_library => 0,
+    # The format that you prefer to add to your library (e.g. ogg, 320, v0,...).
+    preferred_format => 'v2',
+    # Favorite text editor.
+    editor  => 'nano',
+    # Pager used for long documents.
+    pager   => '/usr/bin/more',
 );
 
-my @rc_paths = qw{rip_dir pager upload_root watch};
+my @rc_paths = qw{rip_dir pager upload_root watch library};
 
 my $dumper = Data::Dumper->new([\%default_whatrc],['WhatCDConfig']);
 
 # Subroutine:
 #   new(
-#       announce => $annource_url,
+#       passkey => $whatcd_passkey,
+#       discogs_api_key => $discogs_api_key,
 #       rip_dir => $rip_directory,
-#       upload_root => $upload_root_dir,
-#       pager   => $default_terminal_pager,
+#       upload_root => $upload_root_directory,
 #       watch   => $torrent_watch_directory,
+#       library => $music_library_root,
+#       should_link_to_library => $user_wants_hard_links,
+#       preferred_format => $users_prefered_format,
 #       editor  => $text_editor,
-#       discogs_api_key => $discogs_api,)
+#       pager   => $default_terminal_pager,
+#       )
 # Type: CLASS METHOD
 # Purpose: 
 #   What::WhatRC constructor.
@@ -85,9 +96,47 @@ sub new {
    for my $path_setting (@rc_paths) {
         $self->{$path_setting} = safe_path($self->{$path_setting});
    }
+   if (!format_is_accepted($self->{preferred_format})) {
+        ValueException->throw("Invalid format $self->{preferred_format}");
+   }
    bless $self, $class;
    return $self;
 }
+
+# Subroutine: library()
+# Type: INSTANCE METHOD
+# Purpose: 
+# Returns: Nothing
+sub library {
+    my $self = shift;
+    my $lib_path = shift;
+    return $self->{library} if (!defined $lib_path);
+    $self->{library} = safe_path($lib_path);
+}
+
+# Subroutine: should_link_to_library()
+# Type: INSTANCE METHOD
+# Purpose: 
+# Returns: Nothing
+sub should_link_to_library {
+    my $self = shift;
+    my $should_link = shift;
+    return $self->{should_link} if (!defined $should_link);
+    $self->{should_link} = $should_link;
+}
+
+# Subroutine: preferred_format()
+# Type: INSTANCE METHOD
+# Purpose: 
+# Returns: Nothing
+sub preferred_format {
+    my $self = shift;
+    my $format = shift;
+    return $self->{preferred_format} if (!defined $format);
+    ValueException->throw("Not valid format $format") if !format_is_accepted($format);
+    $self->{preferred_format} = format_normalized($format);
+}
+
 
 # Subroutine: $rc->announce()
 # Type: INSTANCE METHOD
