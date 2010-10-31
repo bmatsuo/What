@@ -32,6 +32,7 @@ my @INTERFACE_SUBS = qw{
     search_hierarchy
     find_hierarchy
     find_subdirs
+    create_directory
     merge_structure
     align
     words_fit
@@ -43,7 +44,8 @@ our %EXPORT_TAGS = (
     'files' => [ qw(glob_safe       expand_home
                     find_file_pattern   search_hierarchy 
                     has_bad_chars   bad_chars           replace_bad_chars )],
-    'dirs' => [ qw( find_subdirs    find_hierarchy      merge_structure) ],
+    'dirs' => [ qw( find_subdirs    find_hierarchy      merge_structure
+                    create_direcotry) ],
     'align' => [ qw(    align   words_fit ) ], );
 
 our @EXPORT_OK = ( 
@@ -140,6 +142,36 @@ sub words_fit {
 #####################
 # DIRECTORY METHODS #
 #####################
+
+# Subroutine: create_directory($dir_path)
+# Type: INTERFACE SUB
+# Purpose: 
+# Returns: Nothing
+sub create_directory {
+    my $dir_path = shift;
+    my $container = dirname($dir_path)
+
+    if (!-d $container) {
+        if (-e $container) {
+            croak("Super directory $container exists and is not a directory.\n");
+        }
+        create_directory($container);
+    }
+    elsif (-e $container) {
+        croak("$container exists and is not a directory.\n");
+    }
+
+    if (-d $dir_path) {
+        croak("Directory '$dir_path' already exists.\n");
+    }
+    elsif (-e $dir_path) {
+        croak("File '$dir_path' is not a directory.\n");
+    }
+
+    subsystem(cmd => ['mkdir', $dir_path]) == 0
+        or croak("Couldn't create directory $dir_path.\n");
+}
+
 
 # Subroutine: merge_structure($skeleton, $body)
 # Type: INTERFACE SUB

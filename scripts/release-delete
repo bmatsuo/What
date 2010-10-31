@@ -1,0 +1,281 @@
+#!/usr/bin/env perl
+
+# Use perldoc or option --man to read documentation
+
+########################################################################
+# MODULES
+########################################################################
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+
+# Include private modules.
+use What::WhatRC;
+use What::Release;
+use What::Format;
+use What::Subsystem;
+use What::Prompt::YesNo;
+use What::Utils qw{:dirs};
+
+our $VERSION = "0.0_1";
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+my $prog_incantation  => $0;
+my $prog_dir          => dirname($0);
+my $prog_name         => basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+my $whatrc = read_whatrc('~/.settings');
+my $uproot = $whatrc->{upload_root};
+my $prompt = What::Prompt::YesNo->new(
+    default => "no",
+    question => "Are you sure you want to remove the FLAC release?",);
+my $subsystem = What::Subsystem->new(
+    verbose => 0,
+    dryrun => 0,);
+my $FLAC = format_normalized('flac')
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my $release = What::Release->new(
+        artist => $opt{'--artist'},
+        title => $opt{'--title'},
+        year => $opt{'--year'},);
+    
+    # Make a list of unwanted formats and find their locations.
+    my @undesireds = grep {$opt{"--$_"}} formats();
+    @undesireds = formats() if $opt{'--all'};
+    my %format_location 
+        = map {($_ => $release->format_dir($uproot, $_))} @undesireds;
+
+    # Specially check if a FLAC release exists.
+    my $flac_dir = $release->format_dir($uproot, 'flac');
+    my $flac_exists = -d $flac_dir ? 1 : 0;
+    if (!$flac_exists && -e $flac_dir) {
+        print {\*STDERR} "Error: $flac_dir is not a direcotry...\n"
+        $flac_exists = 0;
+        $exitcode = 1;
+    }
+
+    # FLAC deletion confirmation logic.
+    my $should_delete_flac = 0;
+    if ($flac_exists && $format_location{$FLAC}) {
+        $quest = "Are you sure you want to remove the FLAC release?";
+        $prompt->question($quest);
+        $resp = $prompt->prompt_user();
+        $should_delete_flac = 1 if $resp =~ /\A y/xms;
+    }
+    elsif ($format_location{$FLAC} && !$opt{'--all'}) {
+        print {\*STDERR} "Requested FLAC removal, but no FLAC release found.\n"
+    }
+    # Boolean value: "There be FLAC files after execution."
+    my $no_flac_after = $should_delete_flac || !$flac_exists;
+
+    # Gather a list of any non-FLAC formats unrecoverable after execution.
+    my @unrecoverables;
+    if ($no_flac_after) {
+        @unrecoverables = grep { ! $_ eq $FLAC } @undesireds;
+    }
+
+    # Confirm that the user wants to delete any unrecoverable formats.
+    my $delete_unrecoverables = 0;
+    if (@unrecoverables) {
+        $quest 
+            = "Warning: format(s) @unrecoverables can't be recreated w/o FLAC\n"
+            . "Are you sure you'd like to delete them?";
+        $prompt->question($quest);
+        $resp = $prompt->prompt_user();
+        $delete_unrecoverables = 1 if $resp =~ /\A y/xms;
+    }
+
+    REMOVEDIRS:
+    for my $f (@undesireds) {
+        my $format_dir = $format_location{$f};
+
+        # Determine if format $f can/should really be deleted.
+        if (!-e $format_dir) {
+            print {\*STDERR} "Warning: no $f release exists.\n"
+            next REMOVEDIRS;
+        }
+        k (!-d $format_dir) {
+            print {\*STDERR} "Error: $format_dir is not a directory...\n";
+            $exitcode = 1;
+            next REMOVEDIRS;
+        }
+        my ($quest, $resp);
+        if ($f eq $FLAC) {
+            next REMOVEDIRS if !$should_delete_flac;
+        }
+        elsif ($no_flac_after) {
+            next REMOVEDIRS if !$delete_unrecoverables;
+        }
+
+        # Delete the format.
+        print "Removing $f...";
+        $release->delete_format($uproot, $f);
+        print "Done.\n";
+    }
+
+    # Delete the release directory if it has no more formats.
+    my @remaining_formats = $release->existing_formats($uproot);
+    if (!@remaining_formats) {
+        print q{'},"Removing ", $release->name(), "...";
+        $release->delete_release($uproot);
+        print "Done.\n";
+
+        # Delete the artist directory if there are no more releases.
+        my @remaining_releases = $release->artist_releases($uproot);
+        if (!@remaining_releases) {
+            print "Removing '$aname'...";
+            $release->delete_artist($uproot);
+            print "Done.\n";
+        }
+    }
+
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+release-delete
+-- short description
+
+=head1 VERSION
+
+Version 0.0_1
+Originally created on 10/30/10 03:43:43
+
+=head1 USAGE
+
+release-delete [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=item --artist <artist>
+
+Release artist.
+
+=for Euclid:
+    artist.type: string, length artist
+
+=item --title <title>
+
+=for Euclid:
+    title.type: string, length title
+
+Release title.
+
+=item --year <year>
+
+Release year.
+
+=for Euclid:
+    year.type: /\d{4}/
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --v0 | --V0
+
+Remove any MP3 V0 VBR release.
+
+=item --v2 | --V2
+
+Remove any MP3 V2 VBR release.
+
+=item --320
+
+Remove any MP3 320kbps CBR release.
+
+=item --ogg | --OGG | --q8
+
+Remove any OGG -q8.0 VBR release.
+
+=item --aac | --AAC
+
+Remove any AAC release.
+
+=item --flac | --FLAC
+
+Remove any FLAC release.
+
+=item --all
+
+Remove all present formats. 
+This requires confirmation without the --force option.
+
+=item -f | --force
+
+Do not prompt user for confirmation before deleting FLAC releases.
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+This program is used to delete releases of specific formats from the upload hierarchy.
+If all formats of a release have been deleted, then the release root directory is deleted.
+If the user asks for the program to delete a FLAC release, it will prompt the user for 
+confirmation (usless --force is used).
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHORS
+
+Bryan Matsuo <bryan.matsuo@gmail.com> (primary author)
+
+=head1 COPYRIGHT 
+
+(c) Bryan Matsuo <bryan.matsuo@gmail.com>
+

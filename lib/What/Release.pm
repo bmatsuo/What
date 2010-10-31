@@ -6,8 +6,9 @@ use Carp;
 use File::Basename;
 use File::Glob 'bsd_glob';
 
-use What::Utils;
+use What::Utils qw{:all};
 use What::Format;
+use What::Subsystem;
 
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
@@ -199,26 +200,197 @@ sub format_disc_dirs {
     croak ("For some reason, no disc directory could be found.");
 }
 
-# Preloaded methods go here.
+# Subroutine: $release->scaffold($root, $format)
+# Type: INSTANCE METHOD
+# Purpose: 
+#   Create hierarchy stucture for given release format at a specified
+#   root directory.
+# Returns:
+#   The path to the format release directory.
+sub scaffold {
+    my $self = shift;
+    my ($root, $format) = @_;
 
-# Autoload methods go after =cut, and are processed by the autosplit program.
+    croak("Root directory not defined.") if !defined $root;
+    croak("Root '$root' does not exist.") if !-e $root;
+    croak("Root '$root' is not a directory.") if !-d $root;
+    croak("Format '$format' is not recognized.") 
+        if !format_is_accepted($format);
+
+    my $fdir = $self->format_dir($root,$format);
+
+    create_directory($fdir);
+
+    return $fdir;
+}
+
+# Subroutine: $release->copy_format_dir($root, $format, $dest)
+# Type: INSTANCE METHOD
+# Purpose: Copy a format release into a given directory.
+# Returns: Nothing
+sub copy_format_dir {
+    my $self = shift;
+    my ($root, $format, $dest) = @_;
+    if (!-d $dest) {
+        croak("Can't copy to non-directory '$dest'.\n");
+    }
+
+    my $fdir = $self->format_dir($root, $format);
+
+    subsystem(cmd => ['cp', $fdir, $dest]) == 0
+        or croak("Couldn't copy format directory.\n$?\n");
+
+    return;
+}
+
+
+# Subroutine: $release->copy_music_into_hierarchy($root, $format, $new_root)
+# Type: INSTANCE METHOD
+# Purpose: 
+#   Copy the music files of one format into another hierarchy.
+#   This can be used for importing into a music library.
+#   Non-music files (logs, cues, playlists, nfo, text files,...) are not copied.
+# Returns: Nothing
+sub copy_music_into_hierarchy {
+    my $self = shift;
+    my ($root, $format, $new_root);
+    my $fdir = $self->format_dir($root, $format);
+    my @disc_dirs = $self->format_disc_dirs($root, $format);
+    my $target = $self->scaffold($new_root, $format);
+    my $extension = format_extension($format);
+
+    for my $d (@disc_dirs) {
+        my $rel_disc_path = substr $d, 0, length ($fdir) + 1, q{};
+        my $target_disc_dir = $target;
+        if (!$d eq $fdir) {
+            $target_disc_dir .= "/$rel_disc_path";
+            create_directory($_);
+        }
+        my @songs = find_file_pattern("*.$extension", $d);
+        if (!@songs) {
+            croak("No '.$extension' songs found in supposed disc directory $d.\n");
+        }
+        subsystem(cmd => ['cp', @songs, $target_disc_dir]) == 0
+            or croak("Couldn't copy songs to $target_disc_dir.\n$?\n");
+    }
+
+    return;
+}
+
+# Subroutine: $release->format_torrent($upload_root, $format)
+# Type: INSTANCE METHOD
+# Returns: The path to the torrent file for a given format.
+sub format_torrent {
+    my $self = shift;
+    my ($uproot, $f) = @_;
+    my $fdir = $self->format_dir($uproot, $f);
+    my $torrent = "$fdir.torrent";
+    return $torrent;
+}
+
+
+# Subroutine: $release->delete_format($upload_root,$format)
+# Type: INSTANCE METHOD
+# Purpose: Delete a specified release format.
+# Returns: Nothing
+sub delete_format {
+    my $self = shift;
+    my ($uproot, $format) = @_;
+
+    my $fdir = $self->format_dir($uproot, $format);
+    if (!-e $fdir) {
+        croak("$format release does not exist.");
+    }
+    subsystem(cmd => ['rm', '-r', $fdir]) == 0
+        or croak("Couldn't remove format release '$fdir'.\n$?\n");
+
+    my $torrent = $self->format_torrent($uproot, $format);
+    if (-e $torrent) {
+        subsystem(cmd => ['rm', '-r', $torrent]) == 0
+            or croak("Couldn't remove torrent '$fdir'.\n$?\n");
+    }
+    return;
+}
+
+# Subroutine: $release->delete_release($upload_root)
+# Type: INSTANCE METHOD
+# Purpose: Delete the release directory.
+sub delete_release {
+    my $self = shift;
+    my ($uproot) = @_;
+    my $rdir = $self->dir($uproot);
+    subsystem(cmd => ['rm', '-r', $rdir]) == 0
+        or croak("Couldn't remove release directory '$rdir'.\n$?\n");
+    return;
+}
+
+# Subroutine: $release->delete_artist($upload_root)
+# Type: INSTANCE METHOD
+# Purpose: Delete the release's artist directory. Use with caution.
+sub delete_artist {
+    my $self = shift;
+    my ($uproot) = @_;
+    my $adir = $self->artist_dir($uproot);
+    subsystem(cmd => ['rm', '-r', $adir]) == 0
+        or croak("Couldn't remove release directory '$rdir'.\n$?\n");
+    return;
+}
+
+
+# Subroutine: $release->existing_formats($upload_root)
+# Type: INSTANCE METHOD
+# Purpose: 
+# Returns: Nothing
+sub existing_formats {
+    my $self = shift;
+    my ($uproot) = @_;
+    my $rdir = $self->dir($uproot);
+    my @formats;
+    for my $subdir (find_subdirs($rdir)) {
+        my $name = basename($subdir);
+        if ($name =~ m/ \[ ([A-Z0-9]+) \] \z/xms) {
+            my $fname = $1;
+            if (my $f = format_is_accepted($fname)) {
+                push @formats, $f;
+            }
+            else {
+                croak("Found unrecognized format name $fname.\n");
+            }
+        }
+        else {
+            croak("Subdirectory doesn't look like a format release '$name'.\n");
+        }
+    }
+
+    return @formats;
+}
+
+# Subroutine: $release->artist_releases($upload_root)
+# Type: INSTANCE METHOD
+# Returns: A list of all releases by the artist.
+sub artist_releases {
+    my $self = shift;
+    my ($uproot) = @_;
+    my $adir = $self->artist_dir($uproot);
+    return find_subdirs($adir);
+}
+
 
 1;
 __END__
-# Below is stub documentation for your module. You'd better edit it!
-
 =head1 NAME
 
-What - A library and program suite to accompany What.CD
+What::Release - A simple class to access the upload hierarchy of releases.
 
 =head1 SYNOPSIS
 
-  use What;
+  use What::Release;
 
 =head1 ABSTRACT
 
-The the What package provides several tools to facilitate uploading and
-other contributions to the what.cd website.
+A What::Release object contains artist, title, and year information for a release.
+It has instance methods for accessing the releases in the upload hierarchy.
+Any program wanting to access the upload hierarchy should include What::Release.
 
 =head2 EXPORT
 
@@ -226,14 +398,9 @@ None by default.
 
 =head1 SEE ALSO
 
-Mention other useful documentation such as the documentation of
-related modules or operating system documentation (such as man pages
-in UNIX), or any relevant external documentation such as RFCs or
-standards.
+What::Format, What::Utils
 
-If you have a mailing list set up for your module, mention it here.
-
-If you have a web site set up for your module, mention it here.
+mkrelease, release-flac-convert, release-mktorrent, release-scaffold
 
 =head1 AUTHOR
 

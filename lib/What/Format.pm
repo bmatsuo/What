@@ -30,6 +30,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
+    formats
     format_normalized
     format_is_accepted
     format_extension
@@ -56,6 +57,12 @@ my %ext_of = (
     V2      => 'mp3',
 );
 
+# Subroutine: formats()
+# Type: INTERFACE SUB
+# Returns: List of the valid formats.
+sub formats {
+    return keys %is_accepted;
+}
 
 
 # INTERFACE METHOD (no class arg);
