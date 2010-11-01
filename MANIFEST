@@ -25,8 +25,6 @@ lib/What/Utils.pm
 lib/What/M3U.pm
 lib/What/Format.pm
 lib/What/XMLLib.pm
-scripts/snatch-inspect
-scripts/release-import
 lib/What/Discogs.pm
 lib/What/Discogs/Base.pm
 lib/What/Discogs/Discography.pm
@@ -35,8 +33,11 @@ lib/What/Discogs/Release.pm
 lib/What/Discogs/Label.pm
 lib/What/Discogs/Search.pm
 lib/What/Discogs/Query.pm
+scripts/snatch-inspect
+scripts/release-import
 scripts/release-scaffold
 scripts/release-art-convert
+scripts/release-delete
 scripts/release-flac-convert
 scripts/release-mktorrent
 scripts/release-mkm3u
