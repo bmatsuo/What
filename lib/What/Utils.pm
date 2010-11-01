@@ -45,7 +45,7 @@ our %EXPORT_TAGS = (
                     find_file_pattern   search_hierarchy 
                     has_bad_chars   bad_chars           replace_bad_chars )],
     'dirs' => [ qw( find_subdirs    find_hierarchy      merge_structure
-                    create_direcotry) ],
+                    create_directory ) ],
     'align' => [ qw(    align   words_fit ) ], );
 
 our @EXPORT_OK = ( 

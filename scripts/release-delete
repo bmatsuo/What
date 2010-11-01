@@ -30,9 +30,9 @@ our $VERSION = "0.0_1";
 ########################################################################
 
 # Basic program information.
-my $prog_incantation  => $0;
-my $prog_dir          => dirname($0);
-my $prog_name         => basename($0);
+my $prog_incantation  = $0;
+my $prog_dir          = dirname($0);
+my $prog_name         = basename($0);
 
 # Command-line option hash.
 my %opt = %ARGV;
@@ -44,7 +44,7 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $whatrc = read_whatrc('~/.settings');
+my $whatrc = read_whatrc('~/.whatrc');
 my $uproot = $whatrc->{upload_root};
 my $prompt = What::Prompt::YesNo->new(
     default => "no",
@@ -52,7 +52,7 @@ my $prompt = What::Prompt::YesNo->new(
 my $subsystem = What::Subsystem->new(
     verbose => 0,
     dryrun => 0,);
-my $FLAC = format_normalized('flac')
+my $FLAC = format_normalized('flac');
 
 ########################################################################
 # MAIN FUNCTION
@@ -75,13 +75,14 @@ sub main{
     my $flac_dir = $release->format_dir($uproot, 'flac');
     my $flac_exists = -d $flac_dir ? 1 : 0;
     if (!$flac_exists && -e $flac_dir) {
-        print {\*STDERR} "Error: $flac_dir is not a direcotry...\n"
+        print {\*STDERR} "Error: $flac_dir is not a direcotry...\n";
         $flac_exists = 0;
         $exitcode = 1;
     }
 
     # FLAC deletion confirmation logic.
     my $should_delete_flac = 0;
+    my ($quest, $resp);
     if ($flac_exists && $format_location{$FLAC}) {
         $quest = "Are you sure you want to remove the FLAC release?";
         $prompt->question($quest);
@@ -97,7 +98,7 @@ sub main{
     # Gather a list of any non-FLAC formats unrecoverable after execution.
     my @unrecoverables;
     if ($no_flac_after) {
-        @unrecoverables = grep { ! $_ eq $FLAC } @undesireds;
+        @unrecoverables = grep { ! ($_ eq $FLAC) } @undesireds;
     }
 
     # Confirm that the user wants to delete any unrecoverable formats.
@@ -117,15 +118,14 @@ sub main{
 
         # Determine if format $f can/should really be deleted.
         if (!-e $format_dir) {
-            print {\*STDERR} "Warning: no $f release exists.\n"
+            print {\*STDERR} "Warning: no $f release exists.\n";
             next REMOVEDIRS;
         }
-        k (!-d $format_dir) {
+        if (!-d $format_dir) {
             print {\*STDERR} "Error: $format_dir is not a directory...\n";
             $exitcode = 1;
             next REMOVEDIRS;
         }
-        my ($quest, $resp);
         if ($f eq $FLAC) {
             next REMOVEDIRS if !$should_delete_flac;
         }
@@ -149,7 +149,7 @@ sub main{
         # Delete the artist directory if there are no more releases.
         my @remaining_releases = $release->artist_releases($uproot);
         if (!@remaining_releases) {
-            print "Removing '$aname'...";
+            print join q{'}, "Removing ", $release->{artist}, "...";
             $release->delete_artist($uproot);
             print "Done.\n";
         }
