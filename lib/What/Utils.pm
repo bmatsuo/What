@@ -149,7 +149,7 @@ sub words_fit {
 # Returns: Nothing
 sub create_directory {
     my $dir_path = shift;
-    my $container = dirname($dir_path)
+    my $container = dirname($dir_path);
 
     if (!-d $container) {
         if (-e $container) {

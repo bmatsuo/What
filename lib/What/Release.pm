@@ -332,7 +332,7 @@ sub delete_artist {
     my ($uproot) = @_;
     my $adir = $self->artist_dir($uproot);
     subsystem(cmd => ['rm', '-r', $adir]) == 0
-        or croak("Couldn't remove release directory '$rdir'.\n$?\n");
+        or croak("Couldn't remove artist directory '$adir'.\n$?\n");
     return;
 }
 
