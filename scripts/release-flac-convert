@@ -765,7 +765,7 @@ sub copy_tags_to_mp3 {
                 $mp3->set_id3v2_frame($id3_tag, $tag_val);
             }
         }
-        print {\*STDERR} "\n";
+        #print {\*STDERR} "\n";
         my ($t_num, $t_tot) 
             = ($song_tag{'TRACKNUMBER'}, $song_tag{'TRACKTOTAL'});
         my ($d_num, $d_tot) 
