@@ -42,15 +42,13 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $whatrc = read_whatrc("~/.whatrc");
-
 ########################################################################
 # MAIN FUNCTION
 ########################################################################
 
 # main() - main program execution 
 sub main{
-    my $rip_dir = $whatrc->{rip_dir};
+    my $rip_dir = whatrc->rip_dir;
     my $artist = $opt{'--artist'};
     my $title = $opt{'--title'};
     my $year = $opt{'--title'};

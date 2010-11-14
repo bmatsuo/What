@@ -44,8 +44,7 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $whatrc = read_whatrc('~/.whatrc');
-my $uproot = $whatrc->{upload_root};
+my $uproot = whatrc->upload_root;
 my $prompt = What::Prompt::YesNo->new(
     default => "no",
     question => "Are you sure you want to remove the FLAC release?",);

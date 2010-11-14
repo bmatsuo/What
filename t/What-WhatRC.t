@@ -5,20 +5,14 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 3;
+use Test::More tests => 2;
 BEGIN { use_ok('What::WhatRC') };
 
 #########################
 
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
+my $rip_dir = whatrc->rip_dir;
+#print {\*STDERR} "$rip_dir\n";
+ok(-d $rip_dir);
+ok(-d $upload_root);
 
-# Try to make construct a new prompt.
-my $rc = What::WhatRC->new(
-    passkey => "deadbeef1234567890",
-    rip_dir => "~",
-); 
-
-ok($rc->{'passkey'} eq "deadbeef1234567890");
-
-ok($rc->{'pager'} eq "/usr/bin/more");
+#ok($rc->{'pager'} eq "/usr/bin/more");

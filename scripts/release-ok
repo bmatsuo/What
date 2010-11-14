@@ -49,9 +49,7 @@ my $illegal_chars = qr{([/?:])}xms;
 
 # main() - main program execution 
 sub main{
-    my $whatrc = read_whatrc("~/.whatrc");
-
-    my $rip_dir = $whatrc->{rip_dir};
+    my $rip_dir = whatrc->rip_dir;
 
     if (!-d $rip_dir) {
         print {\*STDERR} "Can't find rip directory $rip_dir.\n";

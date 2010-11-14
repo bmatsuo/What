@@ -40,7 +40,6 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $whatrc = read_whatrc('~/.whatrc');
 
 ########################################################################
 # MAIN FUNCTION
@@ -55,7 +54,7 @@ sub main{
         die "--snatch must be a directory (sry no singles).";
     }
 
-    my $rip_dir = $whatrc->{rip_dir};
+    my $rip_dir = whatrc->rip_dir;
     my @rip_files 
         = (find_file_pattern('*', $rip_dir),
             find_file_pattern('.*', $rip_dir),);

@@ -42,9 +42,6 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-# Read whatrc file
-my $whatrc = read_whatrc("~/.whatrc");
-
 ########################################################################
 # MAIN FUNCTION
 ########################################################################
@@ -56,13 +53,13 @@ sub main{
     my $num_discs = $opt{"--num-discs"};
 
     my $release = What::Release->new(
-        rip_root => $whatrc->{upload_root},
+        rip_root => whatrc->upload_root,
         artist => $opt{'--artist'},
         title => $opt{'--title'},
         year => $opt{'--year'},
         discs => $opt{'--num-discs'});
 
-    my $rip_root = $whatrc->{upload_root};
+    my $rip_root = whatrc->upload_root;
 
     my $artist_path = $release->artist_dir($rip_root);
     my $root_path = $release->dir($rip_root);

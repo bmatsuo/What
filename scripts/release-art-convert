@@ -41,8 +41,6 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $whatrc = read_whatrc('~/.whatrc');
-
 ########################################################################
 # MAIN FUNCTION
 ########################################################################
@@ -56,7 +54,7 @@ sub main{
     my $release_name = $release->name();
 
     my $source_dir 
-        = safe_path($release->format_dir($whatrc->{upload_root}, 'flac'));
+        = safe_path($release->format_dir(whatrc->upload_root, 'flac'));
 
     my @images = bsd_glob("$source_dir/*.tiff");
     my $dest = $opt{'--output-dir'};

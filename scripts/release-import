@@ -42,7 +42,6 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $whatrc = read_whatrc('~/.whatrc');
 my $info_stub = <<EOSTUB;
 # Put a release description here.
 # Trailing blank lines and lines beginning with a '#' will be ignored.
@@ -105,14 +104,14 @@ sub main{
     my $desc_path = do {
         my $desc_temp = File::Temp->new(
             TEMPLATE => '.desc.XXXX', 
-            DIR => $whatrc->{rip_dir}, 
+            DIR => whatrc->rip_dir, 
             SUFFIX => ".tmp",
             UNLINK => 0,);
         print {$desc_temp} $info_stub;
         $desc_temp->filename;};
     
     my $editor_exitcode 
-        = $subsys->exec($whatrc->{editor}, $desc_path);
+        = $subsys->exec(whatrc->editor, $desc_path);
     if ($editor_exitcode != 0) {
         print {\*STDERR}
             "Editor reported error creating the description. ",
@@ -137,7 +136,7 @@ sub main{
         print {\*STDERR} "warning: Info.txt will be empty.\n";
     }
 
-    open my $info, ">", "$whatrc->{rip_dir}/Info.txt"
+    open my $info, ">", whatrc->rip_dir."/Info.txt"
         or die "Couldn't write to Info.txt";
     print {$info} $desc;
     close $info;

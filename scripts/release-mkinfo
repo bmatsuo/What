@@ -46,7 +46,6 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $whatrc = read_whatrc('~/.whatrc');
 my $prompt = What::Prompt->new();
 
 ########################################################################
@@ -56,7 +55,7 @@ my $prompt = What::Prompt->new();
 # main() - main program execution 
 sub main{
     # Find all the disc directories/FLAC files.
-    my @rip_files = find_hierarchy($whatrc->{rip_dir});
+    my @rip_files = find_hierarchy(whatrc->rip_dir);
     my @flac_files = grep {$_ =~ / \.flac \z/xms} @rip_files;
     my %disc = map {($_ ? (dirname($_) => {}) : ())} @flac_files;
     my @disc_dirs = sort keys %disc;
@@ -260,7 +259,7 @@ sub main{
             my $artist_search_results = search(
                 qstr => $release_artist, 
                 type => 'artist', 
-                api => $whatrc->{discogs_api_key});
+                api => whatrc->discogs_api_key);
             my $matching_result_list 
                 = $artist_search_results->grep(
                     sub {my $a = shift; align($a->title, $release_artist) > 0.83});
@@ -288,7 +287,7 @@ sub main{
             qstr => $release_artist eq "Various Artists" ? $release_title 
                 : "$release_artist - $release_title",
             type => 'release',
-            api => $whatrc->{discogs_api_key},);
+            api => whatrc->discogs_api_key,);
         $release = find_release_in_search_results(
             results => $release_search,
             artist => $release_artist,
@@ -308,7 +307,7 @@ sub main{
         chomp $discogs_id;
         $release = get_release(
                 id => $discogs_id, 
-                api => $whatrc->{discogs_api_key})
+                api => whatrc->discogs_api_key)
             if $discogs_id =~ m/\d+/xms;
 
         my $is_consistent 
@@ -392,7 +391,7 @@ EOIHEAD
 
     my $info_filename = "$release_artist - $release_title ($release_year).nfo";
     $info_filename =~ s![/:]!_!gxms;
-    my $info_path = "$whatrc->{rip_dir}/$info_filename";
+    my $info_path = whatrc->rip_dir."/$info_filename";
     die "Info file exists at $info_path." 
         if -e $info_path;
 
@@ -405,7 +404,7 @@ EOIHEAD
 
     if ($opt{'--nfo-as-info'}) {
         subsystem(
-            cmd => ['cp', $info_filename, "$whatrc->{rip_dir}/Info.txt"]);
+            cmd => ['cp', $info_filename, whatrc->rip_dir."/Info.txt"]);
     }
 
     exit $exitcode;
@@ -439,7 +438,7 @@ sub find_release_in_search_results {
     if (@exact_results > 0) {
         my @release_ids = map {$_->uri_identifier} @exact_results;
         my @exacts
-            = map { get_release(id => $_, api => $whatrc->{discogs_api_key})} 
+            = map { get_release(id => $_, api => whatrc->discogs_api_key)} 
             @release_ids;
         my @exact_fits 
             = grep { release_agrees(release=> $_, %r)} @exacts;
@@ -464,7 +463,7 @@ sub find_release_in_search_results {
     my @narrowed_indices = grep {$result_scores[$_] > 0.82} @sorted_indices;
     my @narrowed_releases 
         = map {
-            get_release(id => $results->get_result($_)->uri_identifier, api => $whatrc->{discogs_api_key})} 
+            get_release(id => $results->get_result($_)->uri_identifier, api => whatrc->discogs_api_key)} 
         @sorted_indices;
     my @matching_releases = grep {release_agrees(release => $_, %r)} @narrowed_releases;
     if (@matching_releases) {
@@ -504,7 +503,7 @@ sub find_release_in_artist_page {
     my $title = $r{title};
     my $artist_discog;
     eval { $artist_discog = get_artist(
-            name => $artist, api => $whatrc->{discogs_api_key}); };
+            name => $artist, api => whatrc->discogs_api_key); };
     return if !defined $artist_discog;
 
     my @releases = @{$artist_discog->releases};
@@ -517,7 +516,7 @@ sub find_release_in_artist_page {
         print "Fetching releases...\n";
         my @exacts
             = map {get_release(
-                    id => $_->id, api => $whatrc->{discogs_api_key})} 
+                    id => $_->id, api => whatrc->discogs_api_key)} 
             @exact_matches;
         my @perfect_fits
             = grep {release_agrees(release=>$_, %r)} @exacts;

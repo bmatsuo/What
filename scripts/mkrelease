@@ -47,7 +47,6 @@ my $exitcode = 0;
 ########################################################################
 
 my $illegal_chars = qr{([/?:])}xms;
-my $whatrc = read_whatrc('~/.whatrc');
 
 ########################################################################
 # MAIN FUNCTION
@@ -87,9 +86,9 @@ sub main{
         $exitcode = 1;
     }
 
-    my $rip_dir = $whatrc->{rip_dir};
+    my $rip_dir = whatrc->rip_dir;
 
-    my $up_root = $whatrc->{upload_root};
+    my $up_root = whatrc->upload_root;
 
     my $flac_dir = $release->format_dir($up_root, 'FLAC');
 
@@ -134,7 +133,7 @@ sub main{
         $subsystem->exec(@mkm3u) == 0 or die;
 
         # Add any created M3U files to the set of release files.
-        my @m3us = find_file_pattern("*.m3u",$whatrc->{rip_dir});
+        my @m3us = find_file_pattern("*.m3u",$rip_dir);
         push @release_files, @m3us if !$root_has_m3u;
     }
 

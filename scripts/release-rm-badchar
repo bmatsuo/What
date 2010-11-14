@@ -43,7 +43,6 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $whatrc = What::WhatRC->new('~/.whatrc');
 my $subsystem = What::Subsystem->new();
 
 ########################################################################
@@ -52,7 +51,7 @@ my $subsystem = What::Subsystem->new();
 
 # main() - main program execution 
 sub main{
-    my $release_dir = $whatrc->{rip_dir};
+    my $release_dir = whatrc->rip_dir;
 
     # Sort files by decreasing directory depth.
     my @files = find_hierarchy($release_dir);

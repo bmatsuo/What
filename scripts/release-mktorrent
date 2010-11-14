@@ -46,10 +46,8 @@ my $exitcode = 0;
 
 # main() - main program execution 
 sub main{
-    my $whatrc = read_whatrc("~/.whatrc");
-
     my $release = What::Release->new(
-        rip_root => $whatrc->{upload_root},
+        rip_root => whatrc->upload_root,
         artist => $opt{'--artist'},
         title => $opt{'--title'},
         year => $opt{'--year'},);
@@ -67,13 +65,13 @@ sub main{
         'AAC'   => $opt{'--aac'},
     );
 
-    my $announce = $whatrc->announce();
+    my $announce = whatrc->announce;
 
     for my $format (keys %want_format) {
         next if not $want_format{$format};
 
         my $format_dir 
-            = $release->format_dir($whatrc->{upload_root}, $format);
+            = $release->format_dir(whatrc->upload_root, $format);
 
         my @mktorrent_cmd = mktorrent_command(
             announce    => $announce,
@@ -91,7 +89,7 @@ sub main{
                     "'$torrent_name'. Attempting to continue.\n";
                 next;
             }
-            $subsystem->exec('cp', $torrent_name, $whatrc->{watch}) == 0
+            $subsystem->exec('cp', $torrent_name, whatrc->watch) == 0
                 or croak("Couldn't copy torrent file.");
         }
     }
