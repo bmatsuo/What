@@ -35,16 +35,16 @@ has passkey => (isa => 'Str', is => 'rw', default => 'xxxxxxxxxxxxxxxxxxxxxxxxxx
 # Discogs API key (https://www.discogs.com/users/api_key).
 has discogs_api_key  => (isa => 'Str', is => 'rw', default => 'xxxxxxxxx');
 # The folder where music rips are placed initially.
-has rip_dir => (isa => 'Str', is => 'rw', default => "$ENV{HOME}/Music/Last Rip",
+has rip_dir => (isa => 'Str', is => 'rw', default => "~/Music/Last Rip",
         initializer => \&_init_path_attr_,);
 # Root directory where uploaded files/torrents go.
-has upload_root => (isa => 'Str', is => 'rw', default => "$ENV{HOME}/Music/Rips",
+has upload_root => (isa => 'Str', is => 'rw', default => "~/Music/Rips",
         initializer => \&_init_path_attr_,);
 # The directory watched by your bit torrent client for new torrents.
-has watch   => (isa => 'Str', is => 'rw', default => "$ENV{HOME}/Downloads",
+has watch   => (isa => 'Str', is => 'rw', default => "~/Downloads",
         initializer => \&_init_path_attr_,);
 # Music library root folder.
-has library => (isa => 'Str', is => 'rw', default => "$ENV{HOME}/Music/Converted",
+has library => (isa => 'Str', is => 'rw', default => "~/Music/Converted",
         initializer => \&_init_path_attr_,);
 # If should_link_to_library is 1 hard-links are added to your music library.
 has should_link_to_library => (isa => 'Str', is => 'rw', default => 0);
@@ -90,6 +90,18 @@ sub release_dir {
     my $release_dir = "$rip_dir/$artist/$artist - $year - $title";
 
     return $release_dir;
+}
+
+# Subroutine: $rc->announce()
+# Type: INSTANCE METHOD
+# Purpose: Construct a what.cd tracker announce URL for making torrents.
+# Returns: URL as a string.
+sub announce {
+    my $self = shift;
+    my $tracker = tracker_url();
+    my $passkey = $self->passkey;
+    my $announce = "$tracker/$passkey/announce";
+    return $announce;
 }
 
 # Subroutine: $whatrc->serialize()
