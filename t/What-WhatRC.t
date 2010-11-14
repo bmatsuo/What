@@ -5,14 +5,13 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 2;
+use Test::More tests => 4;
 BEGIN { use_ok('What::WhatRC') };
 
 #########################
 
-my $rip_dir = whatrc->rip_dir;
-#print {\*STDERR} "$rip_dir\n";
-ok(-d $rip_dir);
-ok(-d $upload_root);
+ok(-d whatrc->rip_dir);
+ok(-d whatrc->upload_root);
+ok(whatrc->announce =~ /./);
 
 #ok($rc->{'pager'} eq "/usr/bin/more");

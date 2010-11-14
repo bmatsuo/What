@@ -96,7 +96,7 @@ sub release_dir {
 # Type: INSTANCE METHOD
 # Purpose: Construct a what.cd tracker announce URL for making torrents.
 # Returns: URL as a string.
-sub announce {
+sub announce($) {
     my $self = shift;
     my $tracker = tracker_url();
     my $passkey = $self->passkey;
