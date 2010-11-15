@@ -377,7 +377,8 @@ EOIHEAD
         for my $track (@tracks) {
             my $dur = $track->{duration};
             my ($min, $sec) = (floor($dur / 60), floor($dur % 60));
-            $info .= "$track->{position} $track->{title} [$min:$sec]";
+            $info .= sprintf "%s %s [%d:%02d]",
+                $track->{position}, $track->{title}, $min, $sec;
             if ($release_artist eq 'Various Artists') {
                 $info .= " ($track->{artist})";
             }
@@ -708,6 +709,9 @@ sub disc_tracks_agree {
 
         # Find the duration of the discogs track in seconds.
         my $rel_dur = $rel_ti->duration();
+
+        next if !defined $rel_dur || $rel_dur eq q{};
+
         if ($rel_dur =~ m/(\d+):(\d{2})/xms) {
             $rel_dur = 60 * $1 + $2;
         }
@@ -719,6 +723,7 @@ sub disc_tracks_agree {
             return 0;
         }
     }
+
     # Track names might be subtly misspelled. Are not checked currently.
 
     # No reason can be found for the tracks to disagree.

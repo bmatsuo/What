@@ -28,6 +28,7 @@ WriteMakefile(
         scripts/release-link
         scripts/release-mkinfo
         scripts/release-rm-badchar
+        scripts/release-stage-rip
         scripts/release-ok
         scripts/mkrelease
     }],

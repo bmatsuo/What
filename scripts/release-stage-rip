@@ -1,0 +1,159 @@
+#!/usr/bin/env perl
+# Use perldoc or option --man to read documentation
+###################################################
+
+our $VERSION = "00.00_01";
+# Originally created: 11/15/10 02:32:47.
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+
+# Include private modules.
+use What::Utils;
+use What::WhatRC;
+use What::Release;
+use What::Subsystem;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+my $prog_incantation  = $0;
+my $prog_dir          = dirname($0);
+my $prog_name         = basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+my $subsystem = What::Subsystem->new();
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my $release = What::Release->new(
+        artist => $opt{'--artist'},
+        title => $opt{'--title'},
+        year => $opt{'--year'}, );
+
+    die sprintf ("Couldn't find release %s.", $release->name())
+        if !$release->exists();
+
+    my $flac_dir = $release->format_dir('flac');
+    my $fd_name = basename($flac_dir);
+
+    die sprintf ("Couldn't find FLAC release %s.", $fd_name)
+        if !-d $flac_dir;
+
+    my @rip_files = find_file_pattern('*', $flac_dir);
+    my @cp_rip = ('cp', '-r', @rip_files, whatrc->rip_dir);
+    $subsystem->exec(@cp_rip) == 0
+        or die sprintf (
+            "Couldn't copy '%s' contents to rip directory.", $fd_name);
+
+    my @cp_info = ('cp', $release->dir."/Info.txt", whatrc->rip_dir);
+    $subsystem->exec(@cp_info) == 0
+        or die sprintf (
+            "Couldn't copy info file.", $fd_name);
+
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+release-stage-rip
+-- Stage a rip by copying a release to the rip directory.
+
+=head1 VERSION
+
+Version 00.00_01
+
+=head1 USAGE
+
+release-stage-rip [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=item --artist <artist>
+
+Release artist.
+
+=for Euclid:
+    artist.type: string, length artist
+
+=item --title <title>
+
+=for Euclid:
+    title.type: string, length title
+
+Release title.
+
+=item --year <year>
+
+Release year.
+
+=for Euclid:
+    year.type: /\d{4}/
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+Stage a rip by copying a release to the rip directory.
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHORS
+
+Bryan Matsuo [bryan.matsuo@gmail.com] (primary author)
+
+=head1 COPYRIGHT 
+
+(c) Bryan Matsuo [bryan.matsuo@gmail.com]
