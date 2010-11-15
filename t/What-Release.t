@@ -9,12 +9,12 @@ use Test::More tests => 2;
 BEGIN { use_ok('What::Release') };
 
 my $release = What::Release->new(
-    rip_root => "~",
+    rip_root => "/home/bryan",
     artist => "Lady Gaga", 
     title => "The Fame Monster", 
     year => "2009");
 
-my $release_dir = $release->dir("/home/bryan");
+my $release_dir = $release->dir();
 
 ok( $release_dir 
     eq '/home/bryan/Lady Gaga/Lady Gaga - The Fame Monster (2009)')

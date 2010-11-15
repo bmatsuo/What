@@ -407,7 +407,6 @@ sub existing_formats {
 # Returns: A list of all releases by the artist.
 sub artist_releases {
     my $self = shift;
-    my () = @_;
     my $adir = $self->artist_dir();
     return find_subdirs($adir);
 }

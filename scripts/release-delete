@@ -105,7 +105,7 @@ sub main{
     if (@unrecoverables) {
         $quest 
             = "Warning: format(s) @unrecoverables can't be recreated w/o FLAC\n"
-            . "Are you sure you'd like to delete them?";
+            . "Are you sure you'd like to delete the FLAC files?";
         $prompt->question($quest);
         $resp = $prompt->prompt_user();
         $delete_unrecoverables = 1 if $resp =~ /\A y/xms;
