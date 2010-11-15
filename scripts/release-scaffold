@@ -53,7 +53,6 @@ sub main{
     my $num_discs = $opt{"--num-discs"};
 
     my $release = What::Release->new(
-        rip_root => whatrc->upload_root,
         artist => $opt{'--artist'},
         title => $opt{'--title'},
         year => $opt{'--year'},

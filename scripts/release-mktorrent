@@ -47,7 +47,6 @@ my $exitcode = 0;
 # main() - main program execution 
 sub main{
     my $release = What::Release->new(
-        rip_root => whatrc->upload_root,
         artist => $opt{'--artist'},
         title => $opt{'--title'},
         year => $opt{'--year'},);

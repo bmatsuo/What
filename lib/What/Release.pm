@@ -74,61 +74,95 @@ sub new {
     return $self;
 }
 
+### INSTANCE METHOD
+# Subroutine: dup
+# Usage: $release->dup()
+# Purpose: Create a duplicate release object.
+# Returns: A new What::Release oject.
+# Throws: Nothing
+sub dup {
+    my $self = shift;
+    # TODO: Values may still be tied together (dangerous).
+    return What::Release->new(%{$self});
+}
+
+### INSTANCE METHOD
+# Subroutine: rerooted
+# Usage: $self->rerooted( $new_root )
+# Purpose: 
+#   Make a new release object rooted at a different directory, 
+#   but otherwise identical.
+# Returns: A new What::Release object.
+# Throws: Nothing
+sub rerooted {
+    my $self = shift;
+    my ($new_root) = @_;
+    my $new_obj = $self->dup();
+    $new_obj->{rip_root} = $new_root;
+    return $new_obj;
+}
+
+### INSTANCE METHOD
+# Subroutine: exists
+# Usage: $self->exists(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub exists {
+    my $self = shift;
+
+    return -d $self->dir();
+}
+
 # Subroutine: name()
 # Type: INSTANCE METHOD
 # Purpose: Compute the name of a release.
 # Returns: String containing the name of the release.
-sub name {
+sub name() {
     my $self = shift;
     my $name = "$self->{artist} - $self->{title} ($self->{year})";
     return $name;
 }
 
-# Subroutine: $release->artist_dir($upload_root)
+# Subroutine: $release->artist_dir()
 # Type: INSTANCE METHOD
 # Purpose: 
 #   Compute the release's root directory, given the rip root directory.
 # Returns: A path to the release's root directory.
-sub artist_dir {
+sub artist_dir() {
     my $self = shift;
-
-    my $rip_root = shift;
 
     my $name = $self->name();
 
-    my $artist_dir = "$rip_root/$self->{artist}";
+    my $artist_dir = "$self->{rip_root}/$self->{artist}";
 
     return $artist_dir;
 }
 
-# Subroutine: $release->dir($upload_root)
+# Subroutine: $release->dir()
 # Type: INSTANCE METHOD
 # Purpose: 
 #   Compute the release's root directory, given the rip root directory.
 # Returns: A path to the release's root directory.
-sub dir {
+sub dir() {
     my $self = shift;
-
-    my $rip_root = shift;
 
     my $name = $self->name();
 
-    my $artist_dir = $self->artist_dir($rip_root);
+    my $artist_dir = $self->artist_dir();
 
     my $release_root = "$artist_dir/$name";
 
     return $release_root;
 }
 
-# Subroutine: $release->format_dir($upload_root, $format)
+# Subroutine: $release->format_dir( $format)
 # Type: INSTANCE METHOD
 # Purpose: 
 #   Compute the release's root directory, given the rip root directory.
 # Returns: A path to the release's root directory.
 sub format_dir {
     my $self = shift;
-
-    my $rip_root = shift;
 
     my $format = shift;
 
@@ -138,14 +172,14 @@ sub format_dir {
     croak ("Unknown format $format_print.") if $format_ext eq q{};
 
     my $release_name = $self->name();
-    my $release_root = $self->dir($rip_root);
+    my $release_root = $self->dir();
 
     my $format_dir = "$release_root/$release_name [$format_print]";
 
     return $format_dir;
 }
 
-# Subroutine: $release->find_audio_files($upload_root, $format)
+# Subroutine: $release->find_audio_files($format)
 # Type: INSTANCE METHOD
 # Purpose: 
 #   Find all audio files in $release's $format dir.
@@ -153,7 +187,7 @@ sub format_dir {
 # Exceptions: Croaks when the $format dir of $release does not exist.
 sub find_audio_files {
     my $self = shift;
-    my ($upload_root, $format) = @_;
+    my ($format) = @_;
 
     # Fix case of $format, and identify type.
     my $format_ext = format_extension($format);
@@ -161,7 +195,7 @@ sub find_audio_files {
     croak ("Unknown format $format_print.") if $format_ext eq q{};
 
     # Find the format directory.
-    my $format_dir = $self->format_dir($upload_root, $format);
+    my $format_dir = $self->format_dir($format);
     croak ("Can't find any $format_print release.") 
         if !-e $format_dir;
     croak ("Non-directory in place of $format_print release.") 
@@ -183,7 +217,7 @@ sub find_audio_files {
 #   A list of disc directories (containing music) for a given format.
 sub format_disc_dirs {
     my $self = shift;
-    my ($upload_root, $format) = @_;
+    my ($format) = @_;
 
     # Fix case of $format, and identify type.
     my $format_ext = format_extension($format);
@@ -191,7 +225,7 @@ sub format_disc_dirs {
     croak ("Unknown format $format_print.") if $format_ext eq q{};
 
     # Find all the audio files in the release's format dir.
-    my @audio_files = $self->find_audio_files($upload_root,$format);
+    my @audio_files = $self->find_audio_files($format);
 
     # Find directories containing found audio files, and return.
     my @music_dirs_w_repeats = map {dirname($_)} @audio_files;
@@ -203,7 +237,7 @@ sub format_disc_dirs {
     croak ("For some reason, no disc directory could be found.");
 }
 
-# Subroutine: $release->scaffold($root, $format)
+# Subroutine: $release->scaffold($format)
 # Type: INSTANCE METHOD
 # Purpose: 
 #   Create hierarchy stucture for given release format at a specified
@@ -212,7 +246,8 @@ sub format_disc_dirs {
 #   The path to the format release directory.
 sub scaffold {
     my $self = shift;
-    my ($root, $format) = @_;
+    my ($format) = @_;
+    my $root = $self->{rip_root};
 
     croak("Root directory not defined.") if !defined $root;
     croak("Root '$root' does not exist.") if !-e $root;
@@ -227,18 +262,19 @@ sub scaffold {
     return $fdir;
 }
 
-# Subroutine: $release->copy_format_dir($root, $format, $dest)
+# Subroutine: $release->copy_format_dir($format, $dest)
 # Type: INSTANCE METHOD
 # Purpose: Copy a format release into a given directory.
 # Returns: Nothing
 sub copy_format_dir {
     my $self = shift;
-    my ($root, $format, $dest) = @_;
+    my ($format, $dest) = @_;
+
     if (!-d $dest) {
         croak("Can't copy to non-directory '$dest'.\n");
     }
 
-    my $fdir = $self->format_dir($root, $format);
+    my $fdir = $self->format_dir($format);
 
     subsystem(cmd => ['cp', $fdir, $dest]) == 0
         or croak("Couldn't copy format directory.\n$?\n");
@@ -246,8 +282,7 @@ sub copy_format_dir {
     return;
 }
 
-
-# Subroutine: $release->copy_music_into_hierarchy($root, $format, $new_root)
+# Subroutine: $release->copy_music_into_hierarchy($format, $new_root)
 # Type: INSTANCE METHOD
 # Purpose: 
 #   Copy the music files of one format into another hierarchy.
@@ -256,10 +291,12 @@ sub copy_format_dir {
 # Returns: Nothing
 sub copy_music_into_hierarchy {
     my $self = shift;
-    my ($root, $format, $new_root);
-    my $fdir = $self->format_dir($root, $format);
-    my @disc_dirs = $self->format_disc_dirs($root, $format);
-    my $target = $self->scaffold($new_root, $format);
+    my ($format, $new_root);
+    my $root = $self->{rip_root};
+    my $fdir = $self->format_dir($format);
+    my @disc_dirs = $self->format_disc_dirs($format);
+    my $reroot = $self->rerooted($new_root);
+    my $target = $reroot->scaffold($format);
     my $extension = format_extension($format);
 
     for my $d (@disc_dirs) {
@@ -280,34 +317,34 @@ sub copy_music_into_hierarchy {
     return;
 }
 
-# Subroutine: $release->format_torrent($upload_root, $format)
+# Subroutine: $release->format_torrent($format)
 # Type: INSTANCE METHOD
 # Returns: The path to the torrent file for a given format.
 sub format_torrent {
     my $self = shift;
-    my ($uproot, $f) = @_;
-    my $fdir = $self->format_dir($uproot, $f);
+    my ($f) = @_;
+    my $fdir = $self->format_dir($f);
     my $torrent = "$fdir.torrent";
     return $torrent;
 }
 
 
-# Subroutine: $release->delete_format($upload_root,$format)
+# Subroutine: $release->delete_format($format)
 # Type: INSTANCE METHOD
 # Purpose: Delete a specified release format.
 # Returns: Nothing
 sub delete_format {
     my $self = shift;
-    my ($uproot, $format) = @_;
+    my ($format) = @_;
 
-    my $fdir = $self->format_dir($uproot, $format);
+    my $fdir = $self->format_dir($format);
     if (!-e $fdir) {
         croak("$format release does not exist.");
     }
     subsystem(cmd => ['rm', '-r', $fdir]) == 0
         or croak("Couldn't remove format release '$fdir'.\n$?\n");
 
-    my $torrent = $self->format_torrent($uproot, $format);
+    my $torrent = $self->format_torrent($format);
     if (-e $torrent) {
         subsystem(cmd => ['rm', '-r', $torrent]) == 0
             or croak("Couldn't remove torrent '$fdir'.\n$?\n");
@@ -315,39 +352,36 @@ sub delete_format {
     return;
 }
 
-# Subroutine: $release->delete_release($upload_root)
+# Subroutine: $release->delete_release()
 # Type: INSTANCE METHOD
 # Purpose: Delete the release directory.
 sub delete_release {
     my $self = shift;
-    my ($uproot) = @_;
-    my $rdir = $self->dir($uproot);
+    my $rdir = $self->dir();
     subsystem(cmd => ['rm', '-r', $rdir]) == 0
         or croak("Couldn't remove release directory '$rdir'.\n$?\n");
     return;
 }
 
-# Subroutine: $release->delete_artist($upload_root)
+# Subroutine: $release->delete_artist()
 # Type: INSTANCE METHOD
 # Purpose: Delete the release's artist directory. Use with caution.
 sub delete_artist {
     my $self = shift;
-    my ($uproot) = @_;
-    my $adir = $self->artist_dir($uproot);
+    my $adir = $self->artist_dir();
     subsystem(cmd => ['rm', '-r', $adir]) == 0
         or croak("Couldn't remove artist directory '$adir'.\n$?\n");
     return;
 }
 
 
-# Subroutine: $release->existing_formats($upload_root)
+# Subroutine: $release->existing_formats()
 # Type: INSTANCE METHOD
 # Purpose: 
 # Returns: Nothing
 sub existing_formats {
     my $self = shift;
-    my ($uproot) = @_;
-    my $rdir = $self->dir($uproot);
+    my $rdir = $self->dir();
     my @formats;
     for my $subdir (find_subdirs($rdir)) {
         my $name = basename($subdir);
@@ -368,13 +402,13 @@ sub existing_formats {
     return @formats;
 }
 
-# Subroutine: $release->artist_releases($upload_root)
+# Subroutine: $release->artist_releases()
 # Type: INSTANCE METHOD
 # Returns: A list of all releases by the artist.
 sub artist_releases {
     my $self = shift;
-    my ($uproot) = @_;
-    my $adir = $self->artist_dir($uproot);
+    my () = @_;
+    my $adir = $self->artist_dir();
     return find_subdirs($adir);
 }
 
