@@ -16,7 +16,6 @@ use Carp;
 
 # Include CPAN modules.
 use Getopt::Euclid qw{ :vars<opt_> };
-use Readonly;
 
 # Include private modules.
 use What::WhatRC;
@@ -29,9 +28,9 @@ use What::Subsystem;
 ########################################################################
 
 # Basic program information.
-Readonly my $prog_incantation  => $0;
-Readonly my $prog_dir          => dirname($0);
-Readonly my $prog_name         => basename($0);
+my $prog_incantation  = $0;
+my $prog_dir          = dirname($0);
+my $prog_name         = basename($0);
 
 # Command-line option hash.
 my %opt = %ARGV;
@@ -52,23 +51,27 @@ my $subsystem = What::Subsystem->new();
 # main() - main program execution 
 sub main{
     my $release_dir = whatrc->rip_dir;
+    $release_dir =~ s! /? \z!/!xms;
 
     # Sort files by decreasing directory depth.
-    my @files = find_hierarchy();
+    my @files = find_hierarchy($release_dir);
     my %depth;
-    for (@files) {$depth{$_} = scalar(@{[$a =~ m!/!g]}) + 1};
-    @files = sort { $depth{$a} <=> $depth{$a} } find_hierarchy();
+    for (@files) {
+        $depth{$_} = scalar(@{[$_ =~ m!/!g]}) + 1
+    };
+    @files = sort { $depth{$a} <=> $depth{$a} } @files;
 
     for my $path (@files) {
+        #my $rel_path = substr $path, 0, length $release_dir, q{};
         my $ext;
-        if ($ext =~ /[^/] \.(\w+) \z/xms) {
+        if ($path =~ m![^/] \.(\w+) \z!xms) {
             $ext = $1;
         }
         if ($ext eq 'm3u') {
             fix_m3u($path);
         }
         elsif ($ext eq 'cue') {
-            fix_cue($path);
+            fix_cue($path, $release_dir);
         }
         fix_file($path);
     }
@@ -82,8 +85,8 @@ sub main{
 
 sub fix_file {
     my $path = shift;
+    return 0 if !has_bad_chars(basename($path));
     my $fixed = join '/', dirname($path), replace_bad_chars(basename($path));
-    return 0 if ($fixed eq $path);
     croak("Destination file exists. $fixed ") if -e  $fixed;
     $subsystem->exec('mv', $path, $fixed) == 0
         or croak("Couldn't move '$path' to '$fixed'.\n");
@@ -92,6 +95,10 @@ sub fix_file {
 
 sub fix_m3u {
     my $m3u_path = shift;
+    my $m3u_dir = dirname($m3u_path);
+    $m3u_dir .= '/';
+    my $prefix_len = length $m3u_dir;
+
     my $m3u;
     open $m3u, "<", $m3u_path
         or croak("Couldn't open $m3u_path");
@@ -100,6 +107,7 @@ sub fix_m3u {
     my $num_replaced = 0;
 
     for (@m3u) {
+        #TODO: There may be problems when m3u is nested deeper than songs.
         next if $_ !~ m/\A [^#]/xms;
         my $path = $_;
         chomp $path;
@@ -127,9 +135,10 @@ sub fix_cue {
         next if 
             $_ !~ 
                 /\A 
-                \s* FILE \s+ " ( [^"] | \\" )* .wav" \s+ WAVE \s* \n? 
+                \s* FILE \s+ " ( (?: [^"] | \\" )* ) .wav" \s+ WAVE \s* \n? 
                 \z/xms;
         my $path = $1;
+        #TODO: There may be problems when cue is nested deeper than songs.
         $path = join '/', (map {replace_bad_chars($_)} split ('/', $path));
         $_ = qq{FILE "$path.wav" WAVE \n};
         ++$num_replaced;

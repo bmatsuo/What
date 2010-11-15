@@ -27,6 +27,7 @@ WriteMakefile(
         scripts/release-mkm3u
         scripts/release-link
         scripts/release-mkinfo
+        scripts/release-rm-badchar
         scripts/release-ok
         scripts/mkrelease
     }],
