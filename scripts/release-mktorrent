@@ -70,7 +70,7 @@ sub main{
         next if not $want_format{$format};
 
         my $format_dir 
-            = $release->format_dir(whatrc->upload_root, $format);
+            = $release->format_dir($format);
 
         my @mktorrent_cmd = mktorrent_command(
             announce    => $announce,

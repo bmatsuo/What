@@ -60,9 +60,9 @@ sub main{
 
     my $rip_root = whatrc->upload_root;
 
-    my $artist_path = $release->artist_dir($rip_root);
-    my $root_path = $release->dir($rip_root);
-    my $flac_dir_path = $release->format_dir($rip_root,'flac');
+    my $artist_path = $release->artist_dir();
+    my $root_path = $release->dir();
+    my $flac_dir_path = $release->format_dir('flac');
     my $subsystem = What::Subsystem->new();
 
     my @mkartist = ('mkdir', $artist_path);

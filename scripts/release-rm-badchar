@@ -54,10 +54,10 @@ sub main{
     my $release_dir = whatrc->rip_dir;
 
     # Sort files by decreasing directory depth.
-    my @files = find_hierarchy($release_dir);
+    my @files = find_hierarchy();
     my %depth;
     for (@files) {$depth{$_} = scalar(@{[$a =~ m!/!g]}) + 1};
-    @files = sort { $depth{$a} <=> $depth{$a} } find_hierarchy($release_dir);
+    @files = sort { $depth{$a} <=> $depth{$a} } find_hierarchy();
 
     for my $path (@files) {
         my $ext;

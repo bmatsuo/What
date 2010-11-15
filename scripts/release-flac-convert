@@ -94,7 +94,7 @@ sub main{
 
     my $release_root_name = $release->name();
 
-    my $release_path = $release->dir($upload_root);
+    my $release_path = $release->dir();
 
     PrerequisiteError->throw(
         error=>"Release root does not exist; $release_path")
@@ -103,11 +103,11 @@ sub main{
     $release_path =~ s/\A ~/$ENV{'HOME'}/xms;
 
     my @flac_dirs 
-        = $release->format_disc_dirs($upload_root,'FLAC');
+        = $release->format_disc_dirs('FLAC');
 
     my $release_is_multidisc = @flac_dirs > 1 ? 1 : 0;
 
-    my $flac_source_dir = $release->format_dir($upload_root,'flac');
+    my $flac_source_dir = $release->format_dir('flac');
 
     #my %flac_info = flac_files_in($flac_source_dir);
     my %flac_info
@@ -117,7 +117,7 @@ sub main{
     for my $format (@desired_formats) {
         print "Finding $format directories...";
         my $format_dest_dir 
-            = $release->format_dir($upload_root,$format);
+            = $release->format_dir($format);
         if (!-d $format_dest_dir) {
             $subsystem->exec('mkdir', $format_dest_dir) == 0
                 or syserr(
@@ -285,8 +285,8 @@ sub main{
         my $disc_name = basename($disc_dir);
         for my $format (@desired_formats) {
             my $format_ext = format_extension($format);
-            my $format_dir = $release->format_dir($upload_root, $format);
-            my $flac_root = $release->format_dir( $upload_root, 'flac');
+            my $format_dir = $release->format_dir($format);
+            my $flac_root = $release->format_dir('flac');
             my $flac_root_name = basename($flac_root);
 
             # Name the disc directory for the given format.

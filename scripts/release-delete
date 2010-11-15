@@ -68,10 +68,10 @@ sub main{
     my @undesireds = grep {$opt{"--$_"}} formats();
     @undesireds = formats() if $opt{'--all'};
     my %format_location 
-        = map {($_ => $release->format_dir($uproot, $_))} @undesireds;
+        = map {($_ => $release->format_dir($_))} @undesireds;
 
     # Specially check if a FLAC release exists.
-    my $flac_dir = $release->format_dir($uproot, 'flac');
+    my $flac_dir = $release->format_dir('flac');
     my $flac_exists = -d $flac_dir ? 1 : 0;
     if (!$flac_exists && -e $flac_dir) {
         print {\*STDERR} "Error: $flac_dir is not a direcotry...\n";
@@ -134,22 +134,22 @@ sub main{
 
         # Delete the format.
         print "Removing $f...";
-        $release->delete_format($uproot, $f);
+        $release->delete_format($f);
         print "Done.\n";
     }
 
     # Delete the release directory if it has no more formats.
-    my @remaining_formats = $release->existing_formats($uproot);
+    my @remaining_formats = $release->existing_formats();
     if (!@remaining_formats) {
         print q{'},"Removing ", $release->name(), "...";
-        $release->delete_release($uproot);
+        $release->delete_release();
         print "Done.\n";
 
         # Delete the artist directory if there are no more releases.
-        my @remaining_releases = $release->artist_releases($uproot);
+        my @remaining_releases = $release->artist_releases();
         if (!@remaining_releases) {
             print join q{'}, "Removing ", $release->{artist}, "...";
-            $release->delete_artist($uproot);
+            $release->delete_artist();
             print "Done.\n";
         }
     }

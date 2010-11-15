@@ -90,7 +90,7 @@ sub main{
 
     my $up_root = whatrc->upload_root;
 
-    my $flac_dir = $release->format_dir($up_root, 'FLAC');
+    my $flac_dir = $release->format_dir('FLAC');
 
     my @release_files = bsd_glob("$rip_dir/*");
     my @existing_m3us = grep {$_ =~ m/\.m3u\z/xms} @release_files;
@@ -175,7 +175,7 @@ sub main{
             for my $format (qw{flac 320 v0 v2}) {
                 next REQUESTFORMAT if !defined $opt{"--$format"};
                 print "Fetching $format... ";
-                my $format_dir = $release->format_dir($up_root, $format);
+                my $format_dir = $release->format_dir($format);
                 my $format_zip = $format_dir.".zip";
                 my $enc_format = $format eq 'flac' ? $format
                 : "mp3-$format";
@@ -207,7 +207,7 @@ sub main{
         $subsystem->exec(@move_release) == 0 or die;
 
         my @move_info 
-        = ('mv', $info[0], $release->dir($up_root));
+        = ('mv', $info[0], $release->dir());
         $subsystem->exec(@move_info) == 0 or die;
 
         if ($user_wants_a_conversion) {
