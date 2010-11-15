@@ -9,6 +9,7 @@ use File::Glob 'bsd_glob';
 use What::Utils qw{:all};
 use What::Format;
 use What::Subsystem;
+use What::WhatRC;
 
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
@@ -19,10 +20,10 @@ our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
 
-our $VERSION = '0.0_2';
+our $VERSION = '0.0_3';
 
 my %def_arg = ( 
-    rip_root => "",
+    rip_root => whatrc->upload_root,
     artist  => "",
     title   => "",
     year    => "",
@@ -32,7 +33,7 @@ my %def_arg = (
 
 # Subroutine: 
 #   What::Release->new(
-#       rip_root=> $rip_root,
+#       [rip_root=> $rip_root,]
 #       artist  => $artist,
 #       title   => $title,
 #       year    => $year,
@@ -42,6 +43,8 @@ my %def_arg = (
 # Purpose: Create a What::Release object.
 #   The constructor requires arguments 'artist', 'title', and 'year'.
 #   'label' and 'desc' are optional arguments.
+#   When 'rip_root' is not given, then the 'upload_root' config value of
+#   '~/.whatrc' is used.
 # Returns:
 #   New What::Release object.
 sub new {
