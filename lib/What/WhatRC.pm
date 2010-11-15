@@ -67,31 +67,6 @@ sub whatrc() {
 
 my $dumper = Data::Dumper->new([{}],['WhatCDConfig']);
 
-# Subroutine: 
-#   release_dir(
-#       artist  => $artist_name,
-#       title   => $release_title,
-#       year    => $release_year )
-# Type: INSTANCE METHOD
-# Purpose: 
-#   Compute the directory that a given release will be contained in.
-# Returns: 
-#   A path to the release directory.
-sub release_dir {
-    my $self = shift;
-    my %arg = @_;
-
-    my $artist = $arg{artist} or croak("Undefined release artist.");
-    my $title = $arg{title} or croak("Undefined release title.");
-    my $year = $arg{year} or croak("Undefined release year.");
-
-    my $rip_dir = $self->{rip_dir};
-
-    my $release_dir = "$rip_dir/$artist/$artist - $year - $title";
-
-    return $release_dir;
-}
-
 # Subroutine: $rc->announce()
 # Type: INSTANCE METHOD
 # Purpose: Construct a what.cd tracker announce URL for making torrents.
