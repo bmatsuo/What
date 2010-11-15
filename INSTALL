@@ -1,36 +1,34 @@
 PREREQUISITES
 
-In order to run the package tests when installing, you must have a 
-free account and API key for www.discogs.com. The tests prompt you 
-to enter this key, and it must be placed in your ~/.whatrc file. 
+    The very first thing to do is get an account at www.discogs.com
+    and get an API key (http://www.discogs.com/users/api_key).
+    You need to complete this step before completing any of the following.
 
-INSTALLATION
+    Then you need to setup your config file '~/.whatrc'.
+    Initially, copy the included config template 'whatrc' into your home 
+    directory with the command
 
-To install this module, with the included scripts, type the following:
+        cp whatrc ~/.whatrc
 
-    perl Makefile.PL
-    make
-    make test
-    make install
+    Open the new file '~/.whatrc' in a tex editor and fill it out
+    with your preferences. Here is an explanation of the most important
+    required fields:
 
-You should edit ~/.whatrc to fit your filesystem and what.cd account.
-Look at the included 'whatrc' file for a template for you to copy, and
-then customize.
+        passkey: This is your What.CD account's torrent passkey,
+            not your password and not your IRC passkey.
+            Your passkey can be found on your profile page in the
+            'Personal' side-box near your account email.
 
-CROSS-PLATFORM COMPATABILITY
+        discogs_api_key: This is mentioned at the beginning of the 
+            document. The API key is required for interacting with
+            www.discogs.com, and checking for the prescence of
+            your uploads.
 
-So far, this package has only been extensively tested on Mac OS X. It
-should also work with minimal difficulty on most Linux
-distributions. There is an issue where the OS X utility 'open' is 
-called. Linux has no standard utitily for opening arbitrary files. 
-Under Gnome, gnome-open can perform a similar task. The situation is
-not ideal and should eventually disappear. But for now, snatch-inspect
-and release-import will not work under Linux. I will try to make a patch
-to allow these programs to work under gnome in the future.
+        rip_dir: This is where you should rip FLAC files to, 
+            and prepare rips before converting/uploading them.
 
-I highly doubt that it will work on Microsoft Windows. Some kind MS Perl
-hacker would need to come along and fix things that cause problems.
-
+        upload_dir: All you're uploaded torrents and their data
+            are categorized inside the upload directory.
 
 PERL DEPENDENCIES
 
@@ -56,23 +54,66 @@ PROGRAM DEPENDENCIES
 
 The What scripts also require free, cross-platform, external programs. 
 Specifically,
-    lame                             (for MP3 reencoding)
-    vorbis-tools (with FLAC support) (for OGG reencoding)
-    faac                             (for AAC reencoding)
-    flac                             (for FLAC stream decoding)
-    mktorrent                        (for making torrent files)
-    spek (command-line binary)       (for viewing spectrograms)
 
-If you do not need any of these functional areas, you do not need to 
-install the dependencies. The 'flac' dependency is required for
-reencoding to pretty much any format though.
+    lame                             (MP3 reencoding)
+    vorbis-tools (with FLAC support) (OGG reencoding)
+    faac                             (AAC reencoding)
+    flac                             (FLAC stream decoding)
+    mktorrent                        (making torrent files)
+    spek (command-line binary)       (viewing spectrograms)
+
+The 'flac' dependency is required for reencoding to any other format.
+and 
+
+But, if you don't need any of these functional areas, 
+    then you don't need to install the dependencies. 
 
 The 'vorbis-tools' dependency must be compiled with flac support.
-If compiling from source, just read documentation about this option.
+If compiling from source, read documentation about this option.
 If installing vorbis-tools via a package manager. Look into the 
 package managers documentation for variants/patches which will install
-a package with flac support.
+a package with flac support. If you are installing vorbis-tools on Mac 
+OS X with macports, the following command installs vorbis-tools properly:
 
-If you are installing vorbis-tools on Mac OS X with macports, then
-the following command should install vorbis-tools properly:
-    sudo port install vorbis-tools+flac
+    sudo port install vorbis-tools +flac
+
+INSTALLATION
+
+You need to have your '~/.whatrc' file in place before continuing
+(see PREREQUISITES). At the minimum, you must have copied the template
+into place. The values of the config variables don't need to be set 
+correctly before testing the module, but some value has to be defined.
+
+Currently, the program dependencies don't need to be installed intall after
+the installation. But you will need them to do just about anything once
+the program is installed.
+
+To install this module and its included scripts, type the following:
+
+    perl Makefile.PL
+    make
+    make test
+    make install
+
+Alternatively, to install the module to a directory other than '/usr/local',
+say '~/local' use this set of commands:
+
+    perl Makefile.PL PREFIX=~/local
+    make
+    make test
+    make install
+
+CROSS-PLATFORM COMPATABILITY
+
+So far, this package has only been extensively tested on Mac OS X. It
+should also work with minimal difficulty on most Linux
+distributions. There is an issue where the OS X utility 'open' is 
+called. Linux has no standard utitily for opening arbitrary files. 
+Under Gnome, gnome-open can perform a similar task. The situation is
+not ideal and should eventually disappear. But for now, snatch-inspect
+and release-import will not work under Linux. I will try to make a patch
+to allow these programs to work under gnome in the future.
+
+I highly doubt that it will work on Microsoft Windows. Some kind MS Perl
+hacker would need to come along and fix things that cause problems.
+
