@@ -82,7 +82,7 @@ sub main{
     }
 
     my ($artist, $year, $title)
-    = map {$opt{$_}} qw{--artist --year --title};
+        = map {$opt{$_}} qw{--artist --year --title};
 
     if ($artist =~ $illegal_chars) {
         print {\*STDERR} 
@@ -112,8 +112,8 @@ sub main{
     my $file_is_info = sub {$_[0] =~ m/Info\.txt\z/xms};
 
     my @info 
-    = defined $opt{'--bandcamp'} ? ("") 
-    : grep {$file_is_info->($_)} @release_files;
+        = defined $opt{'--bandcamp'} ? ("") 
+        : grep {$file_is_info->($_)} @release_files;
 
     if (!@info) {
         print {\*STDERR} "Can't find Info.txt.\n";
@@ -223,10 +223,13 @@ sub main{
         if ($user_wants_a_conversion) {
             my @fargs = @lossy_args;
             my $pformat;
+            my $should_delete_pformat = 0;
             if ($opt{'--add-to-library'})  {
                 $pformat = format_normalized(whatrc->preferred_format);
-                if (!grep {$_ eq $pformat} @lossy_args) {
-                    push @fargs, "--$pformat";
+                my $asked_for_pformat = scalar (grep {$_ eq $pformat} @lossy_formats);
+                if (!$asked_for_pformat) {
+                    push @fargs, '--'.$pformat;
+                    $should_delete_pformat = 1;
                 }
             }
             my @convert = ('release-flac-convert', 
@@ -237,13 +240,15 @@ sub main{
                 ($opt{'--verbose'} ? '--verbose' : ()),
                 ($opt{'--dry-run'} ? '--dry-run' : ()),);
             $subsystem->exec(@convert) == 0 or die;
-            if (scalar @fargs != @lossy_args) {
+            if ($opt{'--add-to-library'}) {
                 #print {\*STDERR} "Attempting to copy to library...\n";
+                # TODO check for errors, and handle them gracefully.
                 $release->copy_music_into_hierarchy(
                     whatrc->preferred_format,
                     whatrc->library );
-                $release->delete_format(whatrc->preferred_format);
-                # TODO check for errors, and handle them gracefully.
+                if ($should_delete_pformat) {
+                    $release->delete_format(whatrc->preferred_format);
+                }
             }
         }
     }
