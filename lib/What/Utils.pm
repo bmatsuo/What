@@ -26,6 +26,8 @@ my @INTERFACE_SUBS = qw{
     replace_bad_chars
     has_bad_chars
     bad_chars
+    what_glob
+    safe_path
     glob_safe
     expand_home
     find_file_pattern
@@ -41,10 +43,10 @@ our %EXPORT_TAGS = (
     'all' => [ @INTERFACE_SUBS ], 
     'http' => [ qw( format_args ) ],
     'flac' => [qw(  get_flac_tag    get_flac_tags )], 
-    'files' => [ qw(glob_safe       expand_home
-                    find_file_pattern   search_hierarchy 
-                    has_bad_chars   bad_chars           replace_bad_chars )],
-    'dirs' => [ qw( find_subdirs    find_hierarchy      merge_structure
+    'files' => [ qw(find_file_pattern               search_hierarchy 
+                    glob_safe       safe_path       what_glob       expand_home
+                    has_bad_chars   bad_chars       replace_bad_chars )],
+    'dirs' => [ qw( find_subdirs    find_hierarchy  merge_structure
                     create_directory ) ],
     'align' => [ qw(    align   words_fit ) ], );
 
@@ -157,9 +159,6 @@ sub create_directory {
         }
         create_directory($container);
     }
-    elsif (-e $container) {
-        croak("$container exists and is not a directory.\n");
-    }
 
     if (-d $dir_path) {
         croak("Directory '$dir_path' already exists.\n");
@@ -250,12 +249,37 @@ sub find_hierarchy {
 # FILE METHODS #
 ################
 
+### INTERFACE SUB
+# Subroutine: what_glob
+# Usage: what_glob( $path )
+# Purpose: 
+#   Performs a fairly straight-forward glob on a path.
+#   The only special character is the leading tilde '~'.
+#   '~' at the beginning of a path expands to the user's home directory.
+# Returns: Nothing
+# Throws: Nothing
+sub what_glob {
+    my ($path) = @_;
+
+    return bsd_glob(glob_safe($path));
+}
+
+# Subroutine: safe_path($path)
+# Type: INTERNAL UTILITY
+# Purpose: Replace tildes '~' at the beginning of a path.
+# Returns: A path with '~' replaced by user's home directory.
+sub safe_path {
+    my $path = shift;
+
+    return expand_home(glob_safe($path));
+}
+
 # Subroutine: expand_home($path)
 # Type: INTERFACE SUB
 # Returns: Expand '~' at the beginning of a path for the home directory.
 sub expand_home {
     my $path = shift;
-    my @path = bsd_glob(glob_safe($path));
+    my @path = what_glob($path);
     return if !@path;
     return $path[0];
 }

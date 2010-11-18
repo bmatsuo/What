@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use Carp;
 
+use What::Utils qw{:files};
+
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
 
@@ -16,17 +18,44 @@ our @ISA = qw(Exporter);
 # This allows declaration	use what ':all';
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
 # will save memory.
-our %EXPORT_TAGS = ( 'all' => [ qw(
-	
-) ] );
+our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-our @EXPORT = qw(
-    tracker_url
-);
+our @EXPORT = qw( tracker_url );
 
 our $VERSION = '0.00_07';
+
+my $whome = safe_path("~/.what");
+
+my $sandbox_base = "$whome/work";
+my $outgoing = "$sandbox_base/outgoing";
+my $temp_wav = "$sandbox_base/wav";
+
+my $ice_dir = "$whome/ice";
+
+### CLASS METHOD
+# Subroutine: outgoing_dir
+# Usage: What::outgoing_dir(  )
+# Purpose: Accessor for the path of the outgoing music directory.
+# Returns: Path of the outgoing music directory.
+sub outgoing_dir { return $outgoing; }
+
+### CLASS METHOD
+# Subroutine: temp_wav_dir
+# Usage: What::temp_wav_dir(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub temp_wav_dir { return $temp_wav; }
+
+### CLASS METHOD
+# Subroutine: ice_dir
+# Usage: What::ice_dir(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub ice_dir { return $ice_dir; }
 
 my $tracker_url = "http://tracker.what.cd:34000";
 

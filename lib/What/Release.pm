@@ -169,7 +169,8 @@ sub format_dir {
     # Fix case of $format, and identify type.
     my $format_ext = format_extension($format);
     my $format_print = format_normalized($format);
-    croak ("Unknown format $format_print.") if $format_ext eq q{};
+    croak ("Unknown format $format_print.") 
+        if defined $format_ext && $format_ext eq q{};
 
     my $release_name = $self->name();
     my $release_root = $self->dir();
@@ -210,7 +211,7 @@ sub find_audio_files {
     return @audio_files;
 }
 
-# Subroutine: $release->format_disc_dirs($upload_root, $format);
+# Subroutine: $release->format_disc_dirs($format);
 # Type: INSTANCE METHOD
 # Purpose: Find all disc directories in a rip directory.
 # Returns: 
@@ -253,9 +254,10 @@ sub scaffold {
     croak("Root '$root' does not exist.") if !-e $root;
     croak("Root '$root' is not a directory.") if !-d $root;
     croak("Format '$format' is not recognized.") 
-        if !format_is_accepted($format);
+        if defined $format && !format_is_accepted($format);
 
-    my $fdir = $self->format_dir($root,$format);
+    my $fdir 
+        = defined $format ? $self->format_dir($format) : $self->dir();
 
     create_directory($fdir);
 
@@ -282,6 +284,56 @@ sub copy_format_dir {
     return;
 }
 
+### INSTANCE METHOD
+# Subroutine: _prep_music_copy_
+# Usage: $release->_prep_music_copy_( $format )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub _prep_music_copy_ {
+    my $self = shift;
+    my ($format) = @_;
+    my $extension = format_extension($format);
+
+    my $fdir = $self->format_dir($format);
+    my @disc_dirs = $self->format_disc_dirs($format);
+
+    my $outgoing_dir = What::outgoing_dir();
+
+    my $cp_failed = 0;
+    for my $d (@disc_dirs) {
+        my $rel_disc_path = $d;
+        substr $rel_disc_path, 0, length ($fdir) + 1, q{};
+        my $target_disc_dir = $outgoing_dir;
+        if (!$d eq $fdir) {
+            $target_disc_dir .= "/$rel_disc_path";
+            create_directory($target_disc_dir);
+        }
+        my @songs = find_file_pattern("*.$extension", $d);
+        if (!@songs) {
+            croak("No '.$extension' songs found in supposed disc directory $d.\n");
+        }
+        subsystem(cmd => ['cp', @songs, $target_disc_dir]) == 0
+            or $cp_failed = 1;
+        if ($cp_failed) {
+            my $error = $?;
+            my $rm_failed = 0;
+            my $msg = "Couldn't copy songs to $target_disc_dir.\n";
+            my @already_copied = find_file_pattern('*',$outgoing_dir);
+            if (@already_copied) {
+                subsystem(cmd => ['rm', '-r', @already_copied])
+                    or $rm_failed = 1;
+            }
+            if ($rm_failed) {
+                $error = "COPY ERROR:$error\n\nREMOVE ERROR:$?\n";
+                $msg = "And couldn't remove the temporary files @already_copied.";
+            }
+            croak("$msg\n\n$error");
+        }
+    }
+    return;
+}
+
 # Subroutine: $release->copy_music_into_hierarchy($format, $new_root)
 # Type: INSTANCE METHOD
 # Purpose: 
@@ -291,28 +343,17 @@ sub copy_format_dir {
 # Returns: Nothing
 sub copy_music_into_hierarchy {
     my $self = shift;
-    my ($format, $new_root);
+    my ($format, $new_root) = @_;
     my $root = $self->{rip_root};
-    my $fdir = $self->format_dir($format);
-    my @disc_dirs = $self->format_disc_dirs($format);
-    my $reroot = $self->rerooted($new_root);
-    my $target = $reroot->scaffold($format);
-    my $extension = format_extension($format);
 
-    for my $d (@disc_dirs) {
-        my $rel_disc_path = substr $d, 0, length ($fdir) + 1, q{};
-        my $target_disc_dir = $target;
-        if (!$d eq $fdir) {
-            $target_disc_dir .= "/$rel_disc_path";
-            create_directory($_);
-        }
-        my @songs = find_file_pattern("*.$extension", $d);
-        if (!@songs) {
-            croak("No '.$extension' songs found in supposed disc directory $d.\n");
-        }
-        subsystem(cmd => ['cp', @songs, $target_disc_dir]) == 0
-            or croak("Couldn't copy songs to $target_disc_dir.\n$?\n");
-    }
+    $self->_prep_music_copy_( $format );
+
+    my $reroot = $self->rerooted($new_root);
+    my $target = $reroot->scaffold();
+
+    my @music_files = find_file_pattern("*", What::outgoing_dir());
+    subsystem(cmd => [ 'mv', @music_files, $reroot->dir() ]) == 0
+        or croak("Couldn't move files from outgoing directory; @music_files\n");
 
     return;
 }

@@ -24,6 +24,7 @@ use What::Utils;
 use What::WhatRC;
 use What::Release;
 use What::Subsystem;
+use What::Format;
 
 our $VERSION = "0.0_7";
 
@@ -59,16 +60,25 @@ sub main{
         title => $opt{'--title'},
         year => $opt{'--year'},);
 
-    my $user_wants_a_conversion
-    = $opt{'--v0'} || $opt{'--v2'} || $opt{'--320'} 
-    || $opt{'--ogg'} || $opt{'--aac'};
+    my @lossy_args = grep {$opt{$_}} (qw{--flac --320 --v0 --v2 --aac --ogg});
+    my @lossy_formats 
+        = map {format_normalized($_)} (map {m/\A -- (.*) \z/xms} @lossy_args);
+    my @format_args = @lossy_args;
+    unshift @format_args, '--flac' if $opt{'--flac'};
+    my @torrent_formats = @lossy_formats;
+    unshift @torrent_formats, format_normalized('FLAC') if $opt{'--flac'};
 
-    my $user_wants_a_format 
-    = $user_wants_a_conversion || $opt{'--flac'};
+    my $user_wants_a_conversion 
+        = scalar (@lossy_args) 
+        || ($opt{'--add-to-library'} ? (whatrc->preferred_format) 
+            : ());
+
+    my $user_wants_a_format = scalar @format_args;
 
     if (!$user_wants_a_format) {
-        print {\*STDERR} "No formats selected to release. ",
-        "FLAC will be moved into hierarchy with no torrents made.\n";
+        print {\*STDERR} join q{ },
+            "No formats selected to release (make torrents).",
+            "FLAC will be moved into hierarchy with no torrents made.\n";
     }
 
     my ($artist, $year, $title)
@@ -211,14 +221,30 @@ sub main{
         $subsystem->exec(@move_info) == 0 or die;
 
         if ($user_wants_a_conversion) {
+            my @fargs = @lossy_args;
+            my $pformat;
+            if ($opt{'--add-to-library'})  {
+                $pformat = format_normalized(whatrc->preferred_format);
+                if (!grep {$_ eq $pformat} @lossy_args) {
+                    push @fargs, "--$pformat";
+                }
+            }
             my @convert = ('release-flac-convert', 
                 '--artist', $opt{'--artist'},
                 '--title', $opt{'--title'},
                 '--year', $opt{'--year'},
-                (grep {$opt{$_}} qw{--v0 --v2 --320 --ogg --aac}),
+                @fargs,
                 ($opt{'--verbose'} ? '--verbose' : ()),
                 ($opt{'--dry-run'} ? '--dry-run' : ()),);
             $subsystem->exec(@convert) == 0 or die;
+            if (scalar @fargs != @lossy_args) {
+                #print {\*STDERR} "Attempting to copy to library...\n";
+                $release->copy_music_into_hierarchy(
+                    whatrc->preferred_format,
+                    whatrc->library );
+                $release->delete_format(whatrc->preferred_format);
+                # TODO check for errors, and handle them gracefully.
+            }
         }
     }
     if ($user_wants_a_format) {
@@ -345,6 +371,10 @@ Release the file regardless of whether or not it has a cue file.
 =item -w | --add-to-watch
 
 Add created torrents to the watch directory specified in '~/.whatrc'.
+
+=item -l | --add-to-library
+
+Add your preferred format to your music library.
 
 =item --dry-run
 

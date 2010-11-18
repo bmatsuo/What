@@ -16,6 +16,7 @@ use Exception::Class (
 
 use What;
 use What::Format;
+use What::Utils qw{:files};
 
 #use Moose;
 use MooseX::Singleton;
@@ -27,7 +28,6 @@ our %EXPORT_TAGS = ( 'all' => [ qw() ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
     whatrc
-    safe_path
 );
 
 # Don't actually put your announce url in this file. Use ~/.whatrc.
@@ -125,6 +125,7 @@ sub read_whatrc {
     What::WhatRC->initialize(%config);
 }
 
+
 ### INTERNAL SUBROUTINE
 # Subroutine: _init_path_attr_
 # Purpose: 
@@ -133,20 +134,6 @@ sub read_whatrc {
 sub _init_path_attr_ {
     my ( $self, $value, $writer_sub_ref, $attribute_meta ) = @_;
     $writer_sub_ref->( safe_path($value) );
-}
-
-# Subroutine: safe_path($path)
-# Type: INTERNAL UTILITY
-# Purpose: Replace tildes '~' at the beginning of a path.
-# Returns: A path with '~' replaced by user's home directory.
-sub safe_path {
-    my $path = shift;
-
-    $path =~ s/(\[|\]|[{}*?])/\\$1/xms;
-
-    my $safe = $path =~ m/~/ ? bsd_glob($path) : $path;
-
-    return $safe;
 }
 
 # Preloaded methods go here.

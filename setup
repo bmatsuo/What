@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+# Directory for what-related files (logs, temp-files, ...).
+WHAT=~/.what
+
+# Directory for temporary/intermediate files.
+WORK="$WHAT/work"
+# Directory for intermediate WAVE files.
+WAVE="$WORK/wav"
+# For compiling releases before exporting to another hierarchy or watch directory.
+OUTGOING="$WORK/outgoing"
+
+# A directory for saving a release for later (putting it on ice) in case a coding 
+# error keeps a workflow from completing.
+ICE="$WHAT/ice"
+
+[[ -d $WHAT ]] || mkdir $WHAT
+
+[[ -d $WORK ]] || mkdir $WORK
+[[ -d $WAVE ]] || mkdir $WAVE
+[[ -d $OUTGOING ]] || mkdir $OUTGOING
+
+[[ -d $ICE ]] || mkdir $ICE
