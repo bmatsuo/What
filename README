@@ -1,77 +1,111 @@
-what version 0.00_07b
+what version 0.00_09
 =================
+
+PREAMBLE
+
+    This package presumes knowledge of the rules for What.CD. It will be
+    far easier to understand what you are doing if you are familiar with
+    the various rules for uploads.
+
+    It is a good general rule of thumb to, before you do anything on What.CD 
+    or another site, become aware of the rules for that site that pertain to 
+    that activity. 
+
+    Before you upload anything, you should have some knowledge about different 
+    audio formats, trumping qualifications, naming, etc. It's probably best 
+    to read this one of the following wiki article urls before you upload 
+    anything:
+
+        https://ssl.what.cd/wiki.php?action=article&id=446
+        http://what.cd/wiki.php?action=article&id=446
+
+    Once you know what a proper rip is, and what is not allowed in a rip,
+    you should know enough to understand the content of the package.
 
 ABSTRACT
 
-What is a package of open source command-line tools for What users. 
-This is not a package of tools for seedboxes. 
-This is meant to help Joe Everyuser get a good ratio.
+    'What' is a package of open source command-line tools for What users. 
+    The package currently centers mostly around creating/packaging torrents.
+    There is also functionality to help deal with snatches, specifically 
+    perfect flac snatches.
 
-The package currently centers around creating releases. 
-More libraries and programs will be added depending on user feedback.
+    This package maintains a 'database' (directory hierarchy) of releases
+    and torrents backed up by perfect FLACs. This is separate from your
+    music library, and download directory. It then acts on that database
+    via a collection of scripts.
+
+    More functionality will be added depending on user feedback.
 
 PACKAGE FEATURES
 
-This package can:
-    Organize your all your releases into a user navigatable hierarchy.
-    Create release descriptions.
-    Create M3U playlists for releases.
-    Convert M3U playlists for different format releases.
-    Convert a FLAC release to:
-        MP3 with 320, V0, or V2 bitrate settings.
-        Ogg Vorbis with -q8 quality setting.
-        AAC with ~256 ABR setting (don't use; FAAC sucks).
-    Re-release FLAC / Log 100% / Cue snatches for tag trumps & better.php.
-    Create torrents for releases.
-    Convert release images to lower res versions for web hosting.
-    Make you a sandwich, if you have permissions.
+    This package can:
+
+        Create a releases from a FLAC CD (or Vinyl?) rip or a perfect FLAC snatch.
+        It will:
+
+            Create M3U playlists (for each for format).
+            Create a descriptions.
+            Create torrents.
+
+        Convert a FLAC release to:
+
+            MP3 with 320, V0, or V2 bitrate settings.
+            Ogg Vorbis with -q8 quality setting.
+            AAC with ~256 ABR setting (don't use; FAAC sucks).
+
+        Convert release images to lower res versions for web hosting.
+
+        Convert FLAC releases to your desired format and add them to your playable
+        music library (iTunes, Plex, XBMC, Amerok, ...).
+
+        Make you a sandwich, if you have permissions.
 
 PACKAGE DEFECIENCIES
 
-This package will probably never:
-    Rip CDs to FLAC.
-    Upload torrents.
+    This package will probably never:
 
-This package can not currently:
-    Score FLAC rip logs (coming).
-    Perform multi-threaded conversions (soon hopefully).
-    Create release descriptions.
-    Make good MP3s w/ non-Latin-1 tags (=> mojibake (lame: L 2 utf-8)).
-    Handle bandcamp.com releases (they keep getting more clever or something).
-    Manage your personal media library.
-    Manage your personal media archival/backup.
-    Make Apple Lossless coversions (meh).
-    Make 'perfect' AAC 320 CBR conversions (no good portable lib/app).
+        Rip CDs to FLAC.
+        Upload torrents.
 
-The above list is pretty much a todo list.
+    To read about requested features, features needing improvement, and bugs, 
+    see the github issues page
+
+        https://github.com/bmatsuo/What/issues
+
+    Registered github users can also create new issues about something they 
+    think the package needs.
 
 DOCUMENTATION
 
-The best documentation currently is the What wiki on github 
-    http://github.com/bmatsuo/What/wiki
+    The best documentation currently is the What wiki on github 
 
-Otherwise, you can refer to the documentation in the package.
-For help installing, read 'INSTALL'.  
-For general information about what a release is and the upload hierarchy,
-read 'docs/RELEASE'.  
-For help uploading/releasing, re-releasing/importing, and converting to other formats,
-read 'docs/UPLOADING'.
+        http://github.com/bmatsuo/What/wiki
+
+    Otherwise, you can refer to the documentation in the package.
+
+    For help installing, read 'INSTALL'.  
+
+    For general information about what a release is and the upload hierarchy,
+    read 'docs/RELEASE'.  
+
+    For help uploading/releasing, re-releasing/importing, and converting to
+    other formats, read 'docs/UPLOADING'.
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2010 by Bryan Matsuo <bryan.matsuo@gmail.com>
+    Copyright (C) 2010 by Bryan Matsuo <bryan.matsuo@gmail.com>
 
-This file is part of What.
+    This file is part of What.
 
-What is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+    What is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-What is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+    What is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with What.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with What.  If not, see <http://www.gnu.org/licenses/>.

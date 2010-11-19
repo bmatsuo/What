@@ -1,14 +1,18 @@
 PREREQUISITES
 
+INITIAL SETUP
+
     The very first thing to do is get an account at www.discogs.com
     and get an API key (http://www.discogs.com/users/api_key).
     You need to complete this step before completing any of the following.
 
-    Then you need to setup your config file '~/.whatrc'.
-    Initially, copy the included config template 'whatrc' into your home 
-    directory with the command
+    Then run the script 'setup' with the command
 
-        cp whatrc ~/.whatrc
+        ./setup
+
+    'setup' installs some necessary directories under the root directory
+    '~/.what/'. The 'setup' script also installs the What configuration
+    file '~/.whatrc'. This file needs to be personalized before installation.
 
     Open the new file '~/.whatrc' in a tex editor and fill it out
     with your preferences. Here is an explanation of the most important
@@ -30,90 +34,95 @@ PREREQUISITES
         upload_dir: All you're uploaded torrents and their data
             are categorized inside the upload directory.
 
+    Next, perl dependencies need to be installed.
+
 PERL DEPENDENCIES
 
-What requires these non-standard modules and libraries from the CPAN:
-    Getopt::Euclid
-    Exception::Class
-    Class::InsideOut
-    LWP::UserAgent
-    Moose
-    Term::Readline
-    Data::Dumper
-    MP3::Tag
-    Audio::FLAC::Header
-    XML::Twig
+    What requires these non-standard modules and libraries from the CPAN:
 
-The easiest way to get all these dependencies is to install the CPAN
-module. You can get the latest version from the following link:
-    http://search.cpan.org/~andk/CPAN/lib/CPAN.pm
-Then read the CPAN documentation about installing modules (it's really
-easy).
+        Getopt::Euclid
+        Exception::Class
+        Class::InsideOut
+        LWP::UserAgent
+        Moose
+        Term::Readline
+        Data::Dumper
+        MP3::Tag
+        Audio::FLAC::Header
+        XML::Twig
+
+    The easiest way to get all these dependencies is to install the CPAN
+    module. You can get the latest version from the following link:
+
+        http://search.cpan.org/~andk/CPAN/lib/CPAN.pm
+
+    Read the CPAN documentation about installing modules (it's really
+    easy).
 
 PROGRAM DEPENDENCIES
 
-The What scripts also require free, cross-platform, external programs. 
-Specifically,
+    The What scripts also require free, cross-platform, external programs. 
+    Specifically,
 
-    lame                             (MP3 reencoding)
-    vorbis-tools (with FLAC support) (OGG reencoding)
-    faac                             (AAC reencoding)
-    flac                             (FLAC stream decoding)
-    mktorrent                        (making torrent files)
-    spek (command-line binary)       (viewing spectrograms)
+        lame                             (MP3 reencoding)
+        vorbis-tools (with FLAC support) (OGG reencoding)
+        faac                             (AAC reencoding)
+        flac                             (FLAC stream decoding)
+        mktorrent                        (making torrent files)
+        spek (command-line binary)       (viewing spectrograms)
 
-The 'flac' dependency is required for reencoding to any other format.
-and 
+    The 'flac' dependency is required for reencoding to any other format.
+    and 
 
-But, if you don't need any of these functional areas, 
+    But, if you don't need any of these functional areas, 
     then you don't need to install the dependencies. 
 
-The 'vorbis-tools' dependency must be compiled with flac support.
-If compiling from source, read documentation about this option.
-If installing vorbis-tools via a package manager. Look into the 
-package managers documentation for variants/patches which will install
-a package with flac support. If you are installing vorbis-tools on Mac 
-OS X with macports, the following command installs vorbis-tools properly:
+    The 'vorbis-tools' dependency must be compiled with flac support.
+    If compiling from source, read documentation about this option.
+    If installing vorbis-tools via a package manager. Look into the 
+    package managers documentation for variants/patches which will install
+    a package with flac support. If you are installing vorbis-tools on Mac 
+    OS X with macports, the following command installs vorbis-tools properly:
 
-    sudo port install vorbis-tools +flac
+        sudo port install vorbis-tools +flac
 
 INSTALLATION
 
-You need to have your '~/.whatrc' file in place before continuing
-(see PREREQUISITES). At the minimum, you must have copied the template
-into place. The values of the config variables don't need to be set 
-correctly before testing the module, but some value has to be defined.
+    You need to have your '~/.whatrc' file in place before continuing
+    (see PREREQUISITES). At the minimum, you must have copied the template
+    into place. The values of the config variables don't need to be set 
+    correctly before testing the module, but some value has to be defined.
 
-Currently, the program dependencies don't need to be installed intall after
-the installation. But you will need them to do just about anything once
-the program is installed.
+    Currently, the program dependencies don't need to be installed intall after
+    the installation. But you will need them to do just about anything once
+    the program is installed.
 
-To install this module and its included scripts, type the following:
+    To install this module and its included scripts, type the following:
 
-    perl Makefile.PL
-    make
-    make test
-    make install
+        perl Makefile.PL
+        make
+        make test
+        make install
 
-Alternatively, to install the module to a directory other than '/usr/local',
-say '~/local' use this set of commands:
+    Alternatively, to install the module to a directory other than '/usr/local',
+    say '~/local' use this set of commands:
 
-    perl Makefile.PL PREFIX=~/local
-    make
-    make test
-    make install
+        perl Makefile.PL PREFIX=~/local
+        make
+        make test
+        make install
 
 CROSS-PLATFORM COMPATABILITY
 
-So far, this package has only been extensively tested on Mac OS X. It
-should also work with minimal difficulty on most Linux
-distributions. There is an issue where the OS X utility 'open' is 
-called. Linux has no standard utitily for opening arbitrary files. 
-Under Gnome, gnome-open can perform a similar task. The situation is
-not ideal and should eventually disappear. But for now, snatch-inspect
-and release-import will not work under Linux. I will try to make a patch
-to allow these programs to work under gnome in the future.
+    So far, this package has only been extensively tested on Mac OS X. It
+    should also work with minimal difficulty on most Linux
+    distributions. There is an issue where the OS X utility 'open' is 
+    called. Linux has no standard utitily for opening arbitrary files. 
+    Under Gnome, gnome-open can perform a similar task. The situation is
+    not ideal and should eventually disappear. But for now, snatch-inspect
+    and release-import will not work under Linux. I will try to make a patch
+    to allow these programs to work under gnome in the future.
 
-I highly doubt that it will work on Microsoft Windows. Some kind MS Perl
-hacker would need to come along and fix things that cause problems.
+    I highly doubt that it will work on Microsoft Windows. Some kind MS Perl
+    hacker would need to come along and fix things that cause problems.
 
