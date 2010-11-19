@@ -21,3 +21,32 @@ ICE="$WHAT/ice"
 [[ -d $OUTGOING ]] || mkdir $OUTGOING
 
 [[ -d $ICE ]] || mkdir $ICE
+
+WHATRC=~/.whatrc
+DIST_WHATRC="whatrc"
+WHATRC_INSTALLED=<<EODIRECTIONS
+Before installing, please take time to costumise your configuration.  Edit the
+newly created file '~/.whatrc' and fill in any settings you want. You need to
+add a correct Discogs.com API key in order to run the install tests.
+
+After you have configured your '~/.whatrc' file, run the commands
+ 
+    perl Makefile.PL
+    make
+    make test
+    sudo make install
+
+or
+
+    perl Makefile.PL PREFIX=~/local/install/path
+    make
+    make test
+    make install
+
+See 'INSTALL' for more information.
+EODIRECTIONS
+
+if [[ !-e $WHATRC ]]; then
+    cp $DIST_WHATRC $WHATRC
+    echo $WHATRC_INSTALLED
+fi
