@@ -1,10 +1,30 @@
 my $WhatCDConfig = {
 
+###
+# Personal account/API info.
+###
+
+# WARNING: THE INFO IN THIS SECTION SHOULD NOT BE SHARED WITH ANYONE.
+#   DOING SO CAN COMPRIMISE YOUR ACCOUNTS WITH THE RESPECTIVE SITES.
+#   NEVER SUBMIT ANY INFORMATION CONTAINING YOUR PASSKEY, PASSWORDS,
+#   OR API KEYS WITH BUG REPORTS.
+
 # Personal What.CD passkey for making torrents.
 'passkey'   => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
 
 # API key for Discogs searches (https://www.discogs.com/users/api_key).
 'discogs_api_key'  => 'xxxxxxxxxx',
+
+###
+# Torrenting Options.
+###
+
+# Directory watched by torrent client for new torrents.
+'watch'     => '~/Downloads',
+
+###
+# Ripping/Uploading Options.
+###
 
 # Location FLAC rips and album art TIFF scans are placed
 'rip_dir'   => '~/Music/Last Rip',
@@ -12,8 +32,9 @@ my $WhatCDConfig = {
 # Root directory holding data and torrents for all uploads.
 'upload_root' => '~/Music/Rips',
 
-# Directory watched by torrent client for new torrents.
-'watch'     => '~/Downloads',
+####
+# Music Library Options
+####
 
 # Music library root folder.
 'library' => '~/Music/Converted',
@@ -21,8 +42,23 @@ my $WhatCDConfig = {
 # The format that you prefer to add to your library (e.g. ogg, 320, v0,...).
 'preferred_format' => 'v2',
 
-# If should_link_to_library is 1 hard-links are added to your music library.
-'should_link_to_library' => 0,
+# Uncomment the next option to create hard links when adding music to your library.
+# This saves memory, but prevents any modification of the files will DESTROY YOUR 
+# ABILITY TO FULLY SEED THE RELEASE. Use with care.
+#'should_link_to_library' => 1,
+
+# MAC OS X SPECIFIC OPTIONS
+
+# iTunes users should uncomment the next line.
+#'should_add_to_itunes' => 1,
+
+# Uncomment the next option if iTunes automatically copies and organizes your music.
+# If this option is option is 1, then the library path is not used.
+#'itunes_copies_music' => 1,
+
+####
+# Misc Options
+####
 
 # Favorite text editor.
 'editor'  => 'nano',

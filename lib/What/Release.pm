@@ -156,6 +156,36 @@ sub dir() {
     return $release_root;
 }
 
+### INSTANCE METHOD
+# Subroutine: _library_rel_dir_
+# Usage: $release->_library_rel_dir_(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub _library_rel_dir_ {
+    my $self = shift;
+    my $artist = $self->{artist};
+    my $title = $self->{title};
+    my $year = $self->{year};
+    my $relative_path = "$artist/$title ($year)";
+    return $relative_path;
+}
+
+### INSTANCE METHOD
+# Subroutine: library_dir
+# Usage: $release->library_dir(  )
+# Purpose: 
+#   Determine the path that $release should have in the user's music library.
+# Returns: Return a path string for a directory that may not exist.
+# Throws: Nothing
+sub library_dir {
+    my $self = shift;
+
+    my $lib_path = join  '/', whatrc->library, $self->_library_rel_dir_();
+
+    return $lib_path;
+}
+
 # Subroutine: $release->format_dir( $format)
 # Type: INSTANCE METHOD
 # Purpose: 
@@ -264,6 +294,30 @@ sub scaffold {
     return $fdir;
 }
 
+### INSTANCE METHOD
+# Subroutine: scaffold_library
+# Usage: $self->scaffold_library( $lib_root )
+# Purpose: Create a 'music library style' path to a release, rooted at $lib_root.
+# Returns: The path to the scaffolded library directory.
+# Throws: Nothing
+sub scaffold_library {
+    my $self = shift;
+    my ($lib_root) = @_;
+
+    croak("Root directory not defined.") 
+        if !defined $lib_root;
+    croak("Library root '$lib_root' does not exist.") 
+        if !-e $lib_root;
+    croak("Library root '$lib_root' is not a directory.") 
+        if !-d $lib_root;
+
+    my $fdir = join '/', $lib_root, $self->_library_rel_dir_();
+
+    create_directory($fdir);
+
+    return $fdir;
+}
+
 # Subroutine: $release->copy_format_dir($format, $dest)
 # Type: INSTANCE METHOD
 # Purpose: Copy a format release into a given directory.
@@ -348,11 +402,13 @@ sub copy_music_into_hierarchy {
 
     $self->_prep_music_copy_( $format );
 
-    my $reroot = $self->rerooted($new_root);
-    my $target = $reroot->scaffold();
+    my $target = $self->scaffold_library($new_root);
 
     my @music_files = find_file_pattern("*", What::outgoing_dir());
-    subsystem(cmd => [ 'mv', @music_files, $reroot->dir() ]) == 0
+    if (!@music_files) {
+        croak("Didn't find the music files in the outgoing directory.");
+    }
+    subsystem(cmd => [ 'mv', @music_files, $target ]) == 0
         or croak("Couldn't move files from outgoing directory; @music_files\n");
 
     return;

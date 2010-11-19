@@ -32,26 +32,41 @@ our @EXPORT = qw(
 
 # Don't actually put your announce url in this file. Use ~/.whatrc.
 has passkey => (isa => 'Str', is => 'rw', default => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+
 # Discogs API key (https://www.discogs.com/users/api_key).
 has discogs_api_key  => (isa => 'Str', is => 'rw', default => 'xxxxxxxxx');
+
 # The folder where music rips are placed initially.
 has rip_dir => (isa => 'Str', is => 'rw', default => "~/Music/Last Rip",
         initializer => \&_init_path_attr_,);
+
 # Root directory where uploaded files/torrents go.
 has upload_root => (isa => 'Str', is => 'rw', default => "~/Music/Rips",
         initializer => \&_init_path_attr_,);
+
 # The directory watched by your bit torrent client for new torrents.
 has watch   => (isa => 'Str', is => 'rw', default => "~/Downloads",
         initializer => \&_init_path_attr_,);
+
 # Music library root folder.
 has library => (isa => 'Str', is => 'rw', default => "~/Music/Converted",
         initializer => \&_init_path_attr_,);
-# If should_link_to_library is 1 hard-links are added to your music library.
-has should_link_to_library => (isa => 'Str', is => 'rw', default => 0);
+
 # The format that you prefer to add to your library (e.g. ogg, 320, v0,...).
 has preferred_format => (isa => 'Str', is => 'rw', default => 'v2');
+
+# Mac OS X users generally will want music to be explicitly added to iTunes.
+has should_add_to_itunes => (isa => 'Bool', is => 'rw', default => 0);
+
+# iTunes may make copies of your files and organize, or use music files in-place.
+has itunes_copies_music => (isa => 'Bool', is => 'rw', default => 0);
+
+# If should_link_to_library is 1 hard-links are added to your music library.
+has should_link_to_library => (isa => 'Str', is => 'rw', default => 0);
+
 # Favorite text editor.
 has editor  => (isa => 'Str', is => 'rw', default => 'nano');
+
 # Pager used for long documents.
 has pager   => (isa => 'Str', is => 'rw', default => '/usr/bin/more');
 
