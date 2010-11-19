@@ -25,9 +25,9 @@ use What::Subsystem;
 ########################################################################
 
 # Basic program information.
-my $prog_incantation  => $0;
-my $prog_dir          => dirname($0);
-my $prog_name         => basename($0);
+my $prog_incantation  = $0;
+my $prog_dir          = dirname($0);
+my $prog_name         = basename($0);
 
 # Command-line option hash.
 my %opt = %ARGV;
@@ -50,6 +50,7 @@ sub main{
         title => $opt{'--title'},
         year => $opt{'--year'},
     );
+
     my $rname = $release->name();
     my $had_to_create_format = 0;
     my $format = whatrc->preferred_format;
@@ -57,21 +58,21 @@ sub main{
     die "There is no release named '$rname' in the upload hierarchy."
         if !$release->exists();
 
-    if (!$release->exists($format) {
-        print "Creating temporary $format release of '$rname'..."
+    if ( !$release->exists($format) ) {
+        print "Creating temporary $format release of '$rname'...";
 
         0 == subsystem(
             cmd => [
                 'release-flac-convert', 
-                '--artist', $release->artist(),
-                '--title', $release->title(),
-                '--year', $release->year(),
+                '--artist', $release->{artist},
+                '--title', $release->{title},
+                '--year', $release->{year},
                 "--$format",
             ],
         ) or die "Couldn't create $format release!";
 
         $had_to_create_format = 1;
-        print "Done\n"
+        print "Done\n";
     }
 
     print join q{ }, "Adding", $release->name(), "to music library...";
@@ -80,7 +81,7 @@ sub main{
         library_root => whatrc->library,
         add_to_itunes => whatrc->should_add_to_itunes,
         itunes_will_copy => whatrc->itunes_copies_music,);
-    print "Done\n"
+    print "Done\n";
 
     if ($had_to_create_format) {
         print "Deleting temporary $format release...";
@@ -88,14 +89,14 @@ sub main{
         0 == subsystem(
             cmd => [
                 'release-delete',
-                '--artist', $release->artist(),
-                '--title', $release->title(),
-                '--year', $release->year(),
+                '--artist', $release->{artist},
+                '--title', $release->{title},
+                '--year', $release->{year},
                 "--$format",
             ],
-        ) or die "Couldn't remove temporary $format release!"
+        ) or die "Couldn't remove temporary $format release!";
 
-        print "Done\n"
+        print "Done\n";
     }
     exit($exitcode);
 }

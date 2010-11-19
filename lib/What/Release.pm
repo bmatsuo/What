@@ -412,12 +412,13 @@ sub copy_music_into_hierarchy {
 
     # Move the music files to the outgoing directory.
     $self->_prep_music_copy_( $format );
+
+    my $containing_dir = What::outgoing_dir();
+
     my @music_files = find_file_pattern("*", $containing_dir);
     if (!@music_files) {
         croak("Didn't find the music files in the outgoing directory.");
     }
-
-    my $containing_dir = What::outgoing_dir();
 
     # Move the files into the hierarchy if itunes doesn't handle organization.
     if (!$itunes_copies) {

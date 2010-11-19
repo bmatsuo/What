@@ -68,7 +68,7 @@ sub main{
     my @torrent_formats = @lossy_formats;
     unshift @torrent_formats, format_normalized('FLAC') if $opt{'--flac'};
 
-    my $user_wants_a_conversion = scalar (@lossy_args)
+    my $user_wants_a_conversion = scalar (@lossy_args);
     my $user_wants_a_format = scalar @format_args;
 
     if (!$user_wants_a_format) {
