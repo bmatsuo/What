@@ -1,0 +1,184 @@
+#!/usr/bin/env perl
+# Use perldoc or option --man to read documentation
+###################################################
+
+our $VERSION = "00.00_01";
+# Originally created: 11/18/10 20:47:49.
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+
+# Include private modules.
+use What;
+use What::WhatRC;
+use What::Release;
+use What::Subsystem;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+my $prog_incantation  => $0;
+my $prog_dir          => dirname($0);
+my $prog_name         => basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my $release = What::Release->new(
+        artist => $opt{'--artist'},
+        title => $opt{'--title'},
+        year => $opt{'--year'},
+    );
+    my $rname = $release->name();
+    my $had_to_create_format = 0;
+    my $format = whatrc->preferred_format;
+
+    die "There is no release named '$rname' in the upload hierarchy."
+        if !$release->exists();
+
+    if (!$release->exists($format) {
+        print "Creating temporary $format release of '$rname'..."
+
+        0 == subsystem(
+            cmd => [
+                'release-flac-convert', 
+                '--artist', $release->artist(),
+                '--title', $release->title(),
+                '--year', $release->year(),
+                "--$format",
+            ],
+        ) or die "Couldn't create $format release!";
+
+        $had_to_create_format = 1;
+        print "Done\n"
+    }
+
+    print join q{ }, "Adding", $release->name(), "to music library...";
+    $release->copy_music_into_hierarchy( 
+        format => $format, 
+        library_root => whatrc->library,
+        add_to_itunes => whatrc->should_add_to_itunes,
+        itunes_will_copy => whatrc->itunes_copies_music,);
+    print "Done\n"
+
+    if ($had_to_create_format) {
+        print "Deleting temporary $format release...";
+
+        0 == subsystem(
+            cmd => [
+                'release-delete',
+                '--artist', $release->artist(),
+                '--title', $release->title(),
+                '--year', $release->year(),
+                "--$format",
+            ],
+        ) or die "Couldn't remove temporary $format release!"
+
+        print "Done\n"
+    }
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+release-add-to-library
+-- Add a specified release to the user's music library.
+
+=head1 VERSION
+
+Version 0.0_1
+
+=head1 USAGE
+
+release-add-to-library [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=item --artist <artist>
+
+Release artist.
+
+=for Euclid:
+    artist.type: string, length artist
+
+=item --title <title>
+
+=for Euclid:
+    title.type: string, length title
+
+Release title.
+
+=item --year <year>
+
+Release year.
+
+=for Euclid:
+    year.type: /\d{4}/
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+Add a specified release to the user's music library.
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHORS
+
+Bryan Matsuo [bryan.matsuo@gmail.com] (primary author)
+
+=head1 COPYRIGHT 
+
+(c) Bryan Matsuo [bryan.matsuo@gmail.com]

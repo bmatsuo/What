@@ -68,11 +68,7 @@ sub main{
     my @torrent_formats = @lossy_formats;
     unshift @torrent_formats, format_normalized('FLAC') if $opt{'--flac'};
 
-    my $user_wants_a_conversion 
-        = scalar (@lossy_args) 
-        || ($opt{'--add-to-library'} ? (whatrc->preferred_format) 
-            : ());
-
+    my $user_wants_a_conversion = scalar (@lossy_args)
     my $user_wants_a_format = scalar @format_args;
 
     if (!$user_wants_a_format) {
@@ -224,14 +220,6 @@ sub main{
             my @fargs = @lossy_args;
             my $pformat;
             my $should_delete_pformat = 0;
-            if ($opt{'--add-to-library'})  {
-                $pformat = format_normalized(whatrc->preferred_format);
-                my $asked_for_pformat = scalar (grep {$_ eq $pformat} @lossy_formats);
-                if (!$asked_for_pformat) {
-                    push @fargs, '--'.$pformat;
-                    $should_delete_pformat = 1;
-                }
-            }
             my @convert = ('release-flac-convert', 
                 '--artist', $opt{'--artist'},
                 '--title', $opt{'--title'},
@@ -240,18 +228,9 @@ sub main{
                 ($opt{'--verbose'} ? '--verbose' : ()),
                 ($opt{'--dry-run'} ? '--dry-run' : ()),);
             $subsystem->exec(@convert) == 0 or die;
-            if ($opt{'--add-to-library'}) {
-                #print {\*STDERR} "Attempting to copy to library...\n";
-                # TODO check for errors, and handle them gracefully.
-                $release->copy_music_into_hierarchy(
-                    whatrc->preferred_format,
-                    whatrc->library );
-                if ($should_delete_pformat) {
-                    $release->delete_format(whatrc->preferred_format);
-                }
-            }
         }
     }
+
     if ($user_wants_a_format) {
         my @mktorrent = ('release-mktorrent', 
             '--artist', $opt{'--artist'},
@@ -267,6 +246,14 @@ sub main{
         print {\*STDERR} "Release is ready.\n",
         "Use release-flac-convert / release-mktorrent ",
         "to upload the release.\n";
+    }
+
+    if ($opt{'--add-to-library'}) {
+        my @add_to_lib = ( 'release-add-to-library',
+            '--artist', $opt{'--artist'},
+            '--title', $opt{'--title'},
+            '--year', $opt{'--year'}, );
+        $subsystem->exec(@add_to_lib) == 0 or die;
     }
 
     exit($exitcode);

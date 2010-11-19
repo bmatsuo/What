@@ -24,6 +24,7 @@ WriteMakefile(
         scripts/release-delete
         scripts/release-flac-convert
         scripts/release-mktorrent
+        scripts/release-add-to-library
         scripts/release-mkm3u
         scripts/release-link
         scripts/release-mkinfo

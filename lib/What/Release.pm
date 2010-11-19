@@ -105,11 +105,15 @@ sub rerooted {
 ### INSTANCE METHOD
 # Subroutine: exists
 # Usage: $self->exists(  )
+#   $self->exists( $format )
 # Purpose: 
 # Returns: Nothing
 # Throws: Nothing
 sub exists {
     my $self = shift;
+    my ( $format ) = @_;
+
+    return -d $self->format_dir($format) if defined $format;
 
     return -d $self->dir();
 }
@@ -388,7 +392,11 @@ sub _prep_music_copy_ {
     return;
 }
 
-# Subroutine: $release->copy_music_into_hierarchy($format, $new_root)
+# Subroutine: $release->copy_music_into_hierarchy(
+#   format => $format, 
+#   library_root => $new_root,
+#   [add_to_itunes => $should_add_to_itunes,]
+#   [itunes_will_copy => $itunes_copies_songs,])
 # Type: INSTANCE METHOD
 # Purpose: 
 #   Copy the music files of one format into another hierarchy.
@@ -397,19 +405,48 @@ sub _prep_music_copy_ {
 # Returns: Nothing
 sub copy_music_into_hierarchy {
     my $self = shift;
-    my ($format, $new_root) = @_;
+    my %arg = @_;
+    my ($format, $new_root, $add_to_itunes, $itunes_copies) 
+        = map {$arg{$_}} qw{format library_root add_to_itunes itunes_will_copy};
     my $root = $self->{rip_root};
 
+    # Move the music files to the outgoing directory.
     $self->_prep_music_copy_( $format );
-
-    my $target = $self->scaffold_library($new_root);
-
-    my @music_files = find_file_pattern("*", What::outgoing_dir());
+    my @music_files = find_file_pattern("*", $containing_dir);
     if (!@music_files) {
         croak("Didn't find the music files in the outgoing directory.");
     }
-    subsystem(cmd => [ 'mv', @music_files, $target ]) == 0
-        or croak("Couldn't move files from outgoing directory; @music_files\n");
+
+    my $containing_dir = What::outgoing_dir();
+
+    # Move the files into the hierarchy if itunes doesn't handle organization.
+    if (!$itunes_copies) {
+        my $target = $self->scaffold_library($new_root);
+
+        subsystem(cmd => [ 'mv', @music_files, $target ]) == 0
+            or croak("Couldn't move files from outgoing directory; @music_files\n");
+
+        $containing_dir = $target;
+        @music_files = find_file_pattern("*", $containing_dir);
+        if (!@music_files) {
+            croak("Didn't find the copied music files in the music library.\n");
+        }
+    }
+
+    # Add the files to iTunes.
+    if ($add_to_itunes) {
+        for my $track (@music_files) {
+            my $add_track_ascript = qq{tell application "iTunes" to add POSIX file "$track"};
+            subsystem(cmd => ['osascript', '-e', $add_track_ascript]) == 0
+                or croak("Couldn't add $track to iTunes.\n");
+        }
+
+        # Remove temporary outgoing directory contents if iTunes copies and organizes.
+        if ( $itunes_copies ) {
+            subsystem(cmd => ['rm', '-r', @music_files] ) == 0
+                or croak("Couldn't remove temporary outgoing files.\n");
+        }
+    }
 
     return;
 }
