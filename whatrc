@@ -53,7 +53,7 @@ my $WhatCDConfig = {
 #'should_add_to_itunes' => 1,
 
 # Uncomment the next option if iTunes automatically copies and organizes your music.
-# If this option is option is 1, then the library path is not used.
+# If this option is 1, then the library path is not used.
 #'itunes_copies_music' => 1,
 
 ####
