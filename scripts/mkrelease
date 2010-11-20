@@ -364,7 +364,7 @@ Release the file regardless of whether or not it has a cue file.
 
 Add created torrents to the watch directory specified in '~/.whatrc'.
 
-=item -l | --add-to-library
+=item -L | --add-to-library
 
 Add your preferred format to your music library.
 

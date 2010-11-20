@@ -11,6 +11,7 @@ use Carp;
 use Audio::FLAC::Header;
 use Moose;
 
+has 'path' => (isa => 'Str', is => 'rw', required => 1);
 has 'head' => (isa => 'Audio::FLAC::Header', is => 'rw', required => 1);
 has 'tag_map' => (isa => 'HashRef[Str]', is => 'rw', required => 1);
 has 'tags_are_modified' => (isa => 'Bool', is => 'rw', default => 0);
@@ -95,6 +96,7 @@ sub read_flac {
     my %tag_map = uniform_tag_map($head->{info});
 
     return What::Format::FLAC->new(
+        path => $flac_path,
         head => $head, 
         tag_map => \%tag_map);
 }

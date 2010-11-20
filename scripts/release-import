@@ -146,6 +146,7 @@ sub main{
             '--artist', $release->{artist},
             '--title', $release->{title},
             '--year', $release->{year},
+            ($opt{'--add-to-library'} ? qw{--add-to-library} : () ),
             (grep {$opt{$_}} qw{--flac --ogg --aac --320 --v0 --v2}),
             ($opt{'--add-to-watch'} ? qw{--add-to-watch} : ()),
             ($opt{'--no-cue'} ? qw{--no-cue} : ()),
@@ -260,6 +261,11 @@ Import a snatch regardless of the presence of a cue file.
 =item --no-log
 
 Import a snatch regardless of the presence of a log file.
+
+=item -L | --add-to-library
+
+Converted the imported release to your preferred format and add it
+to your music library.
 
 =item -w | --add-to-watch
 
