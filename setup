@@ -46,7 +46,7 @@ or
 See 'INSTALL' for more information.
 EODIRECTIONS
 
-if [[ !-e $WHATRC ]]; then
+if [[ ! -e $WHATRC ]]; then
     cp $DIST_WHATRC $WHATRC
     echo $WHATRC_INSTALLED
 fi
