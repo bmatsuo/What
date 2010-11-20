@@ -310,17 +310,19 @@ sub main{
                 api => whatrc->discogs_api_key)
             if $discogs_id =~ m/\d+/xms;
 
-        my $is_consistent 
-            = release_agrees(
-                release => $release, 
-                title => $release_title,
-                artist => $release_artist,
-                year => $release_year,
-                discs => [values %disc],);
-        if (!$is_consistent) {
-            # Die if the discsogs release is not conistent with the files.
-            print {\*STDERR} "Inconsistent release info and tag info.\n";
-            exit 1;
+        if (defined $release) {
+            my $is_consistent 
+                = release_agrees(
+                    release => $release, 
+                    title => $release_title,
+                    artist => $release_artist,
+                    year => $release_year,
+                    discs => [values %disc],);
+            if (!$is_consistent) {
+                # Die if the discsogs release is not conistent with the files.
+                print {\*STDERR} "Inconsistent release info and tag info.\n";
+                exit 1;
+            }
         }
     }
 

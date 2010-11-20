@@ -21,6 +21,7 @@ use Readonly;
 use What::Subsystem;
 use What::Prompt;
 use What::Utils;
+use What::Format::FLAC;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -41,18 +42,19 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
+my $subsystem = What::Subsystem->new(
+    verbose => 0,
+    dry_run => 0,);
+my $prompt = What::Prompt->new({
+    text => '?',
+    is_multiline => 0,});
+
 ########################################################################
 # MAIN FUNCTION
 ########################################################################
 
 # main() - main program execution 
 sub main{
-    my $subsystem = What::Subsystem->new(
-        verbose => 0,
-        dry_run => 0,);
-    my $prompt = What::Prompt->new({
-        text => '?',
-        is_multiline => 0,});
 
     my $snatch = $opt{'--snatch'};
     $snatch =~ s!/\z!!xms;
@@ -70,9 +72,11 @@ sub main{
     }
 
     # This command is MAC OS X ONLY.
-    my @inspect_flacs = ('open', '-W', @flacs);
-    $subsystem->exec(@inspect_flacs) == 0
-        or die "Couldn't open flac files.";
+    #my @inspect_flacs = ('open', '-W', @flacs);
+    #$subsystem->exec(@inspect_flacs) == 0
+    #    or die "Couldn't open flac files.";
+
+    check_tags(@flacs);
 
     $prompt->text("Do the tags look good enough?[Y/n]");
     $prompt->validator(
@@ -138,6 +142,156 @@ sub main{
 ########################################################################
 # SUPPORTING SUBROUTINES
 ########################################################################
+
+### INTERNAL UTILITY
+# Subroutine: check_tags
+# Usage: check_tags( @flac_paths )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub check_tags {
+    my (@flac_paths) = @_;
+
+    my @flacs = map {read_flac($_)} @flac_paths;
+
+    my @missing = map {[missing_tags($_)]} @flacs;
+    my @missing_title;
+    my @missing_track_num;
+    my @missing_artist;
+    my @missing_date;
+
+    for my $i (0 ... $#flacs) {
+        my $i_missing = $missing[$i];
+        for my $m (@{$i_missing}) {
+            if ($m eq 'TRACKNUMBER') {
+                push @missing_track_num, $flacs[$i];
+            }
+            if ($m eq 'ARTIST') {
+                push @missing_artist, $flacs[$i];
+            }
+            if ($m eq 'TITLE') {
+                push @missing_title, $flacs[$i];
+            }
+            if ($m eq 'DATE') {
+                push @missing_date, $flacs[$i];
+            }
+        }
+    }
+
+    my $num_missing;
+    if (@missing_track_num) {
+        $num_missing = scalar @missing_track_num;
+        print {\*STDERR} "$num_missing FLAC files missing TRACKNUMBER tags.\n";
+    }
+    if (@missing_title) {
+        $num_missing = scalar @missing_title;
+        print {\*STDERR} "$num_missing FLAC files missing TITLE tags.\n";
+    }
+    if (@missing_artist) {
+        $num_missing = scalar @missing_artist;
+        print {\*STDERR} "$num_missing FLAC files missing ARTIST tags.\n";
+    }
+    if (@missing_date) {
+        $num_missing = scalar @missing_date;
+        print {\*STDERR} "$num_missing FLAC files missing DATE tags.\n";
+    }
+    if (!defined $num_missing) {
+        print {\*STDERR} "No missing tags were found.\n";
+    }
+
+    my %vals_of = What::Format::FLAC::tag_sets(@flacs);
+    my %varying_vals_of;
+
+    for my $tag (sort keys %vals_of) {
+        print sprintf ("%15s : ", "$tag");
+        my $val;
+        if ( all_equal_strings( @{ $vals_of{$tag} } ) ) {
+            $val = qq('$vals_of{$tag}->[0]');
+            $val = q{} if !defined $val;
+        }
+        else {
+            my @defined_vals = grep { defined $_ } @{$vals_of{$tag}};
+            my %val_map = map {($_ => 1)} @defined_vals;
+            my @unique_vals = keys %val_map;
+            #print "Setting VARYING vals for $tag\n";
+            $varying_vals_of{$tag} = [@defined_vals] if @defined_vals;
+            my $num_defined = scalar @defined_vals;
+            my $num_unique = scalar @unique_vals;
+            my $num_tracks = scalar (@defined_vals);
+
+            $val = "<$num_unique values over $num_defined/$num_tracks tracks>";
+        }
+        print "$val\n";
+    }
+
+    if ($varying_vals_of{'TITLE'}) {
+        $prompt->text("Would you like to inspect track numbers & titles?[Y/n]");
+        $prompt->validator(
+            sub {my $r = shift; $r =~ m/\A(?: [yYnN] | \z )/xms});
+        my $resp = $prompt->prompt_user();
+        my $should_show_titles = $resp =~ m/\A(?: y | \z)/ixms;
+
+        if ($should_show_titles) {
+            my @nts 
+                = map { 
+                    [ $vals_of{'TRACKNUMBER'}->[$_] || "" ,  $vals_of{'TITLE'}->[$_] || "" ] 
+                } (0 .. scalar (@{$vals_of{'TITLE'}}) - 1);
+
+            print join "\n", map {sprintf "%2s '%s'", @{$_}} @nts;
+            print "\n";
+        }
+    }
+
+    return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: all_equal_strings
+# Usage: all_equal_strings( @strs )
+# Purpose: Check if all the strings passed as arguments are equal.
+# Returns: True iff all string are equal.
+# Throws: Nothing
+sub all_equal_strings {
+    my @strs = @_;
+
+    return 1 if !@strs;
+    my $test_elm = shift @strs;
+
+    for my $elm (@strs) {
+        next if $elm eq $test_elm;
+        return;
+    }
+
+    return 1;
+}
+
+### INTERNAL UTILITY
+# Subroutine: missing_tags
+# Usage: missing_tags( $flac )
+# Purpose: Find any tags missing from $flac.
+# Returns: A list of all the suggested tags missing from $flac.
+# Throws: Nothing
+sub missing_tags {
+    my ($flac) = @_;
+
+    my @missing;
+    my ($track_num, $artist, $title, $date) 
+        = map {$flac->tag($_)} qw{TRACKNUMBER ARTIST TITLE DATE};
+
+    if (!defined $track_num || $track_num eq q{}) { 
+        push @missing, 'TRACKNUMBER';
+    }
+    if (!defined $artist || $artist eq q{}) { 
+        push @missing, 'ARTIST';
+    }
+    if (!defined $title || $title eq q{}) { 
+        push @missing, 'TITLE'
+    }
+    if (!defined $date || $date eq q{}) { 
+        push @missing, 'DATE'
+    }
+    return @missing;
+}
 
 
 # Finally, kickstart the script

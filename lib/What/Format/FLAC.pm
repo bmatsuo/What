@@ -60,10 +60,11 @@ sub tag {
     
     my $tag_name = $self->_tag_name_($tag);
     if (!defined $new_val) {
-        my $tag_val = $self->head->{info}->{tags}->{$tag_name};
+        my $tag_val = $self->head->{tags}->{$tag_name};
         return $tag_val;
     }
-    $self->head->{info}->{tags}->{$tag_name} = $new_val;
+
+    $self->head->{tags}->{$tag_name} = $new_val;
     $self->tag_map->{uc $tag_name} = $tag_name;
     $self->tags_are_modified = 1;
     return $new_val;
@@ -99,6 +100,64 @@ sub read_flac {
         path => $flac_path,
         head => $head, 
         tag_map => \%tag_map);
+}
+
+### INTERFACE SUBROUTINE
+# Subroutine: tag_sets
+# Usage: What::Format::FLAC::tag_sets( @flacs )
+# Purpose: 
+#   Find the set of tag values which are common to a list of files.
+# Returns: 
+#   A hash is returned with tags as keys and lists as values.
+#   The list contents will be the collection of values for that tag
+#   found in the list @flacs.
+# Throws: Nothing
+sub tag_sets {
+    my (@flacs) = @_;
+
+    my %vals_of;
+
+    FIRSTFLACLOOP:
+    for my $f (@flacs) {
+        TAGDISCOVERYLOOP:
+        for my $t (keys %{$f->head->{tags}}) {
+
+            # Look for a string tag value.
+            my $v = $f->head->{tags}->{$t};
+            next TAGDISCOVERYLOOP if !defined $v;
+            next TAGDISCOVERYLOOP if ref $v;
+            
+            # Normalize the flac name and create a tag list.
+            my $norm_t = uc $t;
+            $vals_of{$norm_t} = [];
+        }
+    }
+
+    SECONDFLACLOOP:
+    for my $f (@flacs) {
+        TAGRECORDINGLOOP:
+        for my $t (keys %{$f->head->{tags}}) {
+            # Check for presence of a value list.
+            my $other_vals = $vals_of{uc $t};
+            if (defined $other_vals) {
+                push @{$other_vals}, undef;
+            }
+            else {
+                # Continue when no value list is found (all tags w/o string values);
+                next TAGRECORDINGLOOP;
+            }
+
+            # Look for a string tag value.
+            my $v = $f->head->{tags}->{$t};
+            if (!defined $v || ref $v) { next TAGRECORDINGLOOP; }
+
+            # Normalize the tag name and look for an existing value list.
+            my $norm_t = uc $t;
+            $other_vals->[-1] = $v;
+        }
+    }
+
+    return %vals_of;
 }
 
 ### INTERNAL SUBROUTINE
