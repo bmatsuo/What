@@ -8,12 +8,10 @@
 
 use Test::More tests => 9;
 use XML::Twig;
+use What::WhatRC;
 
 # Get a discogs API key from the user.
-print {\*STDERR} "Please enter a valid discogs api key:";
-my $key = <STDIN>;
-die "Couldn't parse API key (must be alphanumeric); $key"
-    if ($key !~ s/\A \s* ([a-z0-9]+) \s*\n? \z/$1/xms);
+my $key = whatrc->discogs_api_key;
 
 BEGIN { use_ok('What::Discogs') };
 
