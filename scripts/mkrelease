@@ -224,7 +224,7 @@ sub main{
                 '--artist', $opt{'--artist'},
                 '--title', $opt{'--title'},
                 '--year', $opt{'--year'},
-                @fargs,
+                (grep {not $_ eq '--flac'} @fargs),
                 ($opt{'--verbose'} ? '--verbose' : ()),
                 ($opt{'--dry-run'} ? '--dry-run' : ()),);
             $subsystem->exec(@convert) == 0 or die;
