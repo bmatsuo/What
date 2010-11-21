@@ -268,6 +268,7 @@ sub main{
     my $num_threads = 0;
     my $thread_action = sub {
         ++$num_threads;
+        threads->exit() if $USER_HAS_THREADS && !$conv_q->pending();
         my $conv_job = $conv_q->dequeue();
         my ($c, $wav) = @{$conv_job};
         my %arg;
@@ -313,7 +314,7 @@ sub main{
         my $thread_buffer_size = scalar threads->list(threads::running);
         if ( $conv_q->pending() && $thread_buffer_size < $max_threads ) {
             for (0 .. $max_threads - $thread_buffer_size) {
-                my $thready = threads->create(sub { $thread_action->() });
+                my $thready = threads->create($thread_action);
             }
         }
         else {
