@@ -146,7 +146,7 @@ has 'styles'
     => ( isa => 'ArrayRef[Str]', 
         is => 'rw', 
         default => sub { [] },);
-has 'date' => (isa => 'Str', is => 'rw', 'required' => 1);
+has 'date' => (isa => 'Str', is => 'rw', 'required' => 0);
 has 'note' => (isa => 'Str', is => 'rw', default => q{} );
 has 'discs' 
     => (isa => 'ArrayRef[What::Discogs::Release::Disc]',
