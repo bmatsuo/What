@@ -45,6 +45,7 @@ PERL DEPENDENCIES
         Class::InsideOut
         LWP::UserAgent
         Moose
+				MooseX::Singleton
         Term::Readline
         Data::Dumper
         MP3::Tag
@@ -102,7 +103,7 @@ INSTALLATION
         perl Makefile.PL
         make
         make test
-        make install
+        sudo make install
 
     Alternatively, to install the module to a directory other than '/usr/local',
     say '~/local' use this set of commands:
