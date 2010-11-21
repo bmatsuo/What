@@ -1,17 +1,17 @@
 package What::Converter::Base;
 
-use 5.008009;
 use strict;
 use warnings;
 use Carp;
 use File::Basename;
 use What::Utils;
 use What::Subsystem;
+use What::Format::FLAC;
 
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
 
-our @ISA = qw(Exporter);
+push our @ISA, qw(Exporter);
 
 our @EXPORT_OK = ( );
 
@@ -25,6 +25,58 @@ use Moose;
 has 'verbose' => (isa => 'Bool', is => 'rw', required => 0, default => 0);
 has 'dry_run' => (isa => 'Bool', is => 'rw', required => 0, default => 0);
 
+# These two attributes must be filled in be the time $c->convert() is called.
+has 'flac'    => (isa => 'What::Format::FLAC', is => 'rw', required => 0);
+has 'dest_dir' => (isa => 'Str', is => 'rw', required => 0);
+
+### INSTANCE METHOD
+# Subroutine: flac_path
+# Usage: $self->flac_path
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub flac_path($) {
+    my $self = shift;
+    return $self->flac->path;
+}
+
+### INSTANCE METHOD
+# Subroutine: ext
+# Usage: $self->ext
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub ext($) {
+    my $self = shift;
+    return '';
+}
+
+### INSTANCE METHOD
+# Subroutine: output_name
+# Usage: $self->output_name
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub output_name($) {
+    my $self = shift;
+    my $name = basename($self->flac->path);
+    my $ext = $self->ext();
+    $name =~ s/\.flac \z/.$ext/xms;
+    return $name;
+}
+
+# Subroutine: output_path
+# Usage: $self->output_path
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub output_path($) {
+    my $self = shift;
+    my $d = $self->dest_dir;
+    my $n = $self->output_name;
+    return "$d/$n";
+}
+
 # Subroutine: $converter->options(
 #   input => $lossles_path,
 #   flac => $flac_path,
@@ -34,12 +86,22 @@ has 'dry_run' => (isa => 'Bool', is => 'rw', required => 0, default => 0);
 # Returns: A list of command line options to use when converting.
 sub options { 
     my $self = shift;
-    my %arg = get_arg_hash(@_);
+    my %arg = @_;
     my @opts = (
         ($self->audio_quality_options()), 
         ($self->tag_options($arg{input})),
         ($self->other_options(%arg)),); 
     return @opts;
+}
+
+### INSTANCE METHOD
+# Subroutine: copy_remaining_tags
+# Usage: $converter->copy_remaining_tags(  )
+# Purpose: Copy tags that aren't set with options.
+# Returns: Nothing
+# Throws: Nothing
+sub copy_remaining_tags {
+    return;
 }
 
 # Subroutine: $converter->describe( )
@@ -49,17 +111,16 @@ sub describe {
     my $self = shift;
     my $desc = join q{ }, 
         "Encoded from FLAC (100% log) using", 
-        $self->program_description()
+        $self->program_description(),
         "with options",
-        $self->tag_options();
-    my $desc .= '.';
+        $self->tag_options(), ;
+    $desc .= '.';
     return $desc;
 }
 
 # Subroutine: $converter->convert(
-#   flac => $flac_path,
 #   wav => $wav_path,
-#   output => $output_path,
+#   [flac => $flac_path],
 # )
 # Type: INSTANCE METHOD
 # Purpose: 
@@ -68,23 +129,31 @@ sub describe {
 # Returns: Nothing.
 sub convert { 
     my $self = shift;
-    my %arg = get_arg_hash(@_);
-    # Check arguments.
-    my $flac = $arg{flac};
-    if ($flac !~ m/\.flac\z/xms) {
-        croak("Input is not a flac file; $flac");
+    my %arg = @_;
+
+    # Check FLAC existence.
+    my $flac 
+        = $arg{flac} ? $self->flac($arg{flac}) 
+        : $self->flac;
+
+    if (!defined $flac) {
+        croak("No What::Format::FLAC given for conversion.\n");
     }
-    if (!-e $flac) {
-        croak("Input does not exist; $flac");
+
+    if (!$flac->isa('What::Format::FLAC')) {
+        croak("Input is not a What::Format::FLAC object; $flac");
     }
-    my $output = $arg{output};
+
+    my $output = $self->output_path;
+    if (!defined $output) { croak("Output path is not defined."); }
+
     my $output_dir = dirname($output);
     if (!-d $output_dir) {
         croak("Directory of output path does not exist; $output_dir");
     }
 
     # Check WAVE if necessary
-    my $wav = $arg{wav}
+    my $wav = $arg{wav};
     if ($self->needs_wav()) {
         if (!defined $wav) {
             croak("WAVE file not given.");
@@ -98,10 +167,10 @@ sub convert {
     }
 
     # Set the converter input.
-    $arg{input} = $self->needs_wav() ? $wav : $flac;
+    $arg{input} = $self->needs_wav() ? $wav : $flac->path;
 
     # Perform the conversion.
-    my @cmd = ($self->program(), $self->options(%arg), $arg{input});
+    my @cmd = ($self->program(), $arg{input}, $self->options(%arg));
     my $res = subsystem(
         cmd => \@cmd,
         verbose => $self->verbose(),
@@ -120,8 +189,10 @@ sub convert {
     
     # Check that the conversion went smoothly.
     if ($res != 0) {
-        croak("Couldn't covert; $arg{input} -> $output");
+        croak("Couldn't convert;\n$arg{input}\n->\n$output");
     }
+
+    $self->copy_remaining_tags();
 
     return;
 }

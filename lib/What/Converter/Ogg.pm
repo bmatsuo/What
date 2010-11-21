@@ -11,7 +11,7 @@ use What::Subsystem;
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
 
-our @ISA = qw(Exporter);
+push our @ISA, qw(Exporter);
 
 our @EXPORT_OK = ( );
 
@@ -21,55 +21,25 @@ our @EXPORT = qw(
 our $VERSION = '0.0_1';
 
 use Moose;
-extends 'What::Converter::base';
+extends 'What::Converter::Base';
 
-# Subroutine: $converter->needs_wav()
-# Type: INSTANCE METHOD
-# Returns: 
-#   A true boolean context if the converter needs a WAVE audio file.
+sub ext {return 'ogg';}
 sub needs_wav { return 0; }
-
-# Subroutine: $converter->program()
-# Type: INSTANCE METHOD
-# Returns: The converting program used be the coverter.
 sub program { return "oggenc"; }
-
-# Subroutine: $converter->program_description()
-# Type: INSTANCE METHOD
-# Returns: A string naming the program and version number.
 sub program_description { return `oggenc --version`; }
 
-# Subroutine: $converter->audio_quality_options()
-# Type: INSTANCE METHOD
-# Returns: 
-#   A list of command line options used that control quality (bitrate).
 sub audio_quality_options { return ('-q', '8'); }
 
-# Subroutine: $converter->tag_options(flac => $flac_path)
-# Type: INSTANCE METHOD
-# Returns: 
-#   A list of command line options used that set tags.
+# Tags are taken out of the FLAC when vorbis-tools has FLAC support.
 sub tag_options { return (); }
 
 # Subroutine: $converter->other_options(
 #   input => $lossles_path,
-#   flac => $flac_path,
-#   output => $lossy_path,
 # )
-# Type: INSTANCE METHOD
-# Purpose:
-#   Some options, such as silencing, may not fit into other categories, 
-#   so they can go here.
-# Returns: 
-#   A list of other command line options used in converting.
 sub other_options { 
     my $self = shift;
-    my %arg = @_;
-    my $output = $arg{output};
-    if (!defined $output) {
-        croak(".ogg output path not specified.");
-    }
-    return ('-Q', '-o', $output); 
+    # Silence oggenc and set the output path.
+    return ('-Q', '-o', $self->output_path); 
 }
 
 1;

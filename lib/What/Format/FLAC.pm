@@ -60,8 +60,7 @@ sub tag {
     
     my $tag_name = $self->_tag_name_($tag);
     if (!defined $new_val) {
-        my $tag_val = $self->head->{tags}->{$tag_name};
-        return $tag_val;
+        return $self->head->{tags}->{$tag_name};
     }
 
     $self->head->{tags}->{$tag_name} = $new_val;

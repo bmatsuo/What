@@ -31,6 +31,11 @@ use What::WhatRC;
 use What::Release;
 use What::Format;
 use What::Subsystem;
+use What::Format::FLAC;
+use What::Converter::WAVE;
+use What::Converter::MP3;
+use What::Converter::AAC;
+use What::Converter::OGG;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -51,6 +56,13 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
+my $wav_c = What::Converter::WAVE->new(verbose => $opt{'--verbose'});
+my $mp3_320_c = What::Converter::MP3->new(bitrate => '320', verbose => $opt{'--verbose'});
+my $mp3_v0_c = What::Converter::MP3->new(bitrate => 'v0', verbose => $opt{'--verbose'});
+my $mp3_v2_c = What::Converter::MP3->new(bitrate => 'v2', verbose => $opt{'--verbose'});
+my $ogg_c = What::Converter::Ogg->new(verbose => $opt{'--verbose'});
+my $aac_c = What::Converter::AAC->new(verbose => $opt{'--verbose'});
+
 ########################################################################
 # MAIN FUNCTION
 ########################################################################
@@ -65,11 +77,7 @@ sub main{
     my %release_info
         = (artist => $artist, title => $title, year => $year);
 
-    my $release = What::Release->new(
-        artist => $opt{'--artist'},
-        title => $opt{'--title'},
-        year => $opt{'--year'},
-    );
+    my $release = What::Release->new( %release_info );
 
     my %format_needs_wav = (
         v0 => 1,
@@ -110,9 +118,10 @@ sub main{
     my $flac_source_dir = $release->format_dir('flac');
 
     #my %flac_info = flac_files_in($flac_source_dir);
-    my %flac_info
-        = (map {flac_files_in($_)} @flac_dirs);
-    my @flac_files = keys %flac_info;
+    #my %flac_info 
+    #    = grep {$_ =~ m/ \. flac \z/xms} find_hierarchy($flac_source_dir);
+    #= (map {flac_files_in($_)} @flac_dirs);
+    my @flac_files = grep {$_ =~ m/ \. flac \z/xms} find_hierarchy($flac_source_dir);
 
     for my $format (@desired_formats) {
         print "Finding $format directories...";
@@ -156,92 +165,61 @@ sub main{
                     <=> do {basename($b) =~ m/\A (\d+)/xms ? $1 : 0} }
             @flac_files
     ) {
-        my $temp_wav_dest_dir = dirname($flac_path);
+        my $flac_obj = read_flac($flac_path);
+
+        my $temp_wav_dest_dir = safe_path('~/.what/work/wav'); #dirname($flac_path);
+
+        my $wav_path;
 
         # Create temporary file for WAVE output.
-        my $wav_path = wav_output($flac_path, $temp_wav_dest_dir);
+        # my $wav_path = wav_output($flac_path, $temp_wav_dest_dir);
 
         # Create a name for reencoded MP3 files.
         my $flac = basename($flac_path);
-        my $mp3 = $flac;
-        $mp3 =~ s/ \.flac \z/.mp3/xms;
-        my $ogg = $flac;
-        $ogg =~ s/ \.flac \z/.ogg/xms;
-        my $aac = $flac;
-        $aac =~ s/ \.flac \z/.m4a/xms;
 
         print "Converting $flac...";
 
         if ($should_create_wav) {
-
-            # Create the call to the flac command.
-            my @flac_cmd = flac_command($flac_path, $temp_wav_dest_dir);
-
-            # Attempt to execute the flac command.
-            $subsystem->exec(@flac_cmd) == 0
-                or syserr( error=> "Couldn't convert:\n"
-                                    . "\t$flac_path->$wav_path\n$?");
-
+            $wav_c->flac($flac_obj);
+            $wav_c->dest_dir($temp_wav_dest_dir);
+            $wav_c->convert();
+            $wav_path = $wav_c->output_path;
             print "WAVE...";
         }
 
         # Convert the decoded WAVE into all desired formats.
         for my $format (@desired_formats) {
             my $uc_format = uc $format;
+
             my $disc_subdir 
                 = $release_is_multidisc 
                     ? "/".basename(dirname($flac_path)) : "";
-            my $dest = $dest_for{$format};
-            $dest .= $disc_subdir;
-            $dest .= $format eq 'ogg' ? "/$ogg"
-                : $format eq 'aac' ? "/$aac"
-                : "/$mp3"; # $format eq 'aac'
-            if ($format eq 'aac') {
-                if (!$should_create_wav) {
-                    print {\*STDERR} 
-                        "Logical error: didn't create WAVE.\n";
-                    exit(1);
-                }
-                my @faac_cmd = faac_command(
-                    input => $wav_path,
-                    output => $dest,
-                    info => $flac_info{$flac_path},);
-                $subsystem->exec(@faac_cmd) == 0
-                    or syserr(
-                        error=> "Couldn't convert $flac_path to $dest\n"
-                            ."$?");
+            my $dest_dir = $dest_for{$format};
+            $dest_dir .= $disc_subdir;
+
+            # Select the converter to use.
+            my $conv 
+                = $uc_format eq '320'   ? $mp3_320_c
+                : $uc_format eq 'V0'    ? $mp3_v0_c
+                : $uc_format eq 'V2'    ? $mp3_v2_c
+                : $uc_format eq 'OGG'   ? $ogg_c
+                : $uc_format eq 'AAC'   ? $aac_c
+                : undef;
+            if (!defined $conv) {
+                croak("Didn't recognize format $uc_format.");
             }
-            elsif ($format eq 'ogg') {
-                my @oggenc_cmd = oggenc_cmd(
-                    input => $flac_path,
-                    output => $dest,);
-                $subsystem->exec(@oggenc_cmd) == 0
-                    or syserr(
-                        error=> "Couldn't convert $flac_path to $dest\n"
-                            ."$?");
-            }
-            else { # Converting to MP3 format.
-                if (!$should_create_wav) {
-                    print {\*STDERR} 
-                        "Logical error: didn't create WAVE.\n";
-                    exit(1);
-                }
-                my @lame_cmd = lame_command(
-                    wav => $wav_path,
-                    mp3 => $dest,
-                    bitrate => $format,
-                    flac_info => $flac_info{$flac_path},);
-                # Execute lame command.
-                $subsystem->exec(@lame_cmd) == 0
-                    or syserr(
-                        error=> "Couldn't convert $flac_path to $dest\n"
-                            ."$?");
-                copy_tags_to_mp3($flac_info{$flac_path}, $dest);
-            }
+
+            # Create the transcode.
+            $conv->flac($flac_obj);
+            $conv->dest_dir($dest_dir);
+            $conv->convert(wav => $wav_path);
+
+            # Print status.
             print "$uc_format...";
         }
 
         print "DONE\n";
+
         if ($should_create_wav) { # Then we should destroy the wav.
             print "Removing WAVE...";
 
@@ -330,62 +308,6 @@ sub main{
 # SUPPORTING SUBROUTINES
 ########################################################################
 
-# Subroutine: lame_description($bitrate)
-# Type: INTERFACE SUB
-# Purpose: Generate a description of the conversion process.
-# Returns: A string description of how the MP3 files were created.
-sub lame_description {
-    my $bitrate = shift;
-
-    my $lame_version = `lame --version | head 1`;
-
-    # Remove URL and newline from lame version text
-    $lame_version =~ s/ \s? [(] .* [)] \n? \z //xms;
-
-    my @opts = lame_bitrate_options($bitrate);
-
-    if (@opts == 0) {
-        BitrateError->throw(error=>"Unrecognized bitrate $bitrate");
-    }
-
-    my $desc = join "\n",
-        "Reencoded from FLAC (via WAVE decode) using $lame_version.",
-        "LAME options: @opts", q{};
-
-    return $desc;
-}
-
-# Subroutine: flac_options($flac_file, $wav_dest)
-# Type: INTERNAL UTILITY
-# Purpose: 
-#   Create a set of options for use with the flac program.
-# Returns: 
-#   A list of options.
-sub flac_options {
-    my ($flac_file, $wav_dest_dir) = @_;
-    my @opts = (
-        '--decode', 
-        '--silent',
-        #"--output-prefix='$wav_dest_dir'",
-        );
-    push @opts, '-f' if $opt{'--force-flac'};
-    return @opts;
-}
-
-# Subroutine: flac_command($flac_file, $wav_dest_dir);
-# Type: INTERFACE SUB
-# Purpose: 
-# Returns: 
-sub flac_command {
-    my ($flac_file, $wav_dest_dir) = @_;
-
-    my @options = flac_options($flac_file, $wav_dest_dir);
-
-    my @cmd = ('flac', @options, $flac_file);
-
-    return @cmd;
-}
-
 # Subroutine: wav_output($flac_file, $wav_dest_dir)
 # Type: INTERFACE SUB
 # Purpose: 
@@ -398,420 +320,6 @@ sub wav_output {
     $wav_name =~ s/ \.flac \z/.wav/xms;
     my $wav_path = "$wav_dir/$wav_name";
     return $wav_path;
-}
-
-# Subroutine: faac_bitrate_options()
-# Type: INTERNAL UTILITY
-# Returns: 
-#   Return the proper options for setting the bitrate of AAC files.
-sub faac_bitrate_options {
-    return ('-c', 22050, '-b', 256,);
-}
-
-# Subroutine: faac_other_options(
-#   output => $path
-#   )
-# Type: INTERNAL UTILITY
-# Returns: 
-#   Return general setting the AAC files.
-sub faac_other_options {
-    my $self = shift;
-    my %arg = @_;
-    return ('-w', '-o', $arg{output});
-}
-
-# Subroutine: faac_tag_options(
-#   info => $flac_info
-# )
-# Type: INTERNAL UTILITY
-# Returns: 
-#   Return the proper tag options for AAC files.
-sub faac_tag_options {
-    my %arg = @_;
-    my %tag = %{$arg{info}->{tags}};
-    my %aac_tag = (
-        artist => '--artist',
-        title => '--title',
-        date => '--year',
-        tracknumber => '--track',
-        discnumber => '--disc',
-        composer => '--writer',
-        genre => '--genre',
-        album => '--album',
-        compilation => '--compilation',
-        comment => '--comment',
-        # forget --cover-art,
-    );
-    my @tag_options;
-    for my $tag (keys %tag) {
-        my $uniform_tag = lc $tag;
-        my $tag_val = $tag{$tag};
-        next if !defined $tag_val;
-        next if $tag_val !~ /./xms;
-
-        my $tag_opt = $aac_tag{$uniform_tag};
-        next if !defined $tag_opt;
-
-        if ($uniform_tag eq 'compilation') {
-            push @tag_options, $tag_opt;
-        }
-        else {
-            push @tag_options, $tag_opt, $tag_val;
-        }
-    }
-    return @tag_options;
-}
-
-
-# Subroutine: faac_command(
-#   input => $wav_path
-#   output => $aac_path
-#   info => $flac_info
-# Type: INTERNAL UTILITY
-# Returns: 
-#   Returns a system command to create a (320kbps) AAC audio file.
-sub faac_command {
-    my %arg = @_;
-    my $wav = $arg{input};
-    my @faac_command = (
-        'faac',
-        faac_bitrate_options(%arg),
-        faac_tag_options(%arg),
-        faac_other_options(%arg),
-        $wav);
-    return @faac_command;
-}
-
-# Subroutine: oggenc_bitrate_options()
-# Type: INTERNAL UTILITY
-# Returns: 
-#   Return the proper options for setting the bitrate of ogg files.
-sub oggenc_bitrate_options {
-    return qw{-q 8};
-}
-
-# Subroutine: oggenc_other_options(
-#   output => $path
-# )
-# Type: INTERNAL UTILITY
-# Returns: 
-#   Return the proper options creating ogg files.
-sub oggenc_options {
-    my %arg = @_;
-    my $output = $arg{output};
-    return ('-Q', '-o', $output);
-}
-
-# Subroutine: oggenc_cmd(
-#   output => $ogg_path,
-#   input => $flac_path,
-# )
-# Type: INTERNAL UTILITY
-# Returns: 
-#   A command to convert $flac_path to Ogg vorbis file $ogg_path.
-sub oggenc_cmd {
-    my %arg = @_;
-    my $flac = $arg{input};
-    return ('oggenc', 
-        oggenc_bitrate_options(), oggenc_options(%arg), $flac,);
-}
-
-# Subroutine: lame_bitrate_options($bitrate)
-# Type: INTERNAL UTILITY
-# Purpose: 
-#   Determine a list of options for converting to a certain bitrate.
-# Returns: 
-#   The list of options.
-sub lame_bitrate_options {
-    my $bitrate = uc shift;
-    my @options;
-
-    if ($bitrate eq 'V0') {
-        @options = qw{-V0 --vbr-new};
-    }
-    elsif ($bitrate eq 'V2') {
-        @options = qw{-V2 --vbr-new};
-    }
-    elsif ($bitrate eq '320') {
-        @options = qw{--cbr -b320 -h};
-    }
-
-    return @options;
-}
-
-# Subroutine: lame_general_tag_options()
-# Type: INTERNAL UTILITY
-# Purpose: Return general options for lame (always used).
-# Returns: A list of options.
-sub lame_general_tag_options {
-    return qw{--add-id3v2};
-}
-
-# Subroutine: lame_tag_options($flac_info)
-# Type: INTERNAL UTILITY
-# Purpose: 
-#   Determine the proper tag options for lame given an
-#   Audio::FLAC::Header object, $flac_info.
-# Returns: 
-#   A list of options.
-sub lame_tag_options {
-    my $flac_info = shift;
-
-    my %tag = %{$flac_info->{tags}};
-
-    my @tag_options = lame_general_tag_options();
-
-    my %lame_tag = (
-        artist => '--ta',
-        album => '--tl',
-        title => '--tt',
-        date => '--ty',
-        #genre => '--tg',
-        comment => '--tc',
-        # The rest of the tags need to be handled as the were...
-        #tracknumber => '--tn',
-        #discnumber => '--disc',
-        #compilation => '--compilation',
-        #composer => '--writer',
-        # forget --cover-art,
-    );
-    for my $tag (keys %tag) {
-        my $uniform_tag = lc $tag;
-        my $tag_val = $tag{$tag};
-        next if !defined $tag_val;
-        next if $tag_val !~ /./xms;
-
-        my $tag_opt = $lame_tag{$uniform_tag};
-        next if !defined $tag_opt;
-
-        $tag_val =~ s/.*\d{4}.*//xms if ($uniform_tag eq 'date');
-
-        push @tag_options, $tag_opt, $tag_val;
-    }
-    return @tag_options;
-}
-
-# Subroutine: lame_options(
-#   wav => $wav_path, 
-#   mp3 => $mp3_path, 
-#   bitrate => $bitrate, 
-#   flac_info => $flac_info);
-# Type: INTERNAL UTILITY
-# Purpose: 
-#   Create options for the command 'lame'.
-# Returns: 
-#   A list of options.
-sub lame_options {
-    my %arg = @_;
-    my @bitrate_opts = lame_bitrate_options($arg{bitrate});
-    my @general_opts = qw{--quiet --nohist --replaygain-accurate};
-    my @tag_opts = lame_tag_options($arg{flac_info});
-    my @lame_opts = (@bitrate_opts, @general_opts, @tag_opts);
-    return @lame_opts;
-}
-
-# Subroutine: lame_command(
-#   wav => $wav_path,
-#   mp3 => $mp3_path,
-#   bitrate => $bitrate,
-#   flac_info => flac_info)
-# Type: INTERFACE SUB
-# Purpose: 
-#   Construct the 'lame' command for converting a wav file into an MP3,
-#   while preserving the tags of the original FLAC file.
-# Returns: 
-#   A 'lame' system command as a list.
-sub lame_command {
-    # TODO: argument checking.
-    my %arg = @_;
-    my @options = lame_options(%arg);
-    my @cmd = ('lame', @options, $arg{wav}, $arg{mp3});
-    return @cmd;
-}
-
-# Subroutine: 
-#   release_root_name(
-#       artist  => $artist,
-#       title   => $title,
-#       year    => $year,
-#       audio_format    => $audio_format,)
-# Type: INTERFACE SUB
-# Purpose: 
-#   Form release information into a director name.
-# Returns: 
-#   The release directory name.
-sub release_root_name {
-    my %info = @_;
-    my ($artist, $title, $year,$audio_format) 
-        = ($info{artist}, $info{title}, $info{year}, $info{audio_format});
-
-    croak("Artist is not defined.") if (!defined $artist);
-    croak("Title is not defined.") if (!defined $title);
-
-    my $dir_name = join q{ - }, $artist, ($year or ()), $title;
-
-    $dir_name .= join q{}, q{ [},uc $audio_format,q{]}
-        if defined $audio_format;
-
-    return $dir_name;
-}
-
-# Subroutine: other_files_in($flac_dir)
-# Type: INTERFACE SUB
-# Purpose: 
-#   Find non-FLAC files in a given directory.
-#   Does not report subdirectories.
-# Returns: 
-#   HASH keyed by file paths.
-sub other_files_in {
-    my $flac_dir = shift;
-
-    # Escape special characters for bsd_glob (space is not special).
-    $flac_dir =~ s/( \[ | \] | [{}()*?] )/\\$1/gxms;
-
-    my @files = find_file_pattern("*", $flac_dir);
-
-    my @other_files;
-
-    for my $file (@files) {
-        push @other_files, $file
-            if $file !~ / \.flac \z/xms && !-d $file;
-    }
-
-    return @other_files;
-}
-
-# Subroutine: flac_files_in($flac_dir)
-# Type: INTERFACE SUB
-# Purpose: 
-#   Find FLAC files in a given directory.
-# Returns: 
-#   Return a hash of keyed by FLAC files in directory $dir.
-#   The values of the hash will be Audio::FLAC::Header objects.
-sub flac_files_in {
-    my $flac_dir = shift;
-
-    # Escape special characters for bsd_glob (space is not special).
-    $flac_dir =~ s/( \[ | \] | [{}()*?] )/\\$1/gxms;
-
-    my @flac_files = bsd_glob("$flac_dir/*.flac");
-
-    my %flac_info;
-
-    for my $flac (@flac_files) {
-        $flac_info{$flac} = Audio::FLAC::Header->new($flac);
-    }
-
-    return %flac_info;
-}
-
-# Subroutine: copy_tags_to_ogg($flac_info_ref, $ogg)
-# Type: INTERFACE SUB
-# Purpose: 
-#   Make the tags of $ogg reflect the tags described by an
-#   Audio::FLAC::Header object $flace_info_ref.
-#   Assumes that $ogg has no tags and does not erase any pre-existing
-#   data.
-# Returns: Nothing
-sub copy_tags_to_ogg {
-    #TODO Implement this method.
-}
-
-# Subroutine: copy_tags_to_mp3($flac_info_ref, $mp3)
-# Type: INTERFACE SUB
-# Purpose: 
-#   Make the tags of $mp3 reflect the tags described by an
-#   Audio::FLAC::Header object $flace_info_ref.
-#   Assumes that $mp3 has no tags and does not erase any pre-existing
-#   data.
-# Returns: Nothing
-sub copy_tags_to_mp3 {
-    my ($flac_info_ref, $mp3_path) = @_;
-
-    my $mp3 = MP3::Tag->new($mp3_path);
-
-    $mp3->get_tags;
-
-    my %id3v2_tag = (
-        'COMPILATION' => 'TCMP',
-        'ISRC' => 'TSRC',
-        #'ALBUMARTIST' => 'TPE2', # THESE CAN HAVE NONASCII CHARS
-        #'COMPOSER'    => 'TCOM', # THESE CAN HAVE NONASCII CHARS
-        #'ALBUM' => 'TALB', # Handled in MP3 Creation
-        #'ARTIST'=> 'TPE1', # Handled in MP3 Creation
-        #'TITLE' => 'TIT2', # Handled in MP3 Creation
-        #'DATE' => 'TDRC', # Handled in MP3 Creation
-        'GENRE' => 'TCON', # Handled in MP3 Creation
-        # HANDLE TRACKNUMBER SPECIALLY,
-        #'TRACKNUMBER' => 'TRCK',
-        #'TRACKTOTAL' => 'TRCK',
-        # HANDLE DISCNUMBER SPECIALLY,
-        #'DISCNUMBER'  => 'TPOS',
-        #'DISCTOTAL'   => 'TPOS',
-        #'COMMENT' => 'COMM',
-        # Ignore the vendor tag,
-        #'VENDOR' => 'TENC',
-    );
-
-    my %song_tag = %{$flac_info_ref->{tags}};
-
-    # Set ID3v2 tags;
-    if (exists $mp3->{ID3v2}) {
-        for my $flac_tag (keys %song_tag) {
-            my $tag_val = $song_tag{$flac_tag};
-            my $id3_tag = $id3v2_tag{uc $flac_tag};
-            if (defined $tag_val and defined $id3_tag) {
-                #print {\*STDERR} "\nSetting $flac_tag: $tag_val";
-                $mp3->set_id3v2_frame($id3_tag, $tag_val);
-            }
-        }
-        #print {\*STDERR} "\n";
-        my ($t_num, $t_tot) 
-            = ($song_tag{'TRACKNUMBER'}, $song_tag{'TRACKTOTAL'});
-        my ($d_num, $d_tot) 
-            = ($song_tag{'DISCNUMBER'}, $song_tag{'DISCTOTAL'});
-        # Compute track number tag value, if it exists.
-        my $t_val 
-            = defined $t_num && defined $t_tot ?  "$t_num/$t_tot"
-                : defined $t_num ? $t_num
-                : "";
-        # Compute the disc number tag value, if it exists.
-        my $d_val 
-            = defined $d_num && defined $d_tot ?  "$d_num/$d_tot"
-                : defined $d_num ? $d_num
-                : "";
-        $mp3->set_id3v2_frame('TRCK', $t_val) if ($t_val =~ m/.+/xms);
-        $mp3->set_id3v2_frame('TPOS', $d_val) if ($d_val =~ m/.+/xms);
-        $mp3->{ID3v2}->write_tag();
-    }
-
-    # Set ID3v1 tags.
-    if (exists $mp3->{ID3v1}) {
-        if (defined $song_tag{'COMMENT'}) {
-            $mp3->{ID3v1}->comment(utf8::decode($song_tag{'COMMENT'}));
-        }
-        if (defined $song_tag{'TITLE'}) {
-            $mp3->{ID3v1}->title(utf8::decode($song_tag{'TITLE'}));
-        }
-        if (defined $song_tag{'ARTIST'}) {
-            $mp3->{ID3v1}->artist(utf8::decode($song_tag{'ARTIST'}));
-        }
-        if (defined $song_tag{'ALBUM'}) {
-            $mp3->{ID3v1}->album(utf8::decode($song_tag{'ALBUM'}));
-        }
-        if (defined $song_tag{'DATE'}) {
-            $mp3->{ID3v1}->year(utf8::decode($song_tag{'DATE'}));
-        }
-        if (defined $song_tag{'TRACK'}) {
-            $mp3->{ID3v1}->track(utf8::decode($song_tag{'TRACK'}));
-        }
-        # Don't deal with ID3v1 genre crap.
-        #if (defined $song_tag{'GENRE'}) {
-        #    $mp3->{ID3v1}->genre(utf8::decode($song_tag{'GENRE'}));
-        #}
-        $mp3->{ID3v1}->write_tag();
-    }
-    return;
 }
 
 # Finally, kickstart the script

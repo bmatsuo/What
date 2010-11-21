@@ -11,7 +11,7 @@ use What::Subsystem;
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
 
-our @ISA = qw(Exporter);
+push our @ISA, qw(Exporter);
 
 our @EXPORT_OK = ( );
 
@@ -21,55 +21,48 @@ our @EXPORT = qw(
 our $VERSION = '0.0_1';
 
 use Moose;
-extends 'What::Converter::base';
+extends 'What::Converter::Base';
 
-# Subroutine: $converter->needs_wav()
-# Type: INSTANCE METHOD
-# Returns: 
-#   A true boolean context if the converter needs a WAVE audio file.
-sub needs_wav { return 1; }
+my %aac_tag = (
+    ARTIST => '--artist',
+    TITLE => '--title',
+    DATE => '--year',
+    TRACKNUMBER => '--track',
+    DISCNUMBER => '--disc',
+    COMPOSER => '--writer',
+    GENRE => '--genre',
+    ALBUM => '--album',
+    COMPILATION => '--compilation',
+    COMMENT => '--comment',
+    # forget --cover-art for now,
+);
 
-# Subroutine: $converter->program()
-# Type: INSTANCE METHOD
-# Returns: The converting program used be the coverter.
+sub ext { return 'm4a'; }
+sub needs_wav { return 0; }
 sub program { return "faac"; }
-
-# Subroutine: $converter->program_description()
-# Type: INSTANCE METHOD
-# Returns: A string naming the program and version number.
 sub program_description { return `faac --help | head -n 2 | tail -n 1`; }
-
-# Subroutine: $converter->audio_quality_options()
-# Type: INSTANCE METHOD
-# Returns: 
-#   A list of command line options used that control quality (bitrate).
 sub audio_quality_options { return qw{-c 22050 -b 256}; }
-
-# Subroutine: $converter->tag_options(flac => $flac_path)
-# Type: INSTANCE METHOD
-# Returns: 
-#   A list of command line options used that set tags.
-sub tag_options { return (); }
-
+# Fill in these options
+sub tag_options { 
+    my $self = shift;
+    my @opts;
+    for my $t (keys %aac_tag) {
+        my $v = $self->flac->tag($t);
+        next if (!defined $v);
+        push @opts, $aac_tag{$t}, $v if $v =~ m/./xms;
+    }
+    return @opts; 
+}
 # Subroutine: $converter->other_options(
 #   input => $lossles_path,
-#   flac => $flac_path,
-#   output => $lossy_path,
 # )
-# Type: INSTANCE METHOD
-# Purpose:
-#   Some options, such as silencing, may not fit into other categories, 
-#   so they can go here.
-# Returns: 
-#   A list of other command line options used in converting.
 sub other_options { 
     my $self = shift;
     my %arg = @_;
-    my $output = $arg{output};
-    if (!defined $output) {
+    if (!defined $self->output_path) {
         croak(".m4a output path not specified.");
     }
-    return ('-w', '-o', $arg{output}); 
+    return ('-w', '-o', $self->output_path); 
 }
 
 1;
