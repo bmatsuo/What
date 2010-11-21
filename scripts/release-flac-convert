@@ -13,6 +13,8 @@ use File::Basename;
 use File::Glob qw{bsd_glob};
 use List::Util qw{first};
 use Carp;
+use threads;
+use Thread::Queue;
 
 # Include CPAN modules.
 use Getopt::Euclid qw{ :vars<opt_> };
@@ -56,12 +58,12 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $wav_c = What::Converter::WAVE->new(verbose => $opt{'--verbose'});
-my $mp3_320_c = What::Converter::MP3->new(bitrate => '320', verbose => $opt{'--verbose'});
-my $mp3_v0_c = What::Converter::MP3->new(bitrate => 'v0', verbose => $opt{'--verbose'});
-my $mp3_v2_c = What::Converter::MP3->new(bitrate => 'v2', verbose => $opt{'--verbose'});
-my $ogg_c = What::Converter::Ogg->new(verbose => $opt{'--verbose'});
-my $aac_c = What::Converter::AAC->new(verbose => $opt{'--verbose'});
+#my $wav_c = What::Converter::WAVE->new(verbose => $opt{'--verbose'});
+#my $mp3_320_c = What::Converter::MP3->new(bitrate => '320', verbose => $opt{'--verbose'});
+#my $mp3_v0_c = What::Converter::MP3->new(bitrate => 'v0', verbose => $opt{'--verbose'});
+#my $mp3_v2_c = What::Converter::MP3->new(bitrate => 'v2', verbose => $opt{'--verbose'});
+#my $ogg_c = What::Converter::Ogg->new(verbose => $opt{'--verbose'});
+#my $aac_c = What::Converter::AAC->new(verbose => $opt{'--verbose'});
 
 ########################################################################
 # MAIN FUNCTION
@@ -157,6 +159,11 @@ sub main{
         }
     }
 
+    my $conv_q = Thread::Queue->new();
+    my %dependent_convs;
+    my %num_dependent;
+
+    my $converter_id = 0;
     # Convert each flac file into all desired formats.
     for my $flac_path (
         sort 
@@ -177,13 +184,22 @@ sub main{
         # Create a name for reencoded MP3 files.
         my $flac = basename($flac_path);
 
-        print "Converting $flac...";
+        print "Preparing convertions $flac...";
 
         if ($should_create_wav) {
-            $wav_c->flac($flac_obj);
-            $wav_c->dest_dir($temp_wav_dest_dir);
-            $wav_c->convert();
-            $wav_path = $wav_c->output_path;
+            my $new_wav_c = What::Converter::WAVE->new(
+                flac => $flac_obj,
+                dest_dir => $temp_wav_dest_dir,
+                append_id => 1,
+                id => $converter_id++,
+            );
+            $conv_q->enqueue([$new_wav_c,]);
+            #$wav_c->flac($flac_obj);
+            #$wav_c->dest_dir($temp_wav_dest_dir);
+            #$wav_c->convert();
+            $wav_path = $new_wav_c->output_path;
+            $dependent_convs{$wav_path} = [];
+            $num_dependent{$wav_path} = 0;
             print "WAVE...";
         }
 
@@ -199,12 +215,21 @@ sub main{
 
             # Select the converter to use.
             my $conv 
-                = $uc_format eq '320'   ? $mp3_320_c
-                : $uc_format eq 'V0'    ? $mp3_v0_c
-                : $uc_format eq 'V2'    ? $mp3_v2_c
-                : $uc_format eq 'OGG'   ? $ogg_c
-                : $uc_format eq 'AAC'   ? $aac_c
+                = $uc_format eq '320'   ? What::Converter::MP3->new (
+                                            bitrate => '320',
+                                            id => $converter_id++, )
+                : $uc_format eq 'V0'    ? What::Converter::MP3->new (
+                                            bitrate => 'V0',
+                                            id => $converter_id++, )
+                : $uc_format eq 'V2'    ? What::Converter::MP3->new (
+                                            bitrate => 'V2',
+                                            id => $converter_id++, )
+                : $uc_format eq 'OGG'   ? What::Converter::Ogg->new (
+                                            id => $converter_id++, )
+                : $uc_format eq 'AAC'   ? What::Converter::AAC->new (
+                                            id => $converter_id++,)
                 : undef;
+
             if (!defined $conv) {
                 croak("Didn't recognize format $uc_format.");
             }
@@ -212,7 +237,14 @@ sub main{
             # Create the transcode.
             $conv->flac($flac_obj);
             $conv->dest_dir($dest_dir);
-            $conv->convert(wav => $wav_path);
+            if ($conv->needs_wav()) {
+                push @{$dependent_convs{$wav_path}}, $conv;
+                ++$num_dependent{$wav_path};
+            }
+            else {
+                $conv_q->enqueue([$conv,]);
+            }
+            #$conv->convert(wav => $wav_path);
 
             # Print status.
             print "$uc_format...";
@@ -221,17 +253,100 @@ sub main{
         print "DONE\n";
 
         if ($should_create_wav) { # Then we should destroy the wav.
-            print "Removing WAVE...";
 
-            # Remove the WAVE path.
-            $subsystem->exec('rm', $wav_path) == 0
-                or syserr( error => "Couldn't remove temporary file;\n"
-                                    . "$wav_path\n$?");
-
-            print "DONE\n";
         }
     }
 
+    print "Converting files...";
+
+    my $num_threads = 0;
+    my $thread_action = sub {
+        ++$num_threads;
+        my $conv_job = $conv_q->dequeue();
+        my ($c, $wav) = @{$conv_job};
+        my %arg;
+        $arg{wav} = $wav if defined $wav;
+        $c->convert(%arg);
+        my $out = $c->output_path;
+
+        if ($c->isa('What::Converter::MP3')) {
+            print join q{}, '[', $c->bitrate, '] ';
+        }
+        print basename($out), "...";
+
+
+        my $now_ok = $dependent_convs{$out};
+        if (defined $now_ok) {
+            my @new_convs = map {[$_, $out]} @{$now_ok};
+            if (@new_convs) {
+                $conv_q->insert(1, @new_convs);
+            }
+        }
+
+        return $wav;
+    };
+
+    my $max_threads = 3;
+    while ( $conv_q->pending() ) {
+        my $thread_buffer_size = scalar threads->list(threads::running);
+        if ($thread_buffer_size < $max_threads) {
+            for (0 .. $max_threads - $thread_buffer_size) {
+                my $thready = threads->create(sub { $thread_action->() });
+            }
+        }
+        else {
+            for my $fin_thread (threads->list(threads::joinable)) {
+                my $used_wav = $fin_thread->join();
+                if (defined $used_wav) {
+                    --$num_dependent{$used_wav} if $num_dependent{$used_wav};
+                    if ($num_dependent{$used_wav} == 0) {
+                        # Remove the WAVE path.
+                        my $wav_name = basename($used_wav);
+                        print "rm $wav_name...";
+                        $subsystem->exec('rm', $used_wav) == 0
+                            or syserr( error => "Couldn't remove temporary file;\n"
+                                                . "$wav_name\n$?");
+                    }
+                }
+            }
+            sleep 1;
+        }
+    }
+
+    while ( threads->list(threads::running) > 0 ) {
+        for my $fin_thread (threads->list(threads::joinable)) {
+            my $used_wav = $fin_thread->join();
+            if (defined $used_wav) {
+                --$num_dependent{$used_wav} if $num_dependent{$used_wav};
+                if ($num_dependent{$used_wav} == 0) {
+                    # Remove the WAVE path.
+                    my $wav_name = basename($used_wav);
+                    print "rm $wav_name...";
+                    $subsystem->exec('rm', $used_wav) == 0
+                        or syserr( error => "Couldn't remove temporary file;\n"
+                                            . "$wav_name\n$?");
+                }
+            }
+        }
+        sleep 1;
+    }
+
+    for my $fin_thread (threads->list(threads::joinable)) {
+        my $used_wav = $fin_thread->join();
+        if (defined $used_wav) {
+            --$num_dependent{$used_wav} if $num_dependent{$used_wav};
+            if ($num_dependent{$used_wav} == 0) {
+                # Remove the WAVE path.
+                my $wav_name = basename($used_wav);
+                print "rm $wav_name...";
+                $subsystem->exec('rm', $used_wav) == 0
+                    or syserr( error => "Couldn't remove temporary file;\n"
+                                        . "$wav_name\n$?");
+            }
+        }
+    }
+
+    print "DONE\n";
 
     print "Copying accompanying files...";
 

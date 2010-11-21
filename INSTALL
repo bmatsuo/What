@@ -46,7 +46,7 @@ PERL DEPENDENCIES
         LWP::UserAgent
         Moose
         MooseX::Singleton
-        Term::Readline
+        Term::ReadLine
         Data::Dumper
         MP3::Tag
         Audio::FLAC::Header

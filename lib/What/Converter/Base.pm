@@ -29,6 +29,9 @@ has 'dry_run' => (isa => 'Bool', is => 'rw', required => 0, default => 0);
 has 'flac'    => (isa => 'What::Format::FLAC', is => 'rw', required => 0);
 has 'dest_dir' => (isa => 'Str', is => 'rw', required => 0);
 
+has 'append_id' => (isa => 'Bool', is => 'rw', default => 0);
+has 'id'    => (isa => 'Int', is => 'rw', required => 1);
+
 ### INSTANCE METHOD
 # Subroutine: flac_path
 # Usage: $self->flac_path
@@ -62,6 +65,7 @@ sub output_name($) {
     my $name = basename($self->flac->path);
     my $ext = $self->ext();
     $name =~ s/\.flac \z/.$ext/xms;
+    $name = $self->id."-$name" if $self->append_id;
     return $name;
 }
 
