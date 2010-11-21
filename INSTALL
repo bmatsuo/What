@@ -45,7 +45,7 @@ PERL DEPENDENCIES
         Class::InsideOut
         LWP::UserAgent
         Moose
-				MooseX::Singleton
+        MooseX::Singleton
         Term::Readline
         Data::Dumper
         MP3::Tag
