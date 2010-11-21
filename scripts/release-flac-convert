@@ -13,7 +13,13 @@ use File::Basename;
 use File::Glob qw{bsd_glob};
 use List::Util qw{first};
 use Carp;
-use threads;
+my $USER_HAS_THREADS;
+if (eval {use threads; 1}) {
+    $USER_HAS_THREADS = 1 
+} else{
+    sub threads::running { () }
+    sub threads::joinable { () }
+}
 use Thread::Queue;
 
 # Include CPAN modules.
@@ -287,33 +293,32 @@ sub main{
     };
 
     my $max_threads = 3;
-    while ( $conv_q->pending() ) {
+    while ( $conv_q->pending() 
+            || ($USER_HAS_THREADS && threads->list(threads::running) > 0)) {
+        if (!$USER_HAS_THREADS) {
+            my $used_wav = $thread_action->();
+            if (defined $used_wav) {
+                --$num_dependent{$used_wav} if $num_dependent{$used_wav};
+                if ($num_dependent{$used_wav} == 0) {
+                    # Remove the WAVE path.
+                    my $wav_name = basename($used_wav);
+                    print "rm $wav_name...";
+                    $subsystem->exec('rm', $used_wav) == 0
+                        or syserr( error => "Couldn't remove temporary file;\n"
+                                            . "$wav_name\n$?");
+                }
+            }
+            next;
+        }
         my $thread_buffer_size = scalar threads->list(threads::running);
-        if ($thread_buffer_size < $max_threads) {
+        if ( $conv_q->pending() && $thread_buffer_size < $max_threads ) {
             for (0 .. $max_threads - $thread_buffer_size) {
                 my $thready = threads->create(sub { $thread_action->() });
             }
         }
         else {
-            for my $fin_thread (threads->list(threads::joinable)) {
-                my $used_wav = $fin_thread->join();
-                if (defined $used_wav) {
-                    --$num_dependent{$used_wav} if $num_dependent{$used_wav};
-                    if ($num_dependent{$used_wav} == 0) {
-                        # Remove the WAVE path.
-                        my $wav_name = basename($used_wav);
-                        print "rm $wav_name...";
-                        $subsystem->exec('rm', $used_wav) == 0
-                            or syserr( error => "Couldn't remove temporary file;\n"
-                                                . "$wav_name\n$?");
-                    }
-                }
-            }
             sleep 1;
         }
-    }
-
-    while ( threads->list(threads::running) > 0 ) {
         for my $fin_thread (threads->list(threads::joinable)) {
             my $used_wav = $fin_thread->join();
             if (defined $used_wav) {
@@ -328,22 +333,14 @@ sub main{
                 }
             }
         }
-        sleep 1;
     }
 
-    for my $fin_thread (threads->list(threads::joinable)) {
-        my $used_wav = $fin_thread->join();
-        if (defined $used_wav) {
-            --$num_dependent{$used_wav} if $num_dependent{$used_wav};
-            if ($num_dependent{$used_wav} == 0) {
-                # Remove the WAVE path.
-                my $wav_name = basename($used_wav);
-                print "rm $wav_name...";
-                $subsystem->exec('rm', $used_wav) == 0
-                    or syserr( error => "Couldn't remove temporary file;\n"
-                                        . "$wav_name\n$?");
-            }
-        }
+    my @remaining_wavs = find_file_pattern('*.wav', '~/.what/work/wav');
+    if (@remaining_wavs) {
+        print map {"rm $_..."} @remaining_wavs;
+        $subsystem->exec('rm', @remaining_wavs) == 0
+            or syserr( error => "Couldn't remove temporary files;\n"
+                                . "@remaining_wavs\n$?");
     }
 
     print "DONE\n";
