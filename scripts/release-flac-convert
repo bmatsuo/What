@@ -16,9 +16,9 @@ use Carp;
 my $USER_HAS_THREADS;
 if (eval {use threads; 1}) {
     $USER_HAS_THREADS = 1 
-} else{
-    sub threads::running { () }
-    sub threads::joinable { () }
+}
+else{
+    eval {use What::ThreadDummy;}
 }
 use Thread::Queue;
 
