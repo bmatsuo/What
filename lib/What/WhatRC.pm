@@ -64,6 +64,9 @@ has itunes_copies_music => (isa => 'Bool', is => 'rw', default => 0);
 # If should_link_to_library is 1 hard-links are added to your music library.
 has should_link_to_library => (isa => 'Str', is => 'rw', default => 0);
 
+# Maximum number of threads to spawn for worker jobs (FLAC conversion).
+has max_threads => (isa => 'Int', is => 'rw', default => 2);
+
 # Favorite text editor.
 has editor  => (isa => 'Str', is => 'rw', default => 'nano');
 

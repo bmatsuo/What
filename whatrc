@@ -60,6 +60,13 @@ my $WhatCDConfig = {
 # Misc Options
 ####
 
+# Maximum number of threads to spawn for worker jobs (e.g. FLAC conversions).
+'max_threads' => 3,
+
+####
+# Preferred Programs
+####
+
 # Favorite text editor.
 'editor'  => 'nano',
 

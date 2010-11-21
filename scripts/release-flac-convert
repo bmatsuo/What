@@ -293,7 +293,7 @@ sub main{
         return $wav;
     };
 
-    my $max_threads = 3;
+    my $max_threads = whatrc->max_threads;
     while ( $conv_q->pending() 
             || ($USER_HAS_THREADS && threads->list(threads::running) > 0)) {
         if (!$USER_HAS_THREADS) {
