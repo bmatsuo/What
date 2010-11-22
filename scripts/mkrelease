@@ -125,6 +125,7 @@ sub main{
     # Check the release and make any necessary M3U files.
     if (!$opt{'--bandcamp'}) {
         # The release must be in the rip_dir. So check it.
+        print {\*STDERR} "Checking release.\n";
         my @check_release = ('release-ok', 
             ($opt{'--verbose'} ? '--verbose' : ()),
             ($opt{'--no-cue'} ? '--no-cue' : ()),
@@ -132,6 +133,7 @@ sub main{
         $subsystem->exec(@check_release) == 0 or die;
 
         # Create any necessary m3u files.
+        print {\*STDERR} "Creating any necessary M3U playlists.\n";
         my @mkm3u = ('release-mkm3u', 
             '--artist', $opt{'--artist'},
             '--title', $opt{'--title'},
@@ -145,6 +147,7 @@ sub main{
     }
 
     # Create the release directory structure.
+    print {\*STDERR} "Creating upload hierarchy directories.\n";
     my @scaffold = ('release-scaffold', 
         '--artist', $opt{'--artist'},
         '--title', $opt{'--title'},
@@ -159,8 +162,8 @@ sub main{
             . "When I know it is reliable again, I will try it out again.\n";
     }
     else { # This is a rip, not bandcamp.
-
         # Move the FLAC release files, and Info.txt into place.
+        print {\*STDERR} "Moving release into the upload hierarchy.\n";
         my @move_release = ('mv', @release_files, $flac_dir);
         $subsystem->exec(@move_release) == 0 or die;
         my @move_info 
@@ -172,6 +175,7 @@ sub main{
             my @fargs = @lossy_args;
             my $pformat;
             my $should_delete_pformat = 0;
+            print {\*STDERR} "Converting release to @lossy_formats.\n";
             my @convert = ('release-flac-convert', 
                 '--artist', $opt{'--artist'},
                 '--title', $opt{'--title'},
@@ -185,6 +189,7 @@ sub main{
 
     # Create any requested torrents.
     if ($user_wants_a_format) {
+        print {\*STDERR} "Create torrent file(s).\n";
         my @mktorrent = ('release-mktorrent', 
             '--artist', $opt{'--artist'},
             '--title', $opt{'--title'},
@@ -206,6 +211,7 @@ sub main{
     # After torrents have been created (uploadable), 
     #   add the release to the users music library if desired.
     if ($opt{'--add-to-library'}) {
+        print {\*STDERR} "Adding release to music library.\n";
         my @add_to_lib = ( 'release-add-to-library',
             '--artist', $opt{'--artist'},
             '--title', $opt{'--title'},

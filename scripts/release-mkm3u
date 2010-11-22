@@ -66,7 +66,8 @@ sub main{
     for my $disc_dir (@disc_dirs) {
         my @existing_m3us = bsd_glob(glob_safe($disc_dir)."/*.m3u");
         if (@existing_m3us > 0) {
-            print "M3U found in $disc_dir. Skipping...\n";
+            print "M3U found in $disc_dir. Skipping...\n"
+                if $opt{'--verbose'};
             next;
         }
         my @disc_flacs = bsd_glob(glob_safe($disc_dir)."/*.flac");
@@ -79,7 +80,7 @@ sub main{
             = $m3u_name =~ m/./xms ? "$title - $m3u_name.m3u"
             : "$title.m3u";
         my $m3u_path = "$disc_dir/$m3u_name";
-        print "Creating playlist $m3u_path...\n";
+        print "Creating playlist $m3u_path...\n" if $opt{'--verbose'};
         open my $m3u, ">", $m3u_path
             or die "Couldn't open M3U file $m3u_path";
         print {$m3u} mkm3u(files => \@disc_flacs);
