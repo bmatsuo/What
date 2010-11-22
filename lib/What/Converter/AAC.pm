@@ -31,14 +31,16 @@ my %aac_tag = (
     COMPOSER => '--writer',
     GENRE => '--genre',
     ALBUM => '--album',
-    COMPILATION => '--compilation',
+    #COMPILATION => '--compilation',
     COMMENT => '--comment',
     # forget --cover-art for now,
 );
 
+sub input_precedes_opts { return 0; }
+sub needs_silencing { return 1; }
 sub format_descriptor { return 'AAC'; }
 sub ext { return 'm4a'; }
-sub needs_wav { return 0; }
+sub needs_wav { return 1; }
 sub program { return "faac"; }
 sub program_description { return `faac --help | head -n 2 | tail -n 1`; }
 sub audio_quality_options { return qw{-c 22050 -b 256}; }
@@ -48,8 +50,15 @@ sub tag_options {
     my @opts;
     for my $t (keys %aac_tag) {
         my $v = $self->flac->tag($t);
-        next if (!defined $v);
-        push @opts, $aac_tag{$t}, $v if $v =~ m/./xms;
+        next if (!defined $v || $v !~ m/./xms);
+        my $t_opt = $aac_tag{$t};
+        next if (!defined $t_opt);
+        if ($t eq 'COMPILATION') {
+            push @opts, $t_opt;
+        }
+        else {
+            push @opts, $t_opt, $v;
+        }
     }
     return @opts; 
 }

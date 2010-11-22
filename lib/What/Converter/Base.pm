@@ -99,6 +99,14 @@ sub options {
 }
 
 ### INSTANCE METHOD
+# Subroutine: input_precedes_opts
+# Usage: $self->input_precedes_opts(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub input_precedes_opts { return 1; }
+
+### INSTANCE METHOD
 # Subroutine: copy_remaining_tags
 # Usage: $converter->copy_remaining_tags(  )
 # Purpose: Copy tags that aren't set with options.
@@ -116,6 +124,16 @@ sub copy_remaining_tags {
 # Throws: Nothing
 sub format_descriptor() {
     return "";
+}
+
+### INSTANCE METHOD
+# Subroutine: needs_silencing
+# Usage: $self->needs_silencing(  )
+# Purpose: 
+# Returns: True if the converter needs to piped to /dev/null
+# Throws: Nothing
+sub needs_silencing {
+    return 0;
 }
 
 # Subroutine: $converter->describe( )
@@ -184,11 +202,20 @@ sub convert {
     $arg{input} = $self->needs_wav() ? $wav : $flac->path;
 
     # Perform the conversion.
-    my @cmd = ($self->program(), $arg{input}, $self->options(%arg));
+    my @cmd = ($self->options(%arg));
+    if ($self->input_precedes_opts()) { 
+        unshift @cmd, $arg{input};
+    }
+    else {
+        push @cmd, $arg{input};
+    }
+    unshift @cmd, $self->program();
     my $res = subsystem(
         cmd => \@cmd,
         verbose => $self->verbose(),
-        dry_run => $self->dry_run(),);
+        dry_run => $self->dry_run(),
+        #($self->needs_silencing() ? (redirect_to => '/dev/null') : ()), #This didn't work...
+    );
 
     # Destroy the WAVE if necessary.
     #if ($self->needs_wav()) {
@@ -203,7 +230,7 @@ sub convert {
     
     # Check that the conversion went smoothly.
     if ($res != 0) {
-        croak("Couldn't convert;\n$arg{input}\n->\n$output");
+        croak("Couldn't convert;\n$arg{input}   ->   $output\n$?");
     }
 
     $self->copy_remaining_tags();

@@ -87,6 +87,7 @@ sub exec {
 
         close $output_file;
         close $pipe_out;
+        return $?;
     }
     else{
         if (@cmd > 1) {
@@ -99,7 +100,6 @@ sub exec {
             return system "$cmd" if not $self->{dryrun};
         }
     }
-    return 0;
 }
 
 # Subroutine: 
