@@ -108,6 +108,16 @@ sub copy_remaining_tags {
     return;
 }
 
+### INSTANCE METHOD
+# Subroutine: format_descriptor
+# Usage: $self->format_descriptor
+# Purpose: Return a descriptor string for the format
+# Returns: Nothing
+# Throws: Nothing
+sub format_descriptor() {
+    return "";
+}
+
 # Subroutine: $converter->describe( )
 # Type: INSTANCE METHOD
 # Returns: A string describing the convertion

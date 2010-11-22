@@ -53,6 +53,7 @@ sub is_valid_bitrate {
     return;
 }
 
+sub format_descriptor { my $self = shift; return uc $self->bitrate }
 sub ext { return 'mp3'; }
 sub needs_wav { return 1; }
 sub program { return "lame"; }

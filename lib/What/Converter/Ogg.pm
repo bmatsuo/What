@@ -22,6 +22,7 @@ our $VERSION = '0.0_1';
 use Moose;
 extends 'What::Converter::Base';
 
+sub format_descriptor { return 'OGG' }
 sub ext {return 'ogg';}
 sub needs_wav { return 0; }
 sub program { return "oggenc"; }

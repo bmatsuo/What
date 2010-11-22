@@ -36,6 +36,7 @@ my %aac_tag = (
     # forget --cover-art for now,
 );
 
+sub format_descriptor { return 'AAC'; }
 sub ext { return 'm4a'; }
 sub needs_wav { return 0; }
 sub program { return "faac"; }

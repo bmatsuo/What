@@ -24,6 +24,7 @@ extends 'What::Converter::Base';
 # This is just a formality.
 sub needs_wav { return 0; }
 
+sub format_descriptor { return 'WAVE' }
 sub ext { return "wav"; }
 sub program { return "flac"; }
 sub program_description { return `flac --version`; }
