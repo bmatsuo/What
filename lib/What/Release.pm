@@ -410,10 +410,17 @@ sub copy_music_into_hierarchy {
         = map {$arg{$_}} qw{format library_root add_to_itunes itunes_will_copy};
     my $root = $self->{rip_root};
 
-    # Move the music files to the outgoing directory.
-    $self->_prep_music_copy_( $format );
+    my $needs_prep = 1;
+    if (whatrc->should_add_to_itunes && whatrc->itunes_copies_music) {
+        $needs_prep = 0;
+    }
 
-    my $containing_dir = What::outgoing_dir();
+    # Move the music files to the outgoing directory.
+    $self->_prep_music_copy_( $format ) if $needs_prep;
+
+    my $containing_dir 
+        = $needs_prep ? What::outgoing_dir()
+        : $self->format_dir(whatrc->preferred_format);
 
     my @music_files = find_file_pattern("*", $containing_dir);
     if (!@music_files) {
@@ -442,12 +449,6 @@ sub copy_music_into_hierarchy {
                 cmd => ['osascript', '-e', $add_track_ascript], 
                 redirect_to => '/dev/null',
             ) == 0 or croak("Couldn't add $track to iTunes.\n");
-        }
-
-        # Remove temporary outgoing directory contents if iTunes copies and organizes.
-        if ( $itunes_copies ) {
-            subsystem(cmd => ['rm', '-r', @music_files] ) == 0
-                or croak("Couldn't remove temporary outgoing files.\n");
         }
     }
 
