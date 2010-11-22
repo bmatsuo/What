@@ -169,7 +169,7 @@ sub main{
     my %dependent_convs;
     my %num_dependent;
 
-    print "Preparing conversions...";
+    print sprintf ("%14s", "Preparing jobs"), ($opt{'--verbose'} ? '...' : q{});
     my $converter_id = 0;
     # Convert each flac file into all desired formats.
     for my $flac_path (
@@ -191,8 +191,9 @@ sub main{
         # Create a name for reencoded MP3 files.
         my $flac = basename($flac_path);
 
-        print '[ ';
-        print sprintf ("%02d %s:", $flac_obj->tag('tracknumber'),$flac_obj->tag('title'));
+        if ($opt{'--verbose'}) {
+            print sprintf ("[ %02d %s:", $flac_obj->tag('tracknumber'),$flac_obj->tag('title'));
+        }
 
         if ($should_create_wav) {
             my $new_wav_c = What::Converter::WAVE->new(
@@ -201,7 +202,12 @@ sub main{
                 append_id => 1,
                 id => $converter_id++,
             );
-            print q{ }.$new_wav_c->format_descriptor;
+            if ($opt{'--verbose'}) {
+                print q{ }.$new_wav_c->format_descriptor;
+            }
+            else {
+                print '.';
+            }
             $conv_q->enqueue([$new_wav_c,]);
             #$wav_c->flac($flac_obj);
             #$wav_c->dest_dir($temp_wav_dest_dir);
@@ -243,7 +249,12 @@ sub main{
                 croak("Didn't recognize format $uc_format.");
             }
 
-            print q{ }.$conv->format_descriptor;
+            if ($opt{'--verbose'}) {
+                print q{ }.$conv->format_descriptor;
+            }
+            else {
+                print '.';
+            }
 
             # Create the transcode.
             $conv->flac($flac_obj);
@@ -257,14 +268,14 @@ sub main{
             }
         }
 
-        print ' ]';
+        print ' ]' if $opt{'--verbose'};
 
         if ($should_create_wav) { # Then we should destroy the wav.
 
         }
     }
-
-    print "\nConverting files...";
+    print "Done\n";
+    print sprintf ("%14s", "Converting"), ($opt{'--verbose'} ? '...' : q{});
 
     my $num_threads = 0;
     my $thread_action = sub {
@@ -277,7 +288,10 @@ sub main{
         $c->convert(%arg);
         my $out = $c->output_path;
 
-        if ($c->flac->tag('discnumber')) {
+        if (!$opt{'--verbose'}) {
+            print '.';
+        }
+        elsif ($c->flac->tag('discnumber')) {
             print sprintf (
                 "[ [%s] %02d-%02d ]",
                 $c->format_descriptor,
@@ -313,7 +327,10 @@ sub main{
             --$num_dependent{$used_wav} if $num_dependent{$used_wav};
             if ($num_dependent{$used_wav} == 0) {
                 # Remove the WAVE path.
-                if ($converter->flac->tag('discnumber')) {
+                if (!$opt{verbose}) {
+                    # Print nothing.
+                }
+                elsif ($converter->flac->tag('discnumber')) {
                     print sprintf (
                         "! RM [WAVE] %02d-%02d !",
                         $converter->flac->tag('discnumber'),
@@ -359,13 +376,15 @@ sub main{
 
     my @remaining_wavs = find_file_pattern('*.wav', '~/.what/work/wav');
     if (@remaining_wavs) {
-        print map {sprintf ("! RM [WAVE] %s !", $_)} @remaining_wavs;
+        if ($opt{'--verbose'}) {
+            print map {sprintf ("! RM [WAVE] %s !", $_)} @remaining_wavs;
+        }
         $subsystem->exec('rm', @remaining_wavs) == 0
             or syserr( error => "Couldn't remove temporary files;\n"
                                 . "@remaining_wavs\n$?");
     }
 
-    print "DONE\n";
+    print "Done\n";
 
     print "Copying accompanying files...";
 
@@ -434,7 +453,7 @@ sub main{
         }
     }
 
-    print "DONE\n";
+    print "Done\n";
 
     exit($exitcode);
 }
