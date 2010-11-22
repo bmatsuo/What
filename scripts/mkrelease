@@ -26,7 +26,7 @@ use What::Release;
 use What::Subsystem;
 use What::Format;
 
-our $VERSION = "0.0_7";
+our $VERSION = "0.0_9";
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -47,7 +47,13 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
+my $rip_dir = whatrc->rip_dir;
+my $up_root = whatrc->upload_root;
 my $illegal_chars = qr{([/?:])}xms;
+my $subsystem = What::Subsystem->new(
+    dryrun => $opt{'--dry-run'},
+    verbose => $opt{'--verbose'},);
+
 
 ########################################################################
 # MAIN FUNCTION
@@ -59,68 +65,62 @@ sub main{
         artist => $opt{'--artist'},
         title => $opt{'--title'},
         year => $opt{'--year'},);
+    my ($artist, $year, $title) 
+        = map {$release->{$_}} qw{artist year title};
 
-    my @lossy_args = grep {$opt{$_}} (qw{--flac --320 --v0 --v2 --aac --ogg});
-    my @lossy_formats 
-        = map {format_normalized($_)} (map {m/\A -- (.*) \z/xms} @lossy_args);
-    my @format_args = @lossy_args;
-    unshift @format_args, '--flac' if $opt{'--flac'};
+    # Figure out the torrent formats requested and do book-keeping.
+    # Create a list of lossy format arguments and their names.
+    my @lossy_args                  
+        = grep {$opt{$_}} (qw{--320 --v0 --v2 --aac --ogg});
+    my @lossy_formats               
+        = map {format_normalized($_)} (map {m/\A --(.*) \z/xms} @lossy_args);
+    # Create a list of all format arguments and their names.
+    my @format_args = @lossy_args;  
     my @torrent_formats = @lossy_formats;
-    unshift @torrent_formats, format_normalized('FLAC') if $opt{'--flac'};
+    if ($opt{'--flac'}) { # Of course, append flac if it was given.
+        unshift @format_args, '--flac' if $opt{'--flac'};
+        unshift @torrent_formats, format_normalized('flac');
+    }
 
+    # Determine if the user wants any conversions, or any torrents at all.
     my $user_wants_a_conversion = scalar (@lossy_args);
     my $user_wants_a_format = scalar @format_args;
-
-    if (!$user_wants_a_format) {
+    if (!$user_wants_a_format && $opt{'--verbose'}) {
         print {\*STDERR} join q{ },
             "No formats selected to release (make torrents).",
             "FLAC will be moved into hierarchy with no torrents made.\n";
     }
 
-    my ($artist, $year, $title)
-        = map {$opt{$_}} qw{--artist --year --title};
-
+    # Look for illegal characters in the artist name and release title.
     if ($artist =~ $illegal_chars) {
-        print {\*STDERR} 
-        "Illegal character $1 in artist '$artist'.\n";
+        print {\*STDERR} "Illegal character $1 in artist '$artist'.\n";
         $exitcode = 1;
     }
-
     if ($title =~ $illegal_chars) {
-        print {\*STDERR} 
-        "Illegal character $1 in title '$title'.\n";
+        print {\*STDERR} "Illegal character $1 in title '$title'.\n";
         $exitcode = 1;
     }
-
-    my $rip_dir = whatrc->rip_dir;
-
-    my $up_root = whatrc->upload_root;
 
     my $flac_dir = $release->format_dir('FLAC');
 
+    # Look for all the release files (TODO: CHECK IF THIS IS ACTUALLY WORKING!!).
     my @release_files = bsd_glob("$rip_dir/*");
+
+    # Look for existing playlists.
     my @existing_m3us = grep {$_ =~ m/\.m3u\z/xms} @release_files;
     my $root_has_m3u = @existing_m3us > 0;
-    if (!$root_has_m3u) {
-        print "No M3U found @existing_m3us\n";
-    }
+    if (!$root_has_m3u && $opt{'--verbose'}) { print "No M3U found @existing_m3us\n"; }
 
+    # Look for file 'Info.txt', and remove it from the @release_files list.
     my $file_is_info = sub {$_[0] =~ m/Info\.txt\z/xms};
-
     my @info 
         = defined $opt{'--bandcamp'} ? ("") 
         : grep {$file_is_info->($_)} @release_files;
-
     if (!@info) {
-        print {\*STDERR} "Can't find Info.txt.\n";
+        print {\*STDERR} "Error: Can't find Info.txt.\n";
         exit(1);
     }
-
     @release_files = grep {!$file_is_info->($_)} @release_files;
-
-    my $subsystem = What::Subsystem->new(
-        dryrun => $opt{'--dry-run'},
-        verbose => $opt{'--verbose'},);
 
     # Check the release and make any necessary M3U files.
     if (!$opt{'--bandcamp'}) {
@@ -139,7 +139,8 @@ sub main{
         $subsystem->exec(@mkm3u) == 0 or die;
 
         # Add any created M3U files to the set of release files.
-        my @m3us = find_file_pattern("*.m3u",$rip_dir);
+        # (That is not very efficient).
+        my @m3us = find_file_pattern("*.m3u", $rip_dir);
         push @release_files, @m3us if !$root_has_m3u;
     }
 
@@ -153,69 +154,20 @@ sub main{
     $subsystem->exec(@scaffold ) == 0 or die;
 
     if ($opt{'--bandcamp'}) {
-        my $artist_subdomain = lc $artist;
-        # All I know now is that spaces turned to empty strings.
-        $artist_subdomain =~ s/[^a-zA-Z0-9]+//gxms;
-        my $album_url_path = lc $title;
-        # All I know now is that spaces turned to dashes.
-        $album_url_path =~ s/[^a-zA-Z0-9]+/-/gxms;
-        $album_url_path =~ s/ -+ \z//xms;
-        my $album_url 
-        = join "/", "http://$artist_subdomain.bandcamp.com",
-        "album", $album_url_path;
-        my $album_html = get($album_url) 
-            or die("Can't fetch $album_url."
-            ." Please report this if it's a non-user error.");
-        # Regexp to find the album id in html.
-        my $album_id_p = qr{<!-- \s album \s id \s (\d+) \s -->}xms;
-        if ($album_html =~ $album_id_p) {
-            # Consturct a base url for requests
-            my $album_id = $1;
-            my $base_request_url 
-            = join '/', 
-            "http://popplers5.bandcamp.com", 
-            "download", "album";
-
-            # TODO: Create a request, download and unzip for each format.
-            REQUESTFORMAT:
-            for my $format (qw{flac 320 v0 v2}) {
-                next REQUESTFORMAT if !defined $opt{"--$format"};
-                print "Fetching $format... ";
-                my $format_dir = $release->format_dir($format);
-                my $format_zip = $format_dir.".zip";
-                my $enc_format = $format eq 'flac' ? $format
-                : "mp3-$format";
-                my $request_arg_string 
-                = "enc=$enc_format&id=$album_id";
-                my $request = "$base_request_url?$request_arg_string";
-                print $request, "\n";
-                my @fetch = ('curl', $request, '-o', $format_zip);
-                $subsystem->exec(@fetch) == 0 or die;
-                if (not $format eq 'flac') { 
-                    # release-scaffold makes a FLAC dir.
-                    # Others need to be created now.
-                    my @mk_format_dir = ('mkdir', $format_dir);
-                    $subsystem->exec(@mk_format_dir) == 0 or die;
-                }
-                my @unzip_format 
-                = ('unzip','-d', $format_dir, $format_zip);
-                $subsystem->exec(@unzip_format) == 0 or die;
-                my @rm_zip = ('rm', $format_zip);
-                $subsystem->exec(@rm_zip) == 0 or die;
-            }
-        }
-        else {
-            die("Can't find album id.")
-        }
+        # MOVED ALL CODE TO bandcamp_release();
+        print "Error: Bandcamp releasing is broken for now. "
+            . "When I know it is reliable again, I will try it out again.\n";
     }
     else { # This is a rip, not bandcamp.
+
+        # Move the FLAC release files, and Info.txt into place.
         my @move_release = ('mv', @release_files, $flac_dir);
         $subsystem->exec(@move_release) == 0 or die;
-
         my @move_info 
         = ('mv', $info[0], $release->dir());
         $subsystem->exec(@move_info) == 0 or die;
 
+        # Convert the FLAC into any other requested formats.
         if ($user_wants_a_conversion) {
             my @fargs = @lossy_args;
             my $pformat;
@@ -231,6 +183,7 @@ sub main{
         }
     }
 
+    # Create any requested torrents.
     if ($user_wants_a_format) {
         my @mktorrent = ('release-mktorrent', 
             '--artist', $opt{'--artist'},
@@ -241,13 +194,17 @@ sub main{
             ($opt{'--dry-run'} ? '--dry-run' : ()),
             ($opt{'--add-to-watch'} ? '--add-to-watch' : ()), );
         $subsystem->exec(@mktorrent ) == 0 or die;
+        print {\*STDERR} "Torrents are ready to be created.\n";
     }
     else {
-        print {\*STDERR} "Release is ready.\n",
-        "Use release-flac-convert / release-mktorrent ",
-        "to upload the release.\n";
+        print {\*STDERR} "Release is ready.\n"
+            , "Use release-flac-convert / release-mktorrent "
+            , "to upload the release.\n"
+            if $opt{'--verbose'};
     }
 
+    # After torrents have been created (uploadable), 
+    #   add the release to the users music library if desired.
     if ($opt{'--add-to-library'}) {
         my @add_to_lib = ( 'release-add-to-library',
             '--artist', $opt{'--artist'},
@@ -263,6 +220,63 @@ sub main{
 # SUPPORTING SUBROUTINES
 ########################################################################
 
+sub bandcamp_release {
+    my ($artist, $title, $release);
+    my $artist_subdomain = lc $artist;
+    # All I know now is that spaces turned to empty strings.
+    $artist_subdomain =~ s/[^a-zA-Z0-9]+//gxms;
+    my $album_url_path = lc $title;
+    # All I know now is that spaces turned to dashes.
+    $album_url_path =~ s/[^a-zA-Z0-9]+/-/gxms;
+    $album_url_path =~ s/ -+ \z//xms;
+    my $album_url 
+    = join "/", "http://$artist_subdomain.bandcamp.com",
+    "album", $album_url_path;
+    my $album_html = get($album_url) 
+        or die("Can't fetch $album_url."
+        ." Please report this if it's a non-user error.");
+    # Regexp to find the album id in html.
+    my $album_id_p = qr{<!-- \s album \s id \s (\d+) \s -->}xms;
+    if ($album_html =~ $album_id_p) {
+        # Consturct a base url for requests
+        my $album_id = $1;
+        my $base_request_url 
+        = join '/', 
+        "http://popplers5.bandcamp.com", 
+        "download", "album";
+
+        # TODO: Create a request, download and unzip for each format.
+        REQUESTFORMAT:
+        for my $format (qw{flac 320 v0 v2}) {
+            next REQUESTFORMAT if !defined $opt{"--$format"};
+            print "Fetching $format... ";
+            my $format_dir = $release->format_dir($format);
+            my $format_zip = $format_dir.".zip";
+            my $enc_format = $format eq 'flac' ? $format
+            : "mp3-$format";
+            my $request_arg_string 
+            = "enc=$enc_format&id=$album_id";
+            my $request = "$base_request_url?$request_arg_string";
+            print $request, "\n";
+            my @fetch = ('curl', $request, '-o', $format_zip);
+            $subsystem->exec(@fetch) == 0 or die;
+            if (not $format eq 'flac') { 
+                # release-scaffold makes a FLAC dir.
+                # Others need to be created now.
+                my @mk_format_dir = ('mkdir', $format_dir);
+                $subsystem->exec(@mk_format_dir) == 0 or die;
+            }
+            my @unzip_format 
+            = ('unzip','-d', $format_dir, $format_zip);
+            $subsystem->exec(@unzip_format) == 0 or die;
+            my @rm_zip = ('rm', $format_zip);
+            $subsystem->exec(@rm_zip) == 0 or die;
+        }
+    }
+    else {
+        die("Can't find album id.")
+    }
+}
 
 # Finally, kickstart the script
 main();
