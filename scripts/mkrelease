@@ -199,7 +199,9 @@ sub main{
             ($opt{'--dry-run'} ? '--dry-run' : ()),
             ($opt{'--add-to-watch'} ? '--add-to-watch' : ()), );
         $subsystem->exec(@mktorrent ) == 0 or die;
-        print {\*STDERR} "Torrents are ready to be openned/uploaded.\n";
+        print {\*STDERR} 
+            "Torrents are ready to be openned/uploaded at\n\n\t"
+            . $release->dir() . "\n\n";
     }
     else {
         print {\*STDERR} "Release is ready.\n"
