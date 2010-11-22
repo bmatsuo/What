@@ -76,8 +76,20 @@ sub main{
             announce    => $announce,
             source_dir  => $format_dir,);
 
+        if ($opt{'--verbose'}) {
+            print "Making $format torrent..."
+        }
+        else {
+            $subsystem->{redirect_to} = '/dev/null';
+        }
         $subsystem->exec(@mktorrent_cmd) == 0
             or croak("Couldn't create torrent file.");
+        if ($opt{'--verbose'}) {
+            print "Done."
+        }
+        else {
+            $subsystem->{redirect_to} = undef;
+        }
 
 
         # Add the torrents to the watch directory.

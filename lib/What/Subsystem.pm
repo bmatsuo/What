@@ -26,28 +26,40 @@ our @EXPORT = qw(
     subsystem
 );
 
-our $VERSION = '0.0_1';
+our $VERSION = '00.00_04';
 
-my %def_arg = ( dryrun => 0, verbose => 0 );
+my %def_arg = ( 
+    dryrun => 0, verbose => 0,
+    redirect_to => undef, append => 0,
+);
 
 # Subroutine: 
 #   What::Subsystem->new(
 #       dryrun => $is_dryrun, 
-#       verbose => $is_verbose,)
+#       verbose => $is_verbose,
+#       redirect_to => $output_file,
+#       append => $should_append_to_output_file,)
 # Type: CLASS METHOD
 # Purpose: Create a What::Subsystem object.
-#   The constructor takes two optional arguments.
+#   The constructor takes four optional arguments.
 #   If $is_dryrun evaluates true, then the system command is not
-#   executed.
+#       executed.
 #   If $is_verbose evaluates true, then the system command will be
-#   printed to STDOUT before it is executed.
+#       printed to STDOUT before it is executed.
+#   If $output_file is given, the system call's stdout stream will
+#       be redirected to the specified file.
+#   If $append is true and $output_file is given, then the system 
+#       call's output will be appended to the specified file.
 # Returns:
 #   New What::Subsystem object.
 sub new {
     my $class = shift;
     my %arg = @_;
     %arg = (%def_arg, %arg);
-    my $self = {dryrun=>$arg{dryrun}, verbose=>$arg{verbose}};
+    my $self = {
+        dryrun=>$arg{dryrun},verbose=>$arg{verbose},
+        redirect_to => $arg{redirect_to},append=>$arg{append},
+    };
     bless $self, $class;
     return $self;
 }
@@ -63,14 +75,29 @@ sub new {
 sub exec {
     my $self = shift;
     my @cmd = @_;
-    if (@cmd > 1) {
-        print "@cmd\n" if $self->{verbose};
-        return system @cmd if not $self->{dryrun};
+    if (defined $self->{redirect_to}) {
+        my $mode = ">";
+        $mode = ">>" if ($self->{append});
+        open my $output_file, $mode, $self->{redirect_to}
+            or die "Couldn't open output file $self->{redirect_to}.";
+        open my $pipe_out, "-|", @cmd
+            or die "Couldn't open up a pipe to command\n\t@cmd\n";
+
+        print {$output_file} do {local $/; <$pipe_out>};
+
+        close $output_file;
+        close $pipe_out;
     }
-    else {
-        my $cmd = $cmd[0];
-        print "$cmd\n" if $self->{verbose};
-        return system "$cmd" if not $self->{dryrun};
+    else{
+        if (@cmd > 1) {
+            print "@cmd\n" if $self->{verbose};
+            return system @cmd if not $self->{dryrun};
+        }
+        else {
+            my $cmd = $cmd[0];
+            print "$cmd\n" if $self->{verbose};
+            return system "$cmd" if not $self->{dryrun};
+        }
     }
     return 0;
 }
@@ -79,7 +106,9 @@ sub exec {
 #   subsystem(
 #       cmd => $cmd,
 #       dryrun => $is_dryrun, 
-#       verbose => $is_verbose,) 
+#       verbose => $is_verbose,
+#       redirect_to => $output_file,
+#       append => $should_append_to_output_file,) 
 # Type: INTERFACE SUB
 # Purpose: Perform a subsystem call without creating an object first.
 #   $cmd can be either a string or an ARRAY reference.
@@ -88,17 +117,9 @@ sub exec {
 sub subsystem {
     my %arg = @_;
     my $cmd = $arg{cmd};
-    my ($is_dryrun, $is_verbose) = ($arg{dryrun}, $arg{verbose});
-    if ("ARRAY" eq ref $cmd) {
-        my @cmd = @$cmd;
-        print "@cmd\n" if $is_verbose;
-        return system @cmd if not $is_dryrun;
-    }
-    else {
-        print "$cmd\n" if $is_verbose;
-        return system "$cmd" if not $is_dryrun;
-    }
-    return 0;
+    delete $arg{cmd};
+    my $ss = What::Subsystem->new(%arg);
+    return $ss->exec( ref $cmd eq 'ARRAY' ? @{$cmd} : $cmd );
 }
 
 # Preloaded methods go here.
