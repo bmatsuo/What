@@ -169,6 +169,7 @@ sub main{
     my %dependent_convs;
     my %num_dependent;
 
+    print "Preparing conversions...";
     my $converter_id = 0;
     # Convert each flac file into all desired formats.
     for my $flac_path (
@@ -190,7 +191,8 @@ sub main{
         # Create a name for reencoded MP3 files.
         my $flac = basename($flac_path);
 
-        print "Preparing convertions $flac...";
+        print '[ ';
+        print sprintf ("%02d %s:", $flac_obj->tag('tracknumber'),$flac_obj->tag('title'));
 
         if ($should_create_wav) {
             my $new_wav_c = What::Converter::WAVE->new(
@@ -199,6 +201,7 @@ sub main{
                 append_id => 1,
                 id => $converter_id++,
             );
+            print q{ }.$new_wav_c->format_descriptor;
             $conv_q->enqueue([$new_wav_c,]);
             #$wav_c->flac($flac_obj);
             #$wav_c->dest_dir($temp_wav_dest_dir);
@@ -206,7 +209,7 @@ sub main{
             $wav_path = $new_wav_c->output_path;
             $dependent_convs{$wav_path} = [];
             $num_dependent{$wav_path} = 0;
-            print "WAVE...";
+            
         }
 
         # Convert the decoded WAVE into all desired formats.
@@ -240,6 +243,8 @@ sub main{
                 croak("Didn't recognize format $uc_format.");
             }
 
+            print q{ }.$conv->format_descriptor;
+
             # Create the transcode.
             $conv->flac($flac_obj);
             $conv->dest_dir($dest_dir);
@@ -250,20 +255,16 @@ sub main{
             else {
                 $conv_q->enqueue([$conv,]);
             }
-            #$conv->convert(wav => $wav_path);
-
-            # Print status.
-            print "$uc_format...";
         }
 
-        print "DONE\n";
+        print ' ]';
 
         if ($should_create_wav) { # Then we should destroy the wav.
 
         }
     }
 
-    print "Converting files...";
+    print "\nConverting files...";
 
     my $num_threads = 0;
     my $thread_action = sub {
@@ -276,10 +277,21 @@ sub main{
         $c->convert(%arg);
         my $out = $c->output_path;
 
-        if ($c->isa('What::Converter::MP3')) {
-            print join q{}, '[', $c->bitrate, '] ';
+        if ($c->flac->tag('discnumber')) {
+            print sprintf (
+                "[ [%s] %02d-%02d ]",
+                $c->format_descriptor,
+                $c->flac->tag('discnumber'),
+                $c->flac->tag('tracknumber') 
+            );
         }
-        print basename($out), "...";
+        else {
+            print sprintf (
+                "[ [%s] %02d ]",
+                $c->format_descriptor,
+                $c->flac->tag('tracknumber')
+            );
+        }
 
 
         my $now_ok = $dependent_convs{$out};
@@ -290,25 +302,44 @@ sub main{
             }
         }
 
-        return $wav;
+        return [$c, $wav];
     };
 
     my $max_threads = whatrc->max_threads;
-    while ( $conv_q->pending() 
-            || ($USER_HAS_THREADS && threads->list(threads::running) > 0)) {
-        if (!$USER_HAS_THREADS) {
-            my $used_wav = $thread_action->();
-            if (defined $used_wav) {
-                --$num_dependent{$used_wav} if $num_dependent{$used_wav};
-                if ($num_dependent{$used_wav} == 0) {
-                    # Remove the WAVE path.
-                    my $wav_name = basename($used_wav);
-                    print "rm $wav_name...";
-                    $subsystem->exec('rm', $used_wav) == 0
-                        or syserr( error => "Couldn't remove temporary file;\n"
-                                            . "$wav_name\n$?");
+
+    my $thread_completion_action = sub {
+        my ($converter, $used_wav) = @{$_[0]};
+        if (defined $used_wav) {
+            --$num_dependent{$used_wav} if $num_dependent{$used_wav};
+            if ($num_dependent{$used_wav} == 0) {
+                # Remove the WAVE path.
+                if ($converter->flac->tag('discnumber')) {
+                    print sprintf (
+                        "! RM [WAVE] %02d-%02d !",
+                        $converter->flac->tag('discnumber'),
+                        $converter->flac->tag('tracknumber') 
+                    );
                 }
+                else {
+                    print sprintf (
+                        "! RM [WAVE] %02d !",
+                        $converter->flac->tag('tracknumber')
+                    );
+                }
+                $subsystem->exec('rm', $used_wav) == 0
+                    or syserr( error => join "\n", 
+                                        "Couldn't remove temporary file;",
+                                        , basename($used_wav) , $?);
+                ;
             }
+        }
+    };
+
+    while ( $conv_q->pending() 
+            || ($USER_HAS_THREADS && threads->list(threads::running) > 0)
+            || ($USER_HAS_THREADS && threads->list(threads::joinable) > 0)) {
+        if (!$USER_HAS_THREADS) {
+            $thread_completion_action->($thread_action->());
             next;
         }
         my $thread_buffer_size = scalar threads->list(threads::running);
@@ -321,24 +352,14 @@ sub main{
             sleep 1;
         }
         for my $fin_thread (threads->list(threads::joinable)) {
-            my $used_wav = $fin_thread->join();
-            if (defined $used_wav) {
-                --$num_dependent{$used_wav} if $num_dependent{$used_wav};
-                if ($num_dependent{$used_wav} == 0) {
-                    # Remove the WAVE path.
-                    my $wav_name = basename($used_wav);
-                    print "rm $wav_name...";
-                    $subsystem->exec('rm', $used_wav) == 0
-                        or syserr( error => "Couldn't remove temporary file;\n"
-                                            . "$wav_name\n$?");
-                }
-            }
+            my $res = $fin_thread->join();
+            $thread_completion_action->($res) if defined $res;
         }
     }
 
     my @remaining_wavs = find_file_pattern('*.wav', '~/.what/work/wav');
     if (@remaining_wavs) {
-        print map {"rm $_..."} @remaining_wavs;
+        print map {sprintf ("! RM [WAVE] %s !", $_)} @remaining_wavs;
         $subsystem->exec('rm', @remaining_wavs) == 0
             or syserr( error => "Couldn't remove temporary files;\n"
                                 . "@remaining_wavs\n$?");
