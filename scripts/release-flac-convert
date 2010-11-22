@@ -378,7 +378,8 @@ sub main{
         # Find the non-audio files in the disc directory.
         my @other_disc_files = find_file_pattern("*", $disc_dir);
         @other_disc_files = grep {$_ !~ m/\A \./xms} @other_disc_files;
-        @other_disc_files = grep {$_ !~ m/\.flac\z/xms} @other_disc_files;
+        @other_disc_files 
+            = grep {$_ !~ m/\.(flac | cue | log)\z/xms} @other_disc_files;
 
         # Find an M3U for the disc, and remove for special treatment.
         my @flac_m3us = grep {$_ =~ m/\.m3u\z/xms} @other_disc_files;
