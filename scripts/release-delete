@@ -120,7 +120,7 @@ sub main{
     }
 
     # Remove all requested format release directories/torrents.
-    print "Removing formats", $opt{'--verbose'} ? '...' : q{};
+    print "Removing format(s)", $opt{'--verbose'} ? '...' : q{};
     REMOVEDIRS:
     for my $f (@undesireds) {
         my $format_dir = $format_location{$f};

@@ -94,7 +94,7 @@ sub main{
     print "Done\n";
 
     if ($had_to_create_format) {
-        print "Deleting temporary $format release...";
+        print "Deleting temporary $format release.\n";
         0 == subsystem(
             cmd => [
                 'release-delete',
@@ -104,8 +104,6 @@ sub main{
                 "--$format",
             ],
         ) or die "Couldn't remove temporary $format release!";
-
-        print "Done\n";
     }
     exit($exitcode);
 }
