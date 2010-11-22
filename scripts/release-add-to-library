@@ -59,7 +59,7 @@ sub main{
         if !$release->exists();
 
     if ( !$release->exists($format) ) {
-        print "Creating temporary $format release of '$rname'...";
+        print "Creating temporary $format release for the library.\n";
 
         0 == subsystem(
             cmd => [
@@ -72,10 +72,20 @@ sub main{
         ) or die "Couldn't create $format release!";
 
         $had_to_create_format = 1;
-        print "Done\n";
     }
 
-    print join q{ }, "Adding", $release->name(), "to music library...";
+
+    # List the possible configurations. and generate a status message.
+    my $config1 = (whatrc->should_add_to_itunes && whatrc->itunes_copies_music);
+    my $config2 = whatrc->should_add_to_itunes;
+    # my $config3 = ...
+    my $status 
+        = $config1 ?"Adding the release to iTunes..."
+        : $config2 ?"Copying the release to the library and adding to iTunes..."
+        : "Copying the release to the library...";
+    print "$status";
+
+    # Add the release to the library.
     $release->copy_music_into_hierarchy( 
         format => $format, 
         library_root => whatrc->library,
@@ -85,7 +95,6 @@ sub main{
 
     if ($had_to_create_format) {
         print "Deleting temporary $format release...";
-
         0 == subsystem(
             cmd => [
                 'release-delete',

@@ -438,8 +438,10 @@ sub copy_music_into_hierarchy {
     if ($add_to_itunes) {
         for my $track (@music_files) {
             my $add_track_ascript = qq{tell application "iTunes" to add POSIX file "$track"};
-            subsystem(cmd => ['osascript', '-e', $add_track_ascript]) == 0
-                or croak("Couldn't add $track to iTunes.\n");
+            subsystem(
+                cmd => ['osascript', '-e', $add_track_ascript], 
+                redirect_to => '/dev/null',
+            ) == 0 or croak("Couldn't add $track to iTunes.\n");
         }
 
         # Remove temporary outgoing directory contents if iTunes copies and organizes.
