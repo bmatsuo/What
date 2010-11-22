@@ -80,9 +80,9 @@ sub main{
     }
 
     # FLAC deletion confirmation logic.
-    my $should_delete_flac = 0;
+    my $should_delete_flac = $opt{'--force'} ? 1 : 0;
     my ($quest, $resp);
-    if ($flac_exists && $format_location{$FLAC}) {
+    if (!$opt{'--force'} && $flac_exists && $format_location{$FLAC}) {
         $quest = "Are you sure you want to remove the FLAC release?";
         $prompt->question($quest);
         $resp = $prompt->prompt_user();
@@ -90,7 +90,9 @@ sub main{
     }
     elsif ($format_location{$FLAC} && !$opt{'--all'}) {
         print {\*STDERR} "Requested FLAC removal, but no FLAC release found.\n"
+            if $opt{'--verbose'};
     }
+
     # Boolean value: "There be FLAC files after execution."
     my $no_flac_after = $should_delete_flac || !$flac_exists;
 
@@ -102,7 +104,7 @@ sub main{
 
     # Confirm that the user wants to delete any unrecoverable formats.
     my $delete_unrecoverables = 1; # Logically easier for 1 to be default.
-    if (@unrecoverables) {
+    if (@unrecoverables && !$opt{'--force'}) {
         $quest = 'Warning: '
             . "The format(s) @unrecoverables can't be recreated w/o FLAC\n"
             . "Are you sure you'd like to delete the FLAC files?";
@@ -111,7 +113,8 @@ sub main{
         $delete_unrecoverables = 0 if $resp =~ /\A n/xms;
     }
 
-    if ( !$should_delete_flac && !$delete_unrecoverables) {
+    if ( ($opt{'--force'} && !(keys %format_location)) 
+            || (!$should_delete_flac && !$delete_unrecoverables) ) {
         print "Not deleting anything.\n" if $opt{'--verbose'};
         exit 0;
     }
