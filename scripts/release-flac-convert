@@ -129,10 +129,11 @@ sub main{
     #my %flac_info 
     #    = grep {$_ =~ m/ \. flac \z/xms} find_hierarchy($flac_source_dir);
     #= (map {flac_files_in($_)} @flac_dirs);
-    my @flac_files = grep {$_ =~ m/ \. flac \z/xms} find_hierarchy($flac_source_dir);
+    my @flac_files 
+        = grep {$_ =~ m/ \. flac \z/xms} find_hierarchy($flac_source_dir);
 
     for my $format (@desired_formats) {
-        print "Finding $format directories...";
+        print "Finding $format directories..." if $opt{'--verbose'};
         my $format_dest_dir 
             = $release->format_dir($format);
         if (!-d $format_dest_dir) {
@@ -142,7 +143,7 @@ sub main{
                         "Couldn't create directory $format_dest_dir\n$?");
         }
 
-        print "Found\n";
+        print "Found\n" if $opt{'--verbose'};
 
         $dest_for{$format} = $format_dest_dir;
 
@@ -386,7 +387,7 @@ sub main{
 
     print "Done\n";
 
-    print "Copying accompanying files...";
+    print "Copying accompanying files..." if $opt{'--verbose'};
 
     # This just makes the files in the root directory get copied.
     push @flac_dirs, $flac_source_dir 
@@ -453,7 +454,7 @@ sub main{
         }
     }
 
-    print "Done\n";
+    print "Done\n" if $opt{'--verbose'};
 
     exit($exitcode);
 }
