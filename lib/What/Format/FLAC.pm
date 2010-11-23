@@ -30,6 +30,17 @@ our @EXPORT = qw{
 };
 
 ### INSTANCE METHOD
+# Subroutine: has_image
+# Usage: $self->has_image(  )
+# Purpose: Determine "Does $flac have any images?"
+# Returns: Nothing
+# Throws: Nothing
+sub has_image {
+    my $self = shift;
+    return exists $self->{'picture'};
+}
+
+### INSTANCE METHOD
 # Subroutine: image_info
 # Usage: $flac->image_info(  )
 # Purpose: Find info about embedded cover art.
@@ -39,7 +50,8 @@ sub image_info {
     my $self = shift;
     #open my $metaflac, '-|', 'metaflac', '--list', $self->flac_path
     #    or croak("Couldn't read FLAC block info.");
-    return $self->head->picture(3);
+    return $self->head->picture(3) if $self->has_image();
+    return;
 }
 
 ### INSTANCE METHOD
