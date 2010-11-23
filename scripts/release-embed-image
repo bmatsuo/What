@@ -1,0 +1,175 @@
+#!/usr/bin/env perl
+# Use perldoc or option --man to read documentation
+###################################################
+
+our $VERSION = "00.00_01";
+# Originally created: 11/22/10 22:44:02.
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+use POSIX qw(ceil);
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+
+# Include private modules.
+use What;
+use What::WhatRC;
+use What::Format::FLAC;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+my $prog_incantation  = $0;
+my $prog_dir          = dirname($0);
+my $prog_name         = basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+my $temp_image_dir = '~/what/work/img';
+if (!-d $temp_image_dir) {
+    print {\*STDERR}
+        "Can't find temporary image directory.\n"
+        . "Please run the latest version of the 'setup' script.\n";
+    exit 1;
+}
+
+my $ok_img_formats 
+    = qr{(?: tiff | jpg | png )}xms;
+
+$kilo = 2<<9;
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    my @release_files = find_hierarchy(whatrc->rip_dir);
+    for my $f (@release_files) {
+        print sprintf "%-30s %d", $f, size_in_KB($f);
+    }
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+### INTERNAL UTILITY
+# Subroutine: is_image
+# Usage: is_image( $img )
+# Purpose: Compute value of logical statement "$img is an image file".
+# Returns: Boolean.
+# Throws: Nothing
+sub is_image {
+    my ($img) = @_;
+    die "No such image; $img." if !-e $img;
+    return 1 if $img =~ m/ \. $ok_img_format \z/ixms;
+    return;
+}
+
+### INTERFACE SUB
+# Subroutine: scale_down
+# Usage: scale_down( $img )
+# Purpose: Scale an image until it fits the What.CD size constraints.
+# Returns: 
+#   The path to the scaled image, 
+#   which must be moved or deleted 'manually' later.
+# Throws: Nothing
+sub scale_down {
+    my ($img) = @_;
+
+    return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: size_in_KB
+# Usage: size_in_KB( $path )
+# Purpose: Upper bound the size of $$path within 1 KB.
+# Returns: File size in kilobytes.
+# Throws: Nothing
+sub size_in_KB {
+    my ($path) = @_;
+    die "No such path; $img." if !-e $img;
+    my $size_in_bytes = -s $path;
+    my $size_in_kilobytes = $size_in_bytes / $kilo;
+    return $size_in_kilobytes;
+}
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+release-embed-image
+-- Safely embed the rip's cover art in FLAC files.
+
+=head1 VERSION
+
+Version 00.00_01
+
+=head1 USAGE
+
+release-embed-image [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+release-embed-image does three things
+
+    Find album cover art in the rip directory.
+
+    Convert that to a size acceptable on What.CD.
+
+    Embed the cover art into FLAC files in the rip directory.
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHORS
+
+Bryan Matsuo [bryan.matsuo@gmail.com] (primary author)
+
+=head1 COPYRIGHT 
+
+(c) Bryan Matsuo [bryan.matsuo@gmail.com]

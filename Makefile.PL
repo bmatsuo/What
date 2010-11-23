@@ -26,6 +26,7 @@ WriteMakefile(
         scripts/release-mktorrent
         scripts/release-add-to-library
         scripts/release-mkm3u
+        scripts/release-embed-image
         scripts/release-link
         scripts/release-mkinfo
         scripts/release-rm-badchar
