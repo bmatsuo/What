@@ -10,6 +10,7 @@ use warnings;
 # include CPAN modules
 use Readonly;
 use Term::ReadLine;
+use IO::Handle;
 
 our $VERSION = '0.0_3';
 # include any private modules

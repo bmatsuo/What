@@ -20,6 +20,7 @@ use What;
 use What::WhatRC;
 use What::Utils;
 use What::Subsystem;
+use What::Prompt::Choose;
 use What::Format::FLAC;
 
 ########################################################################
@@ -68,16 +69,89 @@ my $subsystem = What::Subsystem->new(
 # main() - main program execution 
 sub main{
     my @release_files = find_hierarchy(whatrc->rip_dir);
-    my @tiffs = grep {$_ =~ /\. tiff \z/ixms} @release_files;
-    for my $f (@tiffs) {
-        print sprintf "%s\n", scale_down($f);
-    }
+    my @tiffs = grep { $_ =~ /\. tiff \z/ixms } @release_files;
+    my @scores = map { score_img_name($_) } @tiffs;
+    my @order = sort { $scores[$b] <=> $scores[$a] } (0 ... $#scores);
+    #print "@tiffs\n";
+    #print "@scores\n";
+    @tiffs = @tiffs[@order];
+    #print "@order\n";
+    #print "@tiffs\n";
+    my $img_choose_p = What::Prompt::Choose->new(
+        choices => [@tiffs],
+        default => 0,
+        text    => "Which image is the cover?", );
+    my $i = $img_choose_p->prompt_user();
+    my $small_file = scale_down( $tiffs[$i] );
+    print "$small_file\n";
+
+    my @flac_paths = grep { m/\.flac\z/xms } @release_files;
+    #my @flacs = map { read_flac($_) } @flac_paths;
+    add_img_to_flacs($small_file, @flac_paths);
+
+    remove_temporary_images();
     exit($exitcode);
 }
 
 ########################################################################
 # SUPPORTING SUBROUTINES
 ########################################################################
+
+### INTERNAL UTILITY
+# Subroutine: add_img_to_flacs
+# Usage: add_img_to_flacs( $img, $flac_path )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub add_img_to_flacs {
+    my ($img, @flac_paths) = @_;
+    my @embed = ('metaflac', 
+        qq{--import-picture-from=3||||$img}, 
+        @flac_paths);
+    $subsystem->exec(@embed) == 0
+        or croak("Couldn't add pictures to file.\n\n$?\n\n");
+    return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: score_img_name
+# Usage: score_img_name( $img )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub score_img_name {
+    my ($img) = @_;
+    my $name = basename($img);
+    $name =~ s/\.\w\z//xms;
+    my @tokens = split /\W/, $name;
+    my $num_tokens = scalar @tokens;
+    my $raw_score = 0;
+    for my $t (@tokens) {
+        # Look for a whole match;
+        ++$raw_score
+            if  $t =~ /cover/ixms
+                || $t =~ /front/ixms;
+
+        # Look for a partial match;
+        $raw_score += 0.25
+            if  $t =~ /sleeve/ixms
+                || $t =~ /digipak/ixms;
+    }
+    return $raw_score / $num_tokens;
+}
+
+### INTERNAL UTILITY
+# Subroutine: remove_temporary_images
+# Usage: remove_temporary_images(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub remove_temporary_images {
+    my @temp_imgs = find_file_pattern('*', $temp_img_dir);
+    $subsystem->exec('rm', @temp_imgs) == 0
+        or croak("Couldn't remove @temp_imgs\n\n$?\n\n");
+    return;
+}
 
 ### INTERNAL UTILITY
 # Subroutine: is_image
