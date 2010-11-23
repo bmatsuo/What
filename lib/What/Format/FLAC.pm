@@ -29,6 +29,18 @@ our @EXPORT = qw{
     read_flac
 };
 
+### INSTANCE METHOD
+# Subroutine: image_info
+# Usage: $flac->image_info(  )
+# Purpose: Find info about embedded cover art.
+# Returns: A hash with keys 'block' and 'type';
+# Throws: Nothing
+sub image_info {
+    my $self = shift;
+    #open my $metaflac, '-|', 'metaflac', '--list', $self->flac_path
+    #    or croak("Couldn't read FLAC block info.");
+    return $self->head->picture(3);
+}
 
 ### INSTANCE METHOD
 # Subroutine: _tag_name_

@@ -36,6 +36,11 @@ my %aac_tag = (
     # forget --cover-art for now,
 );
 
+sub image_options {
+    my $self = shift;
+    return ('--cover-art', $self->temp_img_path());
+}
+sub can_embed_img { return 1; }
 sub input_precedes_opts { return 0; }
 sub needs_silencing { return 1; }
 sub format_descriptor { return 'AAC'; }

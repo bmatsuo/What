@@ -14,6 +14,7 @@ use POSIX qw(ceil);
 
 # Include CPAN modules.
 use Getopt::Euclid qw{ :vars<opt_> };
+use Data::Dumper;
 
 # Include private modules.
 use What;
@@ -108,8 +109,10 @@ sub add_img_to_flacs {
     my @embed = ('metaflac', 
         qq{--import-picture-from=3||||$img}, 
         @flac_paths);
+    print "Adding images to FLAC files...";
     $subsystem->exec(@embed) == 0
         or croak("Couldn't add pictures to file.\n\n$?\n\n");
+    print "Done\n";
     return;
 }
 

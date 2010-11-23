@@ -38,8 +38,6 @@ my %lame_tag = (
     #DISCNUMBER => '--disc',
     #COMPILATION => '--compilation',
     #COMPOSER => '--writer',
-
-    # forget --cover-art for now,
 );
 
 # Subroutine: is_valid_bitrate($bitrate)
@@ -53,6 +51,8 @@ sub is_valid_bitrate {
     return;
 }
 
+sub image_options { my $self = shift; return ('--ti', $self->temp_img_path) }
+sub can_embed_img { return 1 }
 sub format_descriptor { my $self = shift; return uc $self->bitrate }
 sub ext { return 'mp3'; }
 sub needs_wav { return 1; }

@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Carp;
 use File::Basename;
+use What;
 use What::Utils;
 use What::Subsystem;
 use What::Format::FLAC;
@@ -150,6 +151,74 @@ sub describe {
     return $desc;
 }
 
+### INSTANCE METHOD
+# Subroutine: can_embed_img
+# Usage: $converter->can_embed_img(  )
+# Purpose: 
+#   Return value of proposition 
+#   "$converter can embed an image in its products".
+# Returns: Boolean.
+# Throws: Nothing
+sub can_embed_img { return 0; }
+
+### INSTANCE METHOD
+# Subroutine: image_options
+# Usage: $self->image_options(  )
+# Purpose: 
+#   Create a list of command line options for setting the image in product files.
+# Returns: Nothing
+# Throws: Nothing
+sub image_options { return (); }
+
+### INSTANCE METHOD
+# Subroutine: create_temp_image
+# Usage: $converter->create_temp_image( $flac )
+# Purpose: Create a temporary exported copy of $flac's image.
+# Returns: The path to the temporary image.
+# Throws: Nothing
+sub create_temp_image {
+    my $self = shift;
+    my $flac = $self->flac;
+    my $img_info = $flac->image_info();
+    return if !defined $img_info;
+
+    my $temp_path = $self->temp_img_path();
+
+    open my $temp_img, ">", $temp_path
+        or croak("Couldn't open temporary image; $temp_path");
+    print {$temp_img} $img_info->{imageData};
+    close $temp_img;
+
+    return $temp_path;
+}
+
+### INSTANCE METHOD
+# Subroutine: temp_img_path
+# Usage: $converter->temp_img_path(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub temp_img_path {
+    my $self = shift;
+    my $flac = $self->flac;
+    my $img_info = $flac->image_info();
+    return if !defined $img_info;
+    my $type = $img_info->{mimeType};
+
+
+    my $temp_name = $self->id;
+
+    my $ext;
+    if ($type eq 'image/jpeg') { $ext = 'jpg'; }
+    elsif ($type eq 'image/png') { $ext = 'png'; }
+    else { croak("Unrecognized image type; $type."); }
+
+    $temp_name .= ".$ext";
+    my $temp_path = What::temp_img_dir;
+    $temp_path .= "/$temp_name";
+    return $temp_path;
+}
+
 # Subroutine: $converter->convert(
 #   wav => $wav_path,
 #   [flac => $flac_path],
@@ -201,8 +270,18 @@ sub convert {
     # Set the converter input.
     $arg{input} = $self->needs_wav() ? $wav : $flac->path;
 
+    # Export any images.
+    my $temp_img = $self->temp_img_path;
+    my $have_img = $self->can_embed_img && $temp_img;
+    if ($have_img) {
+        $self->create_temp_image();
+    }
+
     # Perform the conversion.
     my @cmd = ($self->options(%arg));
+    if ($have_img) {
+        push @cmd, $self->image_options();
+    }
     if ($self->input_precedes_opts()) { 
         unshift @cmd, $arg{input};
     }
@@ -231,6 +310,19 @@ sub convert {
     # Check that the conversion went smoothly.
     if ($res != 0) {
         croak("Couldn't convert;\n$arg{input}   ->   $output\n$?");
+    }
+
+    # Delete temprorary image.
+    if ($have_img) {
+        $res = subsystem(
+            cmd => ['rm', $temp_img],
+            verbose => $self->verbose(),
+            dry_num => $self->dry_run(),
+        );
+
+        if ($res != 0) {
+            croak("Couldn't remove temprorary image.\n");
+        }
     }
 
     $self->copy_remaining_tags();
