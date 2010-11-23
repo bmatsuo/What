@@ -22,7 +22,9 @@ our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-our @EXPORT = qw( tracker_url );
+our @EXPORT = qw(
+    tracker_url
+    );
 
 our $VERSION = '0.00_16';
 
@@ -31,8 +33,20 @@ my $whome = safe_path("~/.what");
 my $sandbox_base = "$whome/work";
 my $outgoing = "$sandbox_base/outgoing";
 my $temp_wav = "$sandbox_base/wav";
+my $temp_img = "$sandbox_base/img";
 
 my $ice_dir = "$whome/ice";
+
+my $img_limit_in_KB = '256';
+
+### CLASS SUB
+# Subroutine: embedded_art_size_limit
+# Usage: embedded_art_size_limit(  )
+# Purpose: 
+#   Access the size limitation (in KB) for embedded art.
+# Returns: Nothing
+# Throws: Nothing
+sub embedded_art_size_limit($) { return $img_limit_in_KB; }
 
 ### CLASS METHOD
 # Subroutine: outgoing_dir
@@ -48,6 +62,14 @@ sub outgoing_dir { return $outgoing; }
 # Returns: Nothing
 # Throws: Nothing
 sub temp_wav_dir { return $temp_wav; }
+
+### CLASS METHOD
+# Subroutine: temp_img_dir
+# Usage: What::temp_img_dir(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub temp_img_dir { return $temp_img; }
 
 ### CLASS METHOD
 # Subroutine: ice_dir

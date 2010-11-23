@@ -18,6 +18,8 @@ use Getopt::Euclid qw{ :vars<opt_> };
 # Include private modules.
 use What;
 use What::WhatRC;
+use What::Utils;
+use What::Subsystem;
 use What::Format::FLAC;
 
 ########################################################################
@@ -39,8 +41,8 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-my $temp_image_dir = '~/what/work/img';
-if (!-d $temp_image_dir) {
+my $temp_img_dir = What::temp_img_dir;
+if (!-d $temp_img_dir) {
     print {\*STDERR}
         "Can't find temporary image directory.\n"
         . "Please run the latest version of the 'setup' script.\n";
@@ -52,6 +54,13 @@ my $ok_img_format
 
 my $kilo = 2<<9;
 
+# Image size (in KB) can be at most (<What.CD constraint> - $size_buffer).
+my $size_buffer = 5;
+my $max_img_size = What::embedded_art_size_limit - $size_buffer;
+my $subsystem = What::Subsystem->new(
+    is_dryrun   => $opt{'--dry-run'},
+    verbose     => $opt{'--verbose'}, );
+
 ########################################################################
 # MAIN FUNCTION
 ########################################################################
@@ -59,8 +68,9 @@ my $kilo = 2<<9;
 # main() - main program execution 
 sub main{
     my @release_files = find_hierarchy(whatrc->rip_dir);
-    for my $f (@release_files) {
-        print sprintf "%-30s %d", $f, size_in_KB($f);
+    my @tiffs = grep {$_ =~ /\. tiff \z/ixms} @release_files;
+    for my $f (@tiffs) {
+        print sprintf "%s\n", scale_down($f);
     }
     exit($exitcode);
 }
@@ -92,22 +102,87 @@ sub is_image {
 # Throws: Nothing
 sub scale_down {
     my ($img) = @_;
+    my $init_size = size_in_KB($img);
 
-    return;
+    return $img if $init_size <= $max_img_size;
+
+    # Make a square $square_pixels wide.
+    my $scale_pixels=800;
+    my $scale_delta =10;
+    my $min_scale   =350;
+    my $scaled = scale_img_to_size($img, $scale_pixels);
+    while (size_in_KB($scaled) > $max_img_size) {
+        my $scale_pixels -= $scale_delta;
+        my $scaled = scale_img_to_size($img, $scale_pixels);
+        if ($scale_pixels < $min_scale) {
+            my $size = size_in_KB($scaled).'KB';
+            my $geometry = sprintf "%dx%d", $min_scale, $min_scale;
+            if ($opt{'--verbose'}) {
+                print {\*STDERR} "Giving up on scaling."
+                    . "Picture is smaller than $geometry."
+                    . "Picture size is $size.";
+            }
+            return;
+        }
+    }
+
+    return $scaled;
 }
 
 ### INTERNAL UTILITY
 # Subroutine: size_in_KB
 # Usage: size_in_KB( $path )
-# Purpose: Upper bound the size of $$path within 1 KB.
+# Purpose: 
+#   Upper bound the size of $$path within 5 KB.
+#   Tries to take page size into account.
 # Returns: File size in kilobytes.
 # Throws: Nothing
 sub size_in_KB {
     my ($path) = @_;
     die "No such path; $path." if !-e $path;
     my $size_in_bytes = -s $path;
-    my $size_in_kilobytes = $size_in_bytes / $kilo;
+    my $size_in_kilobytes = ceil($size_in_bytes / $kilo);
+    my $mod_page_size = $size_in_kilobytes % 4;
+    if ($mod_page_size) {
+        $size_in_kilobytes += 4 - $mod_page_size;
+    }
     return $size_in_kilobytes;
+}
+
+### INTERNAL UTILITY
+# Subroutine: scale_img_to_size
+# Usage: scale_img_to_size( $img, $max_dim )
+# Purpose: Scale $img to fix in a box of $max_dim pixels.
+# Returns: Nothing
+# Throws: Nothing
+sub scale_img_to_size {
+    my ($img, $max_dim) = @_;
+    my $geometry = sprintf '%dx%d', $max_dim, $max_dim;
+    my $name = basename($img);
+
+    my $format;
+    if ( $name =~ m/\. ($ok_img_format) \z /ixms) {
+        $format = uc $1;
+        if ($format eq 'TIFF') {
+            substr $name, length ($name) - 4, 4, 'jpg';
+        }
+    }
+    else {
+        die "Can't determine format of $img.";
+    }
+
+    my $tmp_img = "$temp_img_dir/$name";
+
+    my @img_scale = (
+        'convert',
+        $img,
+        '-resize', $geometry,
+        $tmp_img,
+    );
+    $subsystem->exec(@img_scale) == 0
+        or die "Failed converting image $img to $tmp_img";
+
+    return $tmp_img;
 }
 
 # Finally, kickstart the script
