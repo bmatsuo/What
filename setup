@@ -7,6 +7,8 @@ WHAT=~/.what
 WORK="$WHAT/work"
 # Directory for intermediate WAVE files.
 WAVE="$WORK/wav"
+# Directory for temporary scaled/converted imaged.
+IMAGE="$WORK/img"
 # For compiling releases before exporting to another hierarchy or watch directory.
 OUTGOING="$WORK/outgoing"
 
@@ -18,6 +20,7 @@ ICE="$WHAT/ice"
 
 [[ -d $WORK ]] || mkdir $WORK
 [[ -d $WAVE ]] || mkdir $WAVE
+[[ -d $IMAGE ]] || mkdir $IMAGE
 [[ -d $OUTGOING ]] || mkdir $OUTGOING
 
 [[ -d $ICE ]] || mkdir $ICE

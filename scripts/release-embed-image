@@ -47,10 +47,10 @@ if (!-d $temp_image_dir) {
     exit 1;
 }
 
-my $ok_img_formats 
+my $ok_img_format 
     = qr{(?: tiff | jpg | png )}xms;
 
-$kilo = 2<<9;
+my $kilo = 2<<9;
 
 ########################################################################
 # MAIN FUNCTION
@@ -104,7 +104,7 @@ sub scale_down {
 # Throws: Nothing
 sub size_in_KB {
     my ($path) = @_;
-    die "No such path; $img." if !-e $img;
+    die "No such path; $path." if !-e $path;
     my $size_in_bytes = -s $path;
     my $size_in_kilobytes = $size_in_bytes / $kilo;
     return $size_in_kilobytes;
