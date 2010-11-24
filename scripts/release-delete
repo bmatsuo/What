@@ -171,7 +171,7 @@ sub main{
         print "Done.\n" if $opt{'--verbose'};
     }
 
-    print do { (@undesireds > 1 ? q{ } : q{} ) 
+    print do { (@undesireds > 1 ? q{} : q{ } ) 
         . "Done.\n" } if !$opt{'--verbose'};
 
     # Quit the program if not all existing formats were deleted.
