@@ -70,6 +70,9 @@ my $exitcode = 0;
 #my $mp3_v2_c = What::Converter::MP3->new(bitrate => 'v2', verbose => $opt{'--verbose'});
 #my $ogg_c = What::Converter::Ogg->new(verbose => $opt{'--verbose'});
 #my $aac_c = What::Converter::AAC->new(verbose => $opt{'--verbose'});
+my $subsystem = What::Subsystem->new(
+    verbose => $opt{'--verbose'},
+    dry_run => $opt{'--dry-run'},);
 
 ########################################################################
 # MAIN FUNCTION
@@ -349,7 +352,7 @@ sub main{
 
     my $thread_completion_action = sub {
         return if $thread_error;
-        if (!defined $_[0] || !ref $_[0] eq 'ARRAY') {
+        if (!defined $_[0] || $_[0] eq 'FAIL') {
             print {\*STDERR} 
                 "Error detected in conversion thread."
                 . " Clearing conversion queue, finishing active jobs,"
@@ -422,8 +425,20 @@ sub main{
 
     print "Done\n";
 
-    # Quit the program if there was a converter thread error.
-    exit 1 if $thread_error;
+    # Remove partial releases and quit if a converter thread crashed.
+    if ($thread_error) {
+        my @rm_partials = 
+            ('release-delete', 
+                '--artist', $release->{artist}, 
+                '--title', $release->{title},
+                '--year', $release->{year},
+                map {"--$_"} @desired_formats);
+        print {\*STDERR} "Removing partially transcoded releases.\n";
+        $subsystem->exec(@rm_partials) == 0
+            or croak("Couldn't remove partially transcoded releases"
+                . "@desired_formats.\n");
+        exit 1;
+    }
 
     print "Copying accompanying files..." if $opt{'--verbose'};
 
