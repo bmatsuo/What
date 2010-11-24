@@ -190,8 +190,8 @@ sub main{
     #-----------------------#
     if (defined $release) {
         # TODO: Handle a Musicbrainz release.
-        $release_label = join ", ", (map {$_->name()} @{$release->labels()});
-        $release_catno = join ", ", (map {$_->catno()} @{$release->labels()});
+        $release_label = $release->label_string();
+        $release_catno = $release->catno_string();
         $release_format
             = join ", ",
                 (map {$_->quantity() > 1 ? 
@@ -816,8 +816,23 @@ sub summarize_match {
 #   A string listing the labels, catnos, country, formats of a release
 sub summarize_perfect_match {
     my $dr = shift;
-    my $label_str = join ", ", (map {$_->name} reverse @{$dr->labels});
-    my $catno_str = join ", ", (map {$_->catno} reverse @{$dr->labels});
+
+    # Describe label and catno and neatly as possible.
+    my $label_str = $dr->label_string();
+    my $catno_str = $dr->catno_string();
+    my $catno_cost = length $catno_str;
+    my $allowance =     47;
+    my $LC_format #     || THESE VALUES SHOULD BE EQUAL.
+        = "   labels: %-47s catnos: %s";
+    my $label_allowance = $allowance - $catno_cost;
+    if ($label_allowance < length $label_str) {
+        my $vis_length = $allowance - 3;
+        $label_str =~ s/\A (.{$vis_length}).+ \z/$1.../xms
+    }
+    my $label_and_catno
+        = sprintf $LC_format, $label_str, $catno_str;
+
+    # Describe country and formats;
     my @format_descs = map {join ", ", @{$_->descriptions}} @{$dr->formats};
     my @format_strs;
     for my $i ($#format_descs) {
@@ -832,10 +847,10 @@ sub summarize_perfect_match {
         push @format_strs, $f_str;
     }
     my $formats_str = join ", ", (map {"[$_]"} @format_strs);
-    $label_str =~ s/\A (.{30}).+ \z/$1.../xms;
-    my $summ 
-        = sprintf "labels: %-33s catnos: %s\n    country: %s formats: %s",
-            $label_str, $catno_str, $dr->country, $formats_str;
+    my $country_and_format 
+        = sprintf "countries: %-46s formats: %s", $dr->country, $formats_str;
+
+    my $summ = "$label_and_catno\n    $country_and_format";
     return $summ;
 }
 

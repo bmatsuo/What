@@ -111,6 +111,7 @@ sub track {
 }
 
 package What::Discogs::Release;
+use What::Utils;
 use Moose;
 extends 'What::Discogs::Base';
 
@@ -175,6 +176,52 @@ sub artist_string {
         }
     }
     return $str;
+}
+
+### INSTANCE METHOD
+# Subroutine: catno_string
+# Usage: $self->catno_string(  )
+# Purpose: Compact the string of category numbers if possible.
+# Returns: Nothing
+# Throws: Nothing
+sub catno_string {
+    my $self = shift;
+    my @catnos = map {$_->catno} ($self->labels_in_order);
+    my @with_catnos = grep {$_->catno =~ /\S/xms} @{$self->labels};
+    my $all_equal = sub { 
+        my @strings = @_; my $last; 
+        for my $str (@strings) {
+            if (!defined $last) { $last = $str; }
+            else { return if not $last eq $str; }
+        } 1; };
+    my $catno_str 
+        = !@catnos ? q{}
+        : $all_equal->( @catnos ) ? $catnos[0]
+        : scalar (@with_catnos) == 1 ? $with_catnos[0]->catno
+        : join ", ", @catnos;
+    return $catno_str;
+}
+
+### INSTANCE METHOD
+# Subroutine: label_string
+# Usage: $self->label_string(  )
+# Purpose: Return the string of labels associated with $release
+# Returns: Nothing
+# Throws: Nothing
+sub label_string {
+    my $self = shift;
+    return join q{, }, map {$_->name} ($self->labels_in_order);
+}
+
+### INSTANCE METHOD
+# Subroutine: labels_in_order
+# Usage: $self->labels_in_order(  )
+# Purpose: Return a properly ordered (parent ... child) list of labels.
+# Returns: Nothing
+# Throws: Nothing
+sub labels_in_order {
+    my $self = shift;
+    return reverse @{$self->labels};
 }
 
 # Subroutine: $release->num_discs()
