@@ -16,6 +16,11 @@ use POSIX;
 # Include CPAN modules.
 use Getopt::Euclid qw{ :vars<opt_> };
 use Audio::FLAC::Header;
+use Exception::Class (
+    'TrackException',
+    'TrackTotalException' => { isa => 'TrackException' },
+    'TrackDurationException' => { isa => 'TrackException' },
+);
 
 # Include private modules.
 use What::Subsystem;
@@ -45,7 +50,16 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
+my %checked_release;
+my %checked_artist;
+
 my $prompt = What::Prompt->new();
+
+my $known_miss_char = 'x';
+my $miss_char = '.';
+my $near_miss_char = '_';
+my $close_char = '-';
+my $hit_char = '*';
 
 ########################################################################
 # MAIN FUNCTION
@@ -65,7 +79,7 @@ sub main{
     my $release_title = $r->{title};
     my $release_year = $r->{year};
 
-    print "Searching for release: ";
+    print "Presumed release title: ";
     print "$release_artist - $release_title [$release_year]\n";
 
     my $release_label;
@@ -84,6 +98,8 @@ sub main{
         #---------------------#
 
         # First, try an artist query.
+        print "Trying default artist page ";
+        $checked_artist{$release_artist} = 1;
         $release = find_release_in_artist_page(
             artist => $release_artist,
             title => $release_title,
@@ -91,29 +107,29 @@ sub main{
             discs => [values %disc]);
 
         if (!defined $release) {
-            print {\*STDERR} "Initial artist query failed. ";
-            print {\*STDERR} "Attempting an artist search.\n";
-            # TODO: When unsuccessful w/ artist query; try an artist search.
+            print "Searching by artist name ... ";
             my $artist_search_results = search(
                 qstr => $release_artist, 
                 type => 'artist', 
                 api => whatrc->discogs_api_key);
             my $matching_result_list 
                 = $artist_search_results->grep(
-                    sub {my $a = shift; align($a->title, $release_artist) > 0.83});
-            if ($matching_result_list->num_results > 0) {
+                    sub {my $a = shift;  
+                        !$checked_artist{$a->title} && align($a->title, $release_artist) > 0.83});
+            my $num_matches = $matching_result_list->num_results;
+            print "Found $num_matches (new) matching artists.\n";
+            if ( $num_matches > 0) {
+                SEARCHARTISTRESULTS:
                 for my $r (@{$matching_result_list->results()}) {
+                    print "Searching discography of " . $r->title;
                     $release = find_release_in_artist_page(
-                        artist => $r->title(),
+                        artist => $r->title,
                         title => $release_title,
                         year => $release_year,
                         discs => [values %disc]);
-                    last if defined $release;
-                    #$release = undef;
+                    $checked_artist{$r->title} = 1;
+                    last SEARCHARTISTRESULS if defined $release;
                 }
-            }
-            else {
-                print {\*STDERR} "Can not find a matching result in the artist query.\n";
             }
         }
     }
@@ -124,7 +140,7 @@ sub main{
         #------------------------#
 
         # Either artist search failed or artist is "Various Artists"
-        print {\*STDERR} "Attempting general search.\n";
+        print {\*STDERR} "Attempting general search ";
         my $release_search = search (
             qstr => $release_artist eq "Various Artists" ? $release_title 
                 : "$release_artist - $release_title",
@@ -154,12 +170,12 @@ sub main{
 
         if (defined $release) {
             my $is_consistent 
-                = release_agrees(
+                = 0 == scalar (release_conflicts(
                     release => $release, 
                     title => $release_title,
                     artist => $release_artist,
                     year => $release_year,
-                    discs => [values %disc],);
+                    discs => [values %disc],));
             if (!$is_consistent) {
                 # Die if the discsogs release is not conistent with the files.
                 print {\*STDERR} "Inconsistent release info and tag info.\n";
@@ -295,7 +311,7 @@ sub analyze_release {
     my $release_title;
     my $release_year;
     for my $disc_dir (keys %disc) {
-        print {\*STDERR} $disc_dir, "\n";
+        #print {\*STDERR} $disc_dir, "\n";
         next if !defined $disc_dir || !-d $disc_dir;
         # Get the song files.
         my @disc_files = find_file_pattern('*.flac', $disc_dir);
@@ -413,7 +429,7 @@ sub analyze_release {
     }
     else {
         $release_title = $disc_titles[0];
-        print {\*STDERR} "Using title $release_title.\n";
+        #print {\*STDERR} "Using title $release_title.\n";
     }
     if (!defined $release_title || 0 == length $release_title) {
         croak("Couldn't find a release title common to all discs.");
@@ -484,61 +500,84 @@ sub analyze_release {
 sub find_release_in_search_results {
     shift;
     my $all_results = shift;
-    my $results = $all_results->grep(sub {my $r = shift; $r->type =~ /release/i});
     my %r = @_;
 
+    # Get all the release results, and only search those.
+    my $results = $all_results->grep(sub {my $r = shift; $r->type =~ /release/i});
+    my @releases =  @{$results->results};
+
+    # Get information of necessity from rip arguments.
     my $title = $r{title};
     my $artist = $r{artist};
     $artist =~ s/\AVarious\s+Artists\z/Various/xms;
 
-    my @exact_results 
-        = grep {uc "$artist - $title" eq uc $_->title} @{$results->results};
+    # Iterate through the search results.
+    my @misses;         # List of What::Discogs::Artist::Release objects.
+    my @near_misses;    # List of What::Discogs::Artist::Release objects.
+    my @near_miss_conflicts;# List of conflicts associated with @close_calls.
+    my @close_calls;    # List of What::Discogs::Releaese objects.
+    my @close_conflicts;# List of conflicts associated with @close_calls.
+    my @hits;           # List of What::Discogs::Release objects.
 
-    if (@exact_results > 0) {
-        my @release_ids = map {$_->uri_identifier} @exact_results;
-        my @exacts
-            = map { get_release(id => $_, api => whatrc->discogs_api_key)} 
-            @release_ids;
-        my @exact_fits 
-            = grep { release_agrees(release=> $_, %r)} @exacts;
-        my @exact_choices = map {summarize_perfect_match($_)} @exact_fits;
-        if (@exact_fits > 1) {
-            my $exact_choice_p = What::Prompt::Choose->new(
-                text => "Which release has the most accurate info?",
-                choices => \@exact_choices);
-            my $exact_choice = $exact_choice_p->prompt_user;
-            print {\*STDERR} "Chose $exact_choice.\n";
-            return $exact_fits[$exact_choice];
+    Results:
+    for my $result (@releases) {
+        if ($checked_release{$result->uri_identifier}){
+            print $known_miss_char;
+            next Results;
         }
-        elsif (@exact_fits) {
-            return $exact_fits[0];
-        }
-    }
 
-    my @result_scores 
-        = map {align("$artist - $title", $_->title)} @{$results->results};
-    my @sorted_indices 
-        = sort {$result_scores[$a] <=> $result_scores[$b]} (0 .. $#result_scores);
-    my @narrowed_indices = grep {$result_scores[$_] > 0.82} @sorted_indices;
-    my @narrowed_releases 
-        = map {
-            get_release(id => $results->get_result($_)->uri_identifier, api => whatrc->discogs_api_key)} 
-        @sorted_indices;
-    my @matching_releases = grep {release_agrees(release => $_, %r)} @narrowed_releases;
-    if (@matching_releases) {
-        if (@matching_releases > 1) {
-            my @match_choices = map {summarize_match($_)} @matching_releases;
-            my $matching_p = What::Prompt::Choose->new(
-                text => "Which release has the most accurate info?",
-                choices => \@match_choices);
-            my $choice = $matching_p->prompt_user;
-            #print {\*STDERR} "Chose $choice.\n";
-            return $matching_releases[$choice];
+        # Test to see if the release title is the same.
+        my $release_matches = uc "$artist - $title" eq uc $result->title;
+        if ($release_matches) {
+            my $sr = get_release(
+                id => $result->uri_identifier,
+                api => whatrc->discogs_api_key);
+
+            my @conflicts = release_conflicts(release=>$sr, %r);
+
+            if (@conflicts) {
+                print $close_char;
+                push @close_conflicts, [@conflicts];
+                push @close_calls, $sr;
+            }
+            else {
+                print $hit_char;
+                push @hits, $sr;
+            }
+            $checked_release{$sr->query->id} = 1;
         }
         else {
-            return $matching_releases[0];
+            my $closeness = align("$artist - $title", $result->title);
+            my $close_enough_to_check = $closeness > 0.82;
+            if ($close_enough_to_check) {
+                my $similar_release 
+                    = get_release(
+                        id => $result->uri_identifier, 
+                        api => whatrc->discogs_api_key);
+                my @miss_conflicts 
+                    = release_conflicts(release=>$similar_release, %r);
+
+                print $near_miss_char;
+                push @near_miss_conflicts, \@miss_conflicts;
+                push @near_misses, $similar_release;
+            }
+            else {
+                print $miss_char;
+                push @misses, $result;
+            }
+            $checked_release{$result->uri_identifier} = 1;
         }
     }
+
+    print @releases ? " Done.\n" : "No releases to check.\n";
+
+    my $choice;
+    $choice = choose_perfect_match(@hits)                           if @hits;
+    return $choice if defined $choice;
+    $choice = choose_close_match(\@close_calls, \@close_conflicts)  if @close_calls;
+    return $choice if defined $choice;
+    $choice = choose_near_miss(\@near_misses, \@near_misses)        if @near_misses;
+    return $choice if defined $choice;
 
     return;
 }
@@ -563,54 +602,194 @@ sub find_release_in_artist_page {
     my $artist_discog;
     eval { $artist_discog = get_artist(
             name => $artist, api => whatrc->discogs_api_key); };
-    return if !defined $artist_discog;
+    if (!defined $artist_discog) {
+        print "! DEAD END.\n";
+        return;
+    }
 
+    # Iterate through the artist discography.
     my @releases = @{$artist_discog->releases};
+    my @misses;         # List of What::Discogs::Artist::Release objects.
+    my @near_misses;    # List of What::Discogs::Artist::Release objects.
+    my @near_miss_conflicts;# List of conflicts associated with @close_calls.
+    my @close_calls;    # List of What::Discogs::Releaese objects.
+    my @close_conflicts;# List of conflicts associated with @close_calls.
+    my @hits;           # List of What::Discogs::Release objects.
 
-    # Look for releases that have the same title.
-    my @exact_matches = grep { $title eq $_->title } @releases;
+    ARTISTRESULTS:
+    for my $artist_release (@releases) {
+        if ($checked_release{$artist_release->id}){
+            print $known_miss_char;
+            next ARTISTRESULTS;
+        }
 
-    if (@exact_matches) {
-        print "Exact matches found in artist discography. ";
-        print "Fetching releases...\n";
-        my @exacts
-            = map {get_release(
-                    id => $_->id, api => whatrc->discogs_api_key)} 
-            @exact_matches;
-        my @perfect_fits
-            = grep {release_agrees(release=>$_, %r)} @exacts;
-        if (@perfect_fits) {
-            if (@perfect_fits > 1) {
-                # Have the user select the proper release.
-                my @perfect_choices 
-                    = map {summarize_perfect_match($_)} @perfect_fits;
-                my $pp = What::Prompt::Choose->new(
-                    text => "Multiple release with matching info found\n"
-                        . "Which release has the most accurate info?",
-                    choices => \@perfect_choices);
-                my $choice = $pp->prompt_user();
-                #print {\*STDERR} "Chose $choice.\n";
-                return $perfect_fits[$choice];
+        # Test to see if the release title is the same.
+        my $release_matches = $title eq $artist_release->title;
+        if ($release_matches) {
+            my $ar = get_release(
+                id => $artist_release->id,
+                api => whatrc->discogs_api_key);
+
+            my @conflicts = release_conflicts(release=>$ar, %r);
+
+            if (@conflicts) {
+                print $close_char;
+                push @close_conflicts, [@conflicts];
+                push @close_calls, $ar;
             }
             else {
-                return $perfect_fits[0];
+                print $hit_char;
+                push @hits, $ar;
             }
+            $checked_release{$ar->query->id} = 1;
         }
         else {
-            print {\*STDERR} "Non of the exact matches fit properly.\n";
-            return;
+            my $closeness = align("$title", $artist_release->title);
+            my $close_enough_to_check = $closeness > 0.82;
+            if ($close_enough_to_check) {
+                my $similar_release 
+                    = get_release(
+                        id => $artist_release->id, 
+                        api => whatrc->discogs_api_key);
+                my @miss_conflicts 
+                    = release_conflicts(release=>$similar_release, %r);
+
+                print $near_miss_char;
+                push @near_miss_conflicts, \@miss_conflicts;
+                push @near_misses, $similar_release;
+            }
+            else {
+                print $miss_char;
+                push @misses, $artist_release;
+            }
+            $checked_release{$artist_release->id} = 1;
         }
     }
 
-    # Look for releases that have most of the words in the title.
-    my @near_matches = grep {words_fit($title, $_->title) > .81} @releases;
+    print @releases ? " Done.\n" : "No releases to check.\n";
 
-    if (@near_matches) {
-        print {\*STDERR} "Near matches found in the artist discography.";
-        print {\*STDERR} "(This logic has not been implemented yet).\n";
-    }
+    my $choice;
+    $choice = choose_perfect_match(@hits)                           if @hits;
+    return $choice if defined $choice;
+    $choice = choose_close_match(\@close_calls, \@close_conflicts)  if @close_calls;
+    return $choice if defined $choice;
+    $choice = choose_near_miss(\@near_misses, \@near_misses)        if @near_misses;
+    return $choice if defined $choice;
 
     return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: choose_perfect_match
+# Usage: choose_perfect_match( @hits )
+# Purpose: Prompt the user to choose from a list of "perfect fit" releases;
+# Returns: The chosen What::Discogs::Release object.
+# Throws: Nothing
+sub choose_perfect_match {
+    my (@hits) = @_;
+
+    if (@hits) {
+        if (scalar (@hits) == 1) {
+            print "Only one matching release found,\n\n\t"
+                . summarize_perfect_match($hits[0]) . "\n\n proceding with its data.\n";
+            return $hits[0];
+        }
+        my @perfect_choices = map {summarize_perfect_match($_)} @hits;
+        my $pp = What::Prompt::Choose->new(
+            question => "Multiple release with matching info found\n"
+                . "Which release has the most accurate info?",
+            choices => \@perfect_choices);
+        my $choice = $pp->prompt_user();
+        return $hits[$choice];
+    }
+    return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: _conflict_choose_
+# Usage: _conflict_choose_( 
+#   class => $relationship, # 'NEARMISS'/'CLOSEMATCH'
+#   releases => \@close_calls
+#   conflicts => \@conflicts )
+# Purpose: 
+#   Ask the user if they would like to start off with a release that was not
+#   quite a "perfect match".
+# Returns: Nothing
+# Throws: Nothing
+sub _conflict_choose_ {
+    my %arg = @_;
+    my $class = $arg{class};
+    my $class_name = $arg{class} eq 'NEARMISS' ? 'near-miss' : 'close-match';
+    my @releases = @{ $arg{releases} };
+    my @conflicts = @{ $arg{conflicts} };
+
+    if (@releases) {
+        if (scalar (@releases) == 1) {
+            print "A $class_name was found,\n"
+                . summarize_match($releases[0], @{$conflicts[0]}) . "\n\n";
+            my $use_close_p = What::Prompt::YesNo->new(
+                question => "Should this release be used to make the info file?");
+            my $use_close_match = $use_close_p->prompt_user();
+            if ($use_close_match =~ /\A y/xms) {
+                return $releases[0];
+            }
+            return;
+        }
+
+        my @possibilities = map {
+            summarize_match(@{$_})
+        } (map {[$releases[$_], @{$conflicts[$_]}]} 0 ... $#releases);
+        push @possibilities, "No, these choices do not resemble my copy.";
+
+        my $class_description 
+            = $class eq 'NEARMISS' ? "nearly the same title"
+            : "identical titles and nearly the same info.";
+
+
+        my $pp = What::Prompt::Choose->new(
+            question => "Several releases found with $class_description" 
+                . "Do any of these releases look very similar to the rip?",
+            choices => \@possibilities);
+        my $choice = $pp->prompt_user();
+
+        my $no_good_choices = $choice == scalar @possibilities;
+        return if $no_good_choices;
+
+        return $releases[$choice];
+    }
+    return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: choose_near_miss
+# Usage: choose_near_miss( \@near_misses, \@conflicts )
+# Purpose: 
+#   Ask the user if they would like to start off with a release that was not
+#   quite a match.
+# Returns: Nothing
+# Throws: Nothing
+sub choose_near_miss {
+    my ($near_misses, $conflicts_ref) = @_;
+    return _conflict_choose_(
+        class => 'NEARMISS', 
+        releases => $near_misses,
+        conflicts => $conflicts_ref);
+}
+
+### INTERNAL UTILITY
+# Subroutine: choose_close_match
+# Usage: choose_close_match( \@close_calls, \@conflicts )
+# Purpose: 
+#   Ask the user if they would like to start off with a release that was not
+#   quite a "perfect match".
+# Returns: Nothing
+# Throws: Nothing
+sub choose_close_match {
+    my ($close_calls_ref, $conflicts_ref) = @_;
+    return _conflict_choose_(
+        class => 'CLOSEMATCH', 
+        releases => $close_calls_ref,
+        conflicts => $conflicts_ref);
 }
 
 # Subroutine: summarize_match($discogs_release)
@@ -618,11 +797,13 @@ sub find_release_in_artist_page {
 # Purpose: Make a short summary of a matching release.
 # Returns: Nothing
 sub summarize_match {
-    my ($dr) = @_;
+    my ($dr, @probs) = @_;
     my $short_summ = summarize_perfect_match($dr);
     my $summ = join q{}, 
-        $dr->artist_string, " - ", $dr->title, " [", $dr->date, "]\n", 
-        $short_summ;
+        $dr->artist_string, " - ", $dr->title, " [", $dr->date, "]", 
+        join ("\n    ", 
+            q{}, $short_summ, 
+            (map {defined $_ ? '(' . $_ . ')' : ()} @probs));
     return $summ;
 }
 
@@ -658,7 +839,7 @@ sub summarize_perfect_match {
     return $summ;
 }
 
-# Subroutine: release_agrees(
+# Subroutine: release_conflicts(
 #   release => $release, 
 #   artist => $artist,
 #   title => $title,
@@ -667,21 +848,29 @@ sub summarize_perfect_match {
 # Type: INTERNAL UTILITY
 # Purpose: Check a discogs release, and given release info for consistency.
 # Returns:
-#   1 if the discogs release contains consistent release information.
-#   0 otherwise.
-sub release_agrees {
+#   A list of conflicts between the release and the other supplied info.
+sub release_conflicts {
     my %arg = @_;
     my $release = $arg{release};
-    return if !release_title_agrees($release, $arg{title});
+
+    # Match up basic information.
+    return join q{}, "Release title mismatch; ", $release->title, $arg{title}
+        if !release_title_agrees($release, $arg{title});
     #print "Title agrees\n";
+
+    return join q{}, "Release artist mismatch; ", 
+        $release->artist_string, $arg{artist}
+            if !release_title_agrees($release, $arg{title});
     return if !release_artist_agrees($release, $arg{artist});
     #print "Artist agrees\n";
+
+    return join q{}, "Release year mismatch; ", $release->date, $arg{year}
+        if !release_title_agrees($release, $arg{title});
     return if !release_year_agrees($release, $arg{year});
     #print "Year agrees\n";
-    return if !release_discs_agree($release, $arg{discs});
-    #print "Discs agree\n";
-    print "Found an agreeing release...\n";
-    return 1;
+
+    # Attempt to match up the discs when there is justification to do so.
+    return release_disc_problems($release, $arg{discs});
 }
 
 # Release test template.
@@ -719,46 +908,49 @@ sub release_year_agrees {
     return 1;
 }
 
-# Subroutine: release_discs_agree($discogs_release, \@discs)
+# Subroutine: release_disc_problems($discogs_release, \@discs)
 # Type: INTERNAL UTILITY
 # Purpose: 
 #   Attempt to match of the the release to an array of discs' info.
 #   For now, a simple 'down-the-line' test of agreement for each disc.
 # Returns: 
-#   1 if the discs of the discogs release \@discs.
-#   0 otherwise.
-sub release_discs_agree {
+#   A list of conflicts between the matched discs.
+#   TODO: Implement this method as a permutation search. 
+#   There is not necessarily a guaranteed ordering.
+sub release_disc_problems {
     my $release = shift;
     my @discs = @{shift @_};
-    return 0 if $release->num_discs != scalar @discs;
+    my @release_probs;
+    return () if $release->num_discs != scalar @discs;
     for my $i (0 .. $#discs) {
         my $di = $discs[$i];
         my $rel_di = $release->disc($i + 1);
-        return 0 if !disc_tracks_agree($rel_di, $di->{tracks});
+        push @release_probs, ( disc_track_problems($rel_di, $di->{tracks}) );
     }
-    return 1;
-    # TODO: Implement this method as a permutation search. 
-    #   There is not necessarily a guaranteed ordering.
+    return @release_probs;
 }
 
-# Subroutine: disc_tracks_agree($disc, \@tracks)
+# Subroutine: disc_track_problems($disc, \@tracks)
 # Type: INTERNAL UTILITY
 # Purpose: 
 #   Compare the tracks of a discogs release's disc to a given array of track info.
 # Returns: 
-#   1 if the tracks of the disc agree with $release_tracks.
-#   0 otherwise.
-sub disc_tracks_agree {
+#   A list of conflicts between the disc and the track list. 
+#   For now, a problem is just a string description.
+sub disc_track_problems {
     my ($disc, $tracks_ref) = @_;
     my @rel_tracks = @{$disc->tracks()};
     my @tracks = @{$tracks_ref};
+    my @problems;
 
     # Return false if the number of tracks differ.
     if ($disc->num_tracks != @tracks) {
-        print {\*STDERR} 
-            "Discs with different numbers of tracks; ",
-            $disc->num_tracks, " and ", scalar @tracks, "\n";
-        return 0;
+        my $track_total_msg = join q{},
+            "Disc with different numbers of tracks; ",
+            $disc->num_tracks, " and ", scalar @tracks;
+        push @problems, $track_total_msg;
+        return @problems;
+        #TrackTotalException->throw( error => $track_total_msg );
     }
 
     # Iterate over corresponding tracks.
@@ -775,14 +967,16 @@ sub disc_tracks_agree {
         }
         # Return false if discogs duration is more than the possed duration.
         if ($rel_dur > $ti->{'duration'} + 10) {
-            print {\*STDERR} 
-                "Track ",$ti->{'position'}," has disagreeing length; ", 
-                $rel_dur, " <= ", $ti->{'duration'} + 10, "\n";
-            return 0;
+            my $track_dur_msg = join q{},
+                "Track ", $ti->{'position'} , " has disagreeing length; ", 
+                $rel_dur, " <= ", $ti->{'duration'} + 10;
+            push @problems, $track_dur_msg;
+            #TrackDurException->throw( error => $track_dur_msg );
         }
     }
 
-    # Track names might be subtly misspelled. Are not checked currently.
+    # Track names might be subtly misspelled. The logic is also more complex.
+    # So they are not currently checked at all.
 
     # No reason can be found for the tracks to disagree.
     return 1;
