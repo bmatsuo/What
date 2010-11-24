@@ -21,6 +21,10 @@ use Moose;
 use Scalar::Util qw{looks_like_number};
 extends 'What::Prompt::Base';
 
+has 'question'
+    => (isa => 'Str',
+        is => 'rw',
+        default => "Which one?");
 has 'choices' 
     => (isa => 'ArrayRef[Str]',
         is => 'rw',
@@ -48,9 +52,9 @@ sub default {
 sub preprompt_text {
     my $self = shift;
     my @choices = @{$self->choices};
-    my $text = "\n";
+    my $text = join q{}, "\n", $self->question, "\n\n";
     $text .= join "\n", (map {"[$_] " . $choices[$_] . "\n"} (0 .. $#choices));
-    $text .= "\n\n";
+    #$text .= "\n";
     return $text;
 }
 

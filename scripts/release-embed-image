@@ -79,12 +79,13 @@ sub main{
     #print "@order\n";
     #print "@tiffs\n";
     my $img_choose_p = What::Prompt::Choose->new(
+        question => "Which image is the front cover?",
         choices => [@tiffs],
         default => 0,
         text    => "Which image is the cover?", );
     my $i = $img_choose_p->prompt_user();
     my $small_file = scale_down( $tiffs[$i] );
-    print "$small_file\n";
+    #print "$small_file\n";
 
     my @flac_paths = grep { m/\.flac\z/xms } @release_files;
     #my @flacs = map { read_flac($_) } @flac_paths;

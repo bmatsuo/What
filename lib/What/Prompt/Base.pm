@@ -123,7 +123,7 @@ sub prompt_user {
     if (!defined $rline) {
         # Raise an exception for an unexpected EOF.
         PromptEOFException->throw(
-            error=>'unexpected EOF', resp => $resp);
+            error => "Unexpected EOF.\n", resp => $resp);
     }
 
     return $resp if (&{$is_valid}($resp));
