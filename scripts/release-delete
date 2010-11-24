@@ -67,6 +67,22 @@ sub main{
     # Make a list of unwanted formats and find their locations.
     my @undesireds = grep {$opt{"--$_"}} formats();
     @undesireds = formats() if $opt{'--all'};
+    my @existing;
+    for my $f (@undesireds) {
+        if ($release->exists($f)) {
+            push @existing, $f;
+        }
+        else {
+            my $fnorm = format_normalized($f);
+            print {\*STDERR} "Warning: No $fnorm release exists.\n";
+        }
+    }
+    @undesireds = @existing;
+    if (!@undesireds) {
+        print {\*STDERR} "No format releases to delete. Exiting.\n";
+        exit 0;
+    }
+
     my %format_location 
         = map {($_ => $release->format_dir($_))} @undesireds;
 
@@ -120,7 +136,9 @@ sub main{
     }
 
     # Remove all requested format release directories/torrents.
-    print "Removing format(s)", $opt{'--verbose'} ? '...' : q{};
+    print "Removing format" 
+        . (@undesireds > 1 ? 's' : q{} ) 
+        . ($opt{'--verbose'} ? '...' : q{});
     REMOVEDIRS:
     for my $f (@undesireds) {
         my $format_dir = $format_location{$f};
@@ -153,7 +171,8 @@ sub main{
         print "Done.\n" if $opt{'--verbose'};
     }
 
-    print "Done.\n" if !$opt{'--verbose'};
+    print do { (@undesireds > 1 ? q{ } : q{} ) 
+        . "Done.\n" } if !$opt{'--verbose'};
 
     # Quit the program if not all existing formats were deleted.
     my @remaining_formats = $release->existing_formats();
