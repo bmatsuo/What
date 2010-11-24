@@ -232,6 +232,8 @@ sub convert {
     my $self = shift;
     my %arg = @_;
 
+    #die "Testing death" if $self->id == 9;
+
     # Check FLAC existence.
     my $flac 
         = $arg{flac} ? $self->flac($arg{flac}) 

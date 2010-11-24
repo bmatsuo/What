@@ -184,6 +184,7 @@ sub main{
     }
 
     my $conv_q = Thread::Queue->new();
+    my $num_conv = 0;
     my %dependent_convs;
     my %num_dependent;
 
@@ -227,6 +228,7 @@ sub main{
                 print '.';
             }
             $conv_q->enqueue([$new_wav_c,]);
+            ++$num_conv;
             #$wav_c->flac($flac_obj);
             #$wav_c->dest_dir($temp_wav_dest_dir);
             #$wav_c->convert();
@@ -275,6 +277,7 @@ sub main{
             }
 
             # Create the transcode.
+            ++$num_conv;
             $conv->flac($flac_obj);
             $conv->dest_dir($dest_dir);
             if ($conv->needs_wav()) {
@@ -303,7 +306,11 @@ sub main{
         my ($c, $wav) = @{$conv_job};
         my %arg;
         $arg{wav} = $wav if defined $wav;
-        $c->convert(%arg);
+        my $c_res = eval { $c->convert(%arg) };
+        if ($@) {
+            print {\*STDERR} "Error converting: $@\n";
+            return "FAIL";
+        }
         my $out = $c->output_path;
 
         if (!$opt{'--verbose'}) {
@@ -338,8 +345,19 @@ sub main{
     };
 
     my $max_threads = whatrc->max_threads;
+    my $thread_error = 0;
 
     my $thread_completion_action = sub {
+        return if $thread_error;
+        if (!defined $_[0] || !ref $_[0] eq 'ARRAY') {
+            print {\*STDERR} 
+                "Error detected in conversion thread."
+                . " Clearing conversion queue, finishing active jobs,"
+                . " and halting.\n";
+            $conv_q->extract(0, $num_conv);
+            $thread_error = 1;
+            return;
+        }
         my ($converter, $used_wav) = @{$_[0]};
         if (defined $used_wav) {
             --$num_dependent{$used_wav} if $num_dependent{$used_wav};
@@ -387,8 +405,8 @@ sub main{
             sleep 1;
         }
         for my $fin_thread (threads->list(threads::joinable)) {
-            my $res = $fin_thread->join();
-            $thread_completion_action->($res) if defined $res;
+            my $ressy = $fin_thread->join();
+            $thread_completion_action->($ressy) if defined $ressy;
         }
     }
 
@@ -403,6 +421,9 @@ sub main{
     }
 
     print "Done\n";
+
+    # Quit the program if there was a converter thread error.
+    exit 1 if $thread_error;
 
     print "Copying accompanying files..." if $opt{'--verbose'};
 
