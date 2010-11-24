@@ -852,22 +852,23 @@ sub summarize_perfect_match {
 sub release_conflicts {
     my %arg = @_;
     my $release = $arg{release};
+    my @conflicts;
 
     # Match up basic information.
-    return join q{}, "Release title mismatch; ", $release->title, $arg{title}
+    push @conflicts,
+        sprintf ("Release title mismatch; '%s' and '%s'", 
+            $release->title, $arg{title})
         if !release_title_agrees($release, $arg{title});
-    #print "Title agrees\n";
 
-    return join q{}, "Release artist mismatch; ", 
-        $release->artist_string, $arg{artist}
-            if !release_title_agrees($release, $arg{title});
-    return if !release_artist_agrees($release, $arg{artist});
-    #print "Artist agrees\n";
-
-    return join q{}, "Release year mismatch; ", $release->date, $arg{year}
+    push @conflicts,
+        sprintf ("Release artist mismatch; '%s' and '%s'", 
+            $release->artist_string, $arg{artist})
         if !release_title_agrees($release, $arg{title});
-    return if !release_year_agrees($release, $arg{year});
-    #print "Year agrees\n";
+
+    push @conflicts,
+        sprintf ("Release year mismatch; '%s' & '%s'", 
+            $release->date, $arg{year})
+        if !release_title_agrees($release, $arg{title});
 
     # Attempt to match up the discs when there is justification to do so.
     return release_disc_problems($release, $arg{discs});
