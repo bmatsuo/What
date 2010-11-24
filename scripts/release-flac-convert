@@ -86,6 +86,26 @@ sub main{
         = (artist => $artist, title => $title, year => $year);
 
     my $release = What::Release->new( %release_info );
+    my @existing_formats = $release->existing_formats();
+
+    my @desired_formats;
+    for my $f (map {$opt{"--$_"} ? $_ : () } qw{v0 v2 320 ogg aac}) {
+        my $format_exists = $release->exists($f);
+        if ($format_exists) {
+            my $fnorm = format_normalized($f);
+            print {\*STDERR} 
+                "Warning: $fnorm release already exists."
+                . " Not transcoding to $fnorm.\n";
+        }
+        else {
+            push @desired_formats, $f;
+        }
+    }
+
+    if (!@desired_formats) {
+        print {\*STDERR} "No formats to create. Exiting.\n";
+        exit 0;
+    }
 
     my %format_needs_wav = (
         v0 => 1,
@@ -93,9 +113,6 @@ sub main{
         320 => 1,
         aac => 1,
         ogg => 0,);
-    my @desired_formats 
-        = map {$opt{"--$_"} ? $_ : () } 
-            qw{v0 v2 320 ogg aac};
     my $should_create_wav
         = scalar 
             (map {$format_needs_wav{$_} ? ($_) : ()} @desired_formats);
