@@ -5,7 +5,7 @@ package What::BBCode;
 use MooseX::Singleton;
 
 has 'img_style' # If not "expanded", the short image format [img=<url>] is used.
-    => (isa => 'Str', is => 'rw', default => 'expanded');
+    => (isa => 'Str', is => 'rw', default => 'compact');
 
 our $VERSION = "00.00_01";
 # Originally created on 11/24/10 16:43:47
@@ -77,7 +77,7 @@ sub size {
 sub color {
     my $self = shift;
     my (%arg) = @_;
-    my $name = $arg{name};
+    my $name = $arg{color};
     my $code = $arg{code};
     my $text = $arg{text} || "";
 
@@ -102,7 +102,7 @@ sub color {
     }
 
     BBCodeException->throw(
-        error => "Neither color name, nor color code defined.");
+        error => "Niether color name, nor color code defined.");
 }
 
 ### INSTANCE METHOD
@@ -171,11 +171,11 @@ sub link {
     my $class = shift;
     my %arg = @_;
     my $url = $arg{url};
-    my $text = $arg{text} || "link";
+    my $text = $arg{text};
     my $link = _mktag_( 
         tag => 'url', 
-        val => $url, 
-        inner => $text);
+        ($text ? (val => $url) : ()), 
+        inner => $text || $url,);
     return $link;
 }
 
@@ -196,65 +196,73 @@ sub image {
     my $url = $arg{url};
     my $exp_arg = $arg{expanded};
     my $expanded = $self->img_style;
-    $expanded = $exp_arg if $exp_arg;
-    return _mktag_( tag => 'img', inner=> $url ) if $expanded;
+    $expanded = 'expanded' if $exp_arg;
+    return _mktag_( tag => 'img', inner=> $url ) if $expanded eq 'expanded';
     return _start_('img', $url );
 }
 
 ### INSTANCE METHOD
 # Subroutine: bold
-# Usage: $self->bold( $inner_bbcode )
+# Usage: $self->bold( text => $inner_bbcode )
 # Purpose: 
 # Returns: Nothing
 # Throws: Nothing
 sub bold {
     my $self = shift;
-    my ($inner_bbcode) = @_;
+    my $text = "";
+    my ( %arg ) = @_;
+    $text = $arg{text} if $arg{text};
     return _mktag_(
         tag => 'b',
-        inner => $inner_bbcode);
+        inner => $text);
 }
 
 ### INSTANCE METHOD
 # Subroutine: italic
-# Usage: $self->italic( $inner_bbcode )
+# Usage: $self->italic( text => $inner_bbcode )
 # Purpose: 
 # Returns: Nothing
 # Throws: Nothing
 sub italic {
     my $self = shift;
-    my ($inner_bbcode) = @_;
+    my $text = "";
+    my ( %arg ) = @_;
+    $text = $arg{text} if $arg{text};
     return _mktag_(
         tag => 'i',
-        inner => $inner_bbcode);
+        inner => $text);
 }
 
 ### INSTANCE METHOD
-# Subroutine: underline
-# Usage: bbcode->underline( $inner_bbcode )
+# Subroutine: underlined
+# Usage: bbcode->underlined( text => $inner_bbcode )
 # Purpose: 
 # Returns: Nothing
 # Throws: Nothing
-sub underline {
+sub underlined {
     my $self = shift;
-    my ($inner_bbcode) = @_;
+    my $text = "";
+    my ( %arg ) = @_;
+    $text = $arg{text} if $arg{text};
     return _mktag_(
         tag => 'u',
-        inner => $inner_bbcode);
+        inner => $text);
 }
 
 ### INSTANCE METHOD
 # Subroutine: strikethrough
-# Usage: bbcode->strikethrough( $inner_bbcode )
+# Usage: bbcode->strikethrough( text => $inner_bbcode )
 # Purpose: 
 # Returns: Nothing
 # Throws: Nothing
 sub strikethrough {
     my $self = shift;
-    my ($inner_bbcode) = @_;
+    my $text = "";
+    my ( %arg ) = @_;
+    $text = $arg{text} if $arg{text};
     return _mktag_(
-        tag   => 's',
-        inner => $inner_bbcode);
+        tag => 's',
+        inner => $text);
 }
 
 ### INSTANCE METHOD
@@ -268,7 +276,7 @@ sub list_item {
     my $text = "";
     my (%arg) = @_;
     $text = $arg{text} if $arg{text};
-    return _start_(tag => '*') . $text;
+    return _start_('*') . " $text\n";
 }
 
 ### INSTANCE METHOD
@@ -280,7 +288,7 @@ sub list_item {
 sub list {
     my $self = shift;
     my (@items) = @_;
-    return join "\n", (map { $self->list_item( text => $_ ) } @items);
+    return join q{}, (map { $self->list_item( text => $_ ) } @items);
 }
 
 ### INSTANCE METHOD
@@ -356,21 +364,26 @@ sub wiki {
     if (!defined $page) {
         BBCodeException->throw(error => 'Wiki page name not defined.');
     }
-    return _mktag_(tag => _mktag_( tag => $page));
+    return _start_(_start_($page));
 }
 
 ### INSTANCE METHOD
 # Subroutine: hide
-# Usage: $self->hide( text => $text )
+# Usage: $self->hide( label => $label_text, text => $text )
 # Purpose: Create markup that is hidden by default.
 # Returns: Nothing
 # Throws: Nothing
 sub hide {
     my $self = shift;
+    my $label;
     my $text = "";
     my (%arg) = @_;
+    $label = $arg{label};
     $text = $arg{text} if $arg{text};
-    return _mktag_(tag => 'hide', inner => $text);
+    return _mktag_(
+        tag => 'hide', 
+        (defined $label ? (label => $label) : ()),
+        inner => $text);
 }
 
 ### INTERNAL UTILITY
@@ -389,7 +402,7 @@ sub _mktag_ {
     my    ( $tag,      $val,      $inner)
         = ( $arg{tag}, $arg{val}, $arg{inner});
 
-    return join q{}, _start_($tag, $val), $inner, _end_($tag);
+    return join q{}, _start_($tag, $val), $inner || q{}, _end_($tag);
 }
 
 ### INTERNAL UTILITY
@@ -399,7 +412,7 @@ sub _mktag_ {
 # Returns: Nothing
 # Throws: Nothing
 sub _start_ {
-    my ($tag,$val) = @_;
+    my ($tag, $val) = @_;
     my $insert 
         = $val && $val =~ /./xms ?  "=$val"
         : q{};
