@@ -17,6 +17,7 @@ t/007-What-Prompt.t
 t/008-What-Discogs.t
 t/009-What.t
 t/010-What-BBCode.t
+t/011-What-Converter.t
 lib/What.pm
 lib/What/BBCode.pm
 lib/What/ThreadDummy.pm
