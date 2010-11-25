@@ -79,9 +79,7 @@ read_whatrc('~/.whatrc');
 # Subroutine: whatrc
 # Usage: whatrc
 # Returns: The whatrc instance (a shorthand for What::WhatRC->instance).
-sub whatrc() {
-    return What::WhatRC->instance;
-}
+sub whatrc() { return What::WhatRC->instance; }
 
 my $dumper = Data::Dumper->new([{}],['WhatCDConfig']);
 
