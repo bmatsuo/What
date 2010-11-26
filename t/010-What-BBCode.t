@@ -45,6 +45,10 @@ my $exp_colored_text = '[color=blue]This is blue text.[/color]';
 ok($colored_text eq $exp_colored_text);
 $colored_text = eval {bbcode->color( code => '0000ff', text => $text)} || '';
 $exp_colored_text = '[color=#0000ff]This is blue text.[/color]';
+if ($@) {
+    print {\*STDERR} "Error calling bbcode->color(); $@.\n";
+    exit 1;
+}
 ok($colored_text eq $exp_colored_text);
 
 $text = "This is size 4.";

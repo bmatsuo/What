@@ -92,7 +92,7 @@ sub color {
     }
 
     if (defined $code) {
-        if ($code =~ /\p{xdigit}{6}/xms) {
+        if ($code =~ /\p{isXDigit}{6}/xms) {
             return _mktag_(tag => 'color', val => "#$code", inner => $text);
         }
         else {
