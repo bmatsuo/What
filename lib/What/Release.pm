@@ -128,6 +128,18 @@ sub name() {
     return $name;
 }
 
+### CLASS METHOD
+# Subroutine: artists
+# Usage: What::Release->artists(  )
+# Purpose: Return a list of all artists.
+# Returns: Nothing
+# Throws: Nothing
+sub artists {
+    my $class = shift;
+    my @artist_dirs = find_subdirs(whatrc->upload_root);
+    return @artist_dirs;
+}
+
 # Subroutine: $release->artist_dir()
 # Type: INSTANCE METHOD
 # Purpose: 
@@ -540,11 +552,21 @@ sub existing_formats {
     return @formats;
 }
 
-# Subroutine: $release->artist_releases()
-# Type: INSTANCE METHOD
-# Returns: A list of all releases by the artist.
+# Subroutine: artist_releases
+#   $release->artist_releases()
+#   What::Release->artist_releases( $name )
+# Type: INSTANCE/CLASS METHOD
+# Returns: A list of all releases by an artist.
 sub artist_releases {
     my $self = shift;
+    if ($self eq 'What::Release') {
+        my $artist = shift;
+        if (!defined $artist) {
+            croak("Artist not defined.\n");
+        }
+        $self = What::Release->new(
+            artist => $artist, title => '.', year => '....');
+    }
     my $adir = $self->artist_dir();
     return find_subdirs($adir);
 }

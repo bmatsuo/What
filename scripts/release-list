@@ -15,16 +15,16 @@ use Carp;
 use Getopt::Euclid qw{ :vars<opt_> };
 
 # Include private modules.
-# ...
+use What::Release;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
 ########################################################################
 
 # Basic program information.
-my $prog_incantation  => $0;
-my $prog_dir          => dirname($0);
-my $prog_name         => basename($0);
+my $prog_incantation  = $0;
+my $prog_dir          = dirname($0);
+my $prog_name         = basename($0);
 
 # Command-line option hash.
 my %opt = %ARGV;
@@ -42,7 +42,23 @@ my $exitcode = 0;
 
 # main() - main program execution 
 sub main{
-    # <S-s>
+    my $artist = $opt{'--artist'};
+    my $title = $opt{'--title'};
+    my $year = $opt{'--year'};
+    my $should_list_artist = $opt{'--list-artists'};
+
+    if (defined $artist) {
+        search_artist( 
+            artist => $artist,
+            title => $title,
+            year => $year,);
+    }
+    else {
+        search_all_artists(
+            title => $title, 
+            year => $year,
+            include_artist => 1, );
+    }
 
     exit($exitcode);
 }
@@ -51,6 +67,78 @@ sub main{
 # SUPPORTING SUBROUTINES
 ########################################################################
 
+### INTERFACE SUB
+# Subroutine: search_all_artists
+# Usage: 
+#   search_all_artists( 
+#       title => $title, 
+#       year => $year )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub search_all_artists {
+    my ( %arg ) = @_;
+
+    for my $adir (What::Release->artists()) {
+        my $artist = basename($adir);
+        search_artist(artist => $artist, %arg);
+    }
+    
+    return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: search_artist
+# Usage: 
+#   search_artist( 
+#       artist => $artist, 
+#       [title => $title,] 
+#       [year => $year,] 
+#       [include_artist => $should_print_artist,]
+#   )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub search_artist {
+    my ( %arg ) = @_;
+    my $artist = $arg{artist};
+
+    if (!defined $artist) {
+        die "Search for undefined artist.";
+    }
+
+    my @possible_releases = What::Release->artist_releases($arg{artist});
+
+    my @matching_releases;
+
+    for my $r (@possible_releases) {
+        my $trim_length = length ($artist) + 3;
+        my $no_artist 
+            = substr basename($r), $trim_length, length ($r) - $trim_length;
+
+        my $title = $no_artist;
+        my $year = '';
+        if ($title =~ s/\s+ [(] (\d{4}) [)] \z//xms) {
+            $year = $1;
+        }
+        else {
+            die "Couldn't find year in release $no_artist";
+        }
+
+        my $title_match = 1;
+        $title_match = 0 if $arg{title} and not $title eq $arg{title};
+        my $year_match = 1;
+        $year_match = 0 if $arg{year} and not $year == $arg{year};
+
+        if ($title_match && $year_match) {
+            print "$artist - " if $arg{include_artist};
+            print "$title [$year]\n";
+        }
+
+    }
+
+    return;
+}
 
 # Finally, kickstart the script
 main();
@@ -79,6 +167,31 @@ release-list [options]
 =head1 OPTIONS
 
 =over
+
+=item --artist <artist>
+
+List releases by <artist>.
+
+=for Euclid:
+    artist.type: string, length artist
+
+=item --title <title>
+
+=for Euclid:
+    title.type: string, length title
+
+List releases (different editions) with the same title.
+
+=item --year <year>
+
+List releases restricted by year.
+
+=for Euclid:
+    year.type: /\d{4}/
+
+=item --list-artists
+
+List all artists in the upload hierarchy.
 
 =item --version
 
