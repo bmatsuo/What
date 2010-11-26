@@ -8,7 +8,7 @@ WriteMakefile(
         Getopt::Euclid => 0,
         Exception::Class => 0,
         Class::InsideOut => 0,
-        Term::Readline => 0,
+        Term::ReadLine => 0,
         Data::Dumper => 0,
         MP3::Tag => 0,
         LWP::UserAgent => 0,
