@@ -78,14 +78,17 @@ sub main{
     my $release_artist = $r->{artist};
     my $release_title = $r->{title};
     my $release_year = $r->{year};
+    my $release_date = $release_year;
 
     print "Presumed release title: ";
     print "$release_artist - $release_title [$release_year]\n";
 
+    my $release_country;
     my $release_label;
     my $release_catno;
     my $release_format;
     my $release_edition;
+    my $release_type = q{};
 
     #-------------------------#
     # BEGIN SEARCHING DISCOGS #
@@ -115,7 +118,9 @@ sub main{
             my $matching_result_list 
                 = $artist_search_results->grep(
                     sub {my $a = shift;  
-                        !$checked_artist{$a->title} && align($a->title, $release_artist) > 0.83});
+                        $a->type eq 'artist'
+                        && !$checked_artist{$a->title} 
+                        && align($a->title, $release_artist) > 0.83});
             my $num_matches = $matching_result_list->num_results;
             print "Found $num_matches (new) matching artists.\n";
             if ( $num_matches > 0) {
@@ -128,7 +133,7 @@ sub main{
                         year => $release_year,
                         discs => [values %disc]);
                     $checked_artist{$r->title} = 1;
-                    last SEARCHARTISTRESULS if defined $release;
+                    last SEARCHARTISTRESULTS if defined $release;
                 }
             }
         }
@@ -152,6 +157,22 @@ sub main{
             title => $release_title,
             year => $release_year,
             discs => [values %disc]);
+        if (!$release 
+                && $release_artist eq "Various Artists" 
+                && $release_title =~ m/\A(.+):.*\z/xms) {
+            my $main_title = $1;
+            print "Attempting even more general search";
+            $release_search = search (
+                qstr => $main_title,
+                type => 'release',
+                api => whatrc->discogs_api_key,);
+            $release = find_release_in_search_results(
+                results => $release_search,
+                artist => $release_artist,
+                title => $release_title,
+                year => $release_year,
+                discs => [values %disc]);
+        }
     }
     # TODO: When Discogs search fails, search Musicbrainz if possible.
 
@@ -190,45 +211,67 @@ sub main{
     #-----------------------#
     if (defined $release) {
         # TODO: Handle a Musicbrainz release.
+        if (defined $release->date) {
+            $release_date = $release->date;
+            if ($release_date =~ m/(\d{4})/xms) {
+                $release_year = $1;
+            }
+        }
         $release_label = $release->label_string();
         $release_catno = $release->catno_string();
         $release_format
-            = join ", ",
-                (map {$_->quantity() > 1 ? 
-                        $_->quantity() ."x".$_->type()
-                        : $_->type() }
+            = join ":",
+                (map {  ( $_->quantity() > 1 ?  $_->quantity() ."x".$_->type()
+                            : $_->type()) 
+                        . (join q{, }, @{$_->descriptions()})}
                     @{$release->formats()});
         $release_edition 
             = join ", ",
                 (map {join " ", @{$_->descriptions()}} @{$release->formats()});
+        if ($release_edition 
+                =~ s/(?: \A | \s ) ( Soundtrack | Compilation | Anthology | Album | EP | Single ) (?:\s | \z)//igxms) {
+            $release_type = $1
+        }
+        $release_country = $release->country || q{};
     }
     else {
         # When the user can't find a release id, create info from tags.
         print "'Manual' info creation...\n";
         # Prompt user for label and catno.
         $prompt->reset_validator();
+        $prompt->text("Enter a release type (Album, EP, Compilation, ...):");
+        $release_type= $prompt->prompt_user();
         $prompt->text("Enter the label if any:");
         $release_label = $prompt->prompt_user();
         $prompt->text("Enter the category number if any (on CD side):");
         $release_catno = $prompt->prompt_user();
-        $prompt->text("Enter any edition information (none for original release):");
+        $prompt->text(
+            "Enter any extra edition info (e.g. 'Deluxe', 'Remaster', etc.):"
+        );
         $release_edition = $prompt->prompt_user();
-        if ($release_edition =~ s/\A \s*\n? \z//xms) {
-            $release_edition = "Original Release";
-        }
+        $prompt->text("Enter the country country of the release:");
+        $release_country = $prompt->prompt_user();
     }
+    #if ($release_edition =~ s/\A \s*\n? \z//xms) {
+    #    $release_edition = "Original Release";
+    #    if (defined $release_country) {
+    #        $release_edition .= " ($release_country)";
+    #    }
+    #}
 
     #---------------#
     # GENERATE INFO #
     #---------------#
 
     my $info =<<EOIHEAD;
-Title.....$release_title
-Artist....$release_artist
-Edition...$release_edition
-Released..$release_year 
-Label.....$release_label
-Catno.....$release_catno
+Title.........$release_title
+Artist........$release_artist
+Type..........$release_type
+Edition info..$release_edition
+Released......$release_date 
+Countries.....$release_country
+Label.........$release_label
+Catno.........$release_catno
 
 EOIHEAD
 
@@ -527,7 +570,11 @@ sub find_release_in_search_results {
         }
 
         # Test to see if the release title is the same.
-        my $release_matches = uc "$artist - $title" eq uc $result->title;
+        my $release_title_string = "$artist - $title";
+        my $release_matches 
+            = uc $release_title_string eq uc $result->title
+            || 0 == index $release_title_string, $result->title
+            || 0 == index $result->title, $release_title_string;
         if ($release_matches) {
             my $sr = get_release(
                 id => $result->uri_identifier,
@@ -576,7 +623,7 @@ sub find_release_in_search_results {
     return $choice if defined $choice;
     $choice = choose_close_match(\@close_calls, \@close_conflicts)  if @close_calls;
     return $choice if defined $choice;
-    $choice = choose_near_miss(\@near_misses, \@near_misses)        if @near_misses;
+    $choice = choose_near_miss(\@near_misses, \@near_miss_conflicts)if @near_misses;
     return $choice if defined $choice;
 
     return;
@@ -690,17 +737,27 @@ sub choose_perfect_match {
 
     if (@hits) {
         if (scalar (@hits) == 1) {
-            print "Only one matching release found,\n\n\t"
-                . summarize_perfect_match($hits[0]) . "\n\n proceding with its data.\n";
-            return $hits[0];
+            print "Only one matching release found,\n\n    "
+                . summarize_perfect_match($hits[0]) . "\n\n";
+            my $use_close_p = What::Prompt::YesNo->new(
+                question => "Should this release be used to make the info file?");
+            my $use_close_match = $use_close_p->prompt_user();
+            if ($use_close_match =~ /\A y/xms) {
+                return $hits[0];
+            }
+            return;
         }
         my @perfect_choices = map {summarize_perfect_match($_)} @hits;
+        push @perfect_choices, 
+            "None of these choices are correct. Keep searching.";
         my $pp = What::Prompt::Choose->new(
             question => "Multiple release with matching info found\n"
                 . "Which release has the most accurate info?",
             choices => \@perfect_choices);
         my $choice = $pp->prompt_user();
-        return $hits[$choice];
+        my $release_choice = $hits[$choice];
+        return if !defined $release_choice;
+        return $release_choice;
     }
     return;
 }
@@ -799,11 +856,18 @@ sub choose_close_match {
 sub summarize_match {
     my ($dr, @probs) = @_;
     my $short_summ = summarize_perfect_match($dr);
-    my $summ = join q{}, 
-        $dr->artist_string, " - ", $dr->title, " [", $dr->date, "]", 
-        join ("\n    ", 
+    my $conflict_string 
+        = join ("\n    ", 
             q{}, $short_summ, 
             (map {defined $_ ? '(' . $_ . ')' : ()} @probs));
+    my $title_string 
+        = join q{}, 
+            $dr->artist_string, " - ", 
+            $dr->title, 
+            " [", $dr->date || q{}, "]";
+    my $summ = join q{}, 
+        $title_string, 
+        $conflict_string;
     return $summ;
 }
 
@@ -835,20 +899,21 @@ sub summarize_perfect_match {
     # Describe country and formats;
     my @format_descs = map {join ", ", @{$_->descriptions}} @{$dr->formats};
     my @format_strs;
-    for my $i ($#format_descs) {
+    for my $i (0 ... $#format_descs) {
         my $f = $dr->formats->[$i];
         my $f_str = $f->type;
         if ($f->quantity > 1) {
             $f_str = join "x", $f->quantity, $f_str;
         }
         my $f_desc = $format_descs[$i];
-        $f_str .= " $f_desc"
-            if $f_desc =~ /./xms;
+        $f_str .= " $f_desc" if $f_desc =~ /./xms;
         push @format_strs, $f_str;
     }
-    my $formats_str = join ", ", (map {"[$_]"} @format_strs);
+    my $formats_str = join " : ", @format_strs;
+    $formats_str = "[$formats_str]";
     my $country_and_format 
-        = sprintf "countries: %-46s formats: %s", $dr->country, $formats_str;
+        = sprintf "countries: %-46s formats: %s", 
+            ($dr->country || q{}) , ($formats_str || q{});
 
     my $summ = "$label_and_catno\n    $country_and_format";
     return $summ;
@@ -878,15 +943,16 @@ sub release_conflicts {
     push @conflicts,
         sprintf ("Release artist mismatch; '%s' and '%s'", 
             $release->artist_string, $arg{artist})
-        if !release_title_agrees($release, $arg{title});
+        if !release_artist_agrees($release, $arg{artist});
 
     push @conflicts,
         sprintf ("Release year mismatch; '%s' & '%s'", 
             $release->date, $arg{year})
-        if !release_title_agrees($release, $arg{title});
+        if !release_year_agrees($release, $arg{year});
 
     # Attempt to match up the discs when there is justification to do so.
-    return release_disc_problems($release, $arg{discs});
+    push @conflicts, release_disc_problems($release, $arg{discs});
+    return @conflicts;
 }
 
 # Release test template.
@@ -909,12 +975,16 @@ sub release_conflicts {
 sub release_title_agrees {
     my ($release, $title) = @_;
     return 1 if ($release->title() eq $title);
+    return 1 if (-1 != index $title, $release->title);
     return 0;
 }
 
 # Subroutine: release_year_agrees($discogs_release, $release_year)
 # Type: INTERNAL UTILITY
-# Purpose: Compare the year of a discogs release to a given string.
+# Purpose:
+#   Compare the year of a discogs release to a given string.
+#   This may be difficult because year tags may represent original release
+#   year, or edition release year.
 # Returns: 
 #   1 if the title of the discogs release is equal to $release_year.
 #   0 otherwise.
@@ -937,10 +1007,13 @@ sub release_disc_problems {
     my $release = shift;
     my @discs = @{shift @_};
     my @release_probs;
-    return () if $release->num_discs != scalar @discs;
+    my @audio_discs 
+        = grep {$_->media =~ /\A CD | Vinyl\z/xms} @{$release->discs};
+    return ("Number of audio discs are not the same.")
+        if @audio_discs != scalar @discs;
     for my $i (0 .. $#discs) {
         my $di = $discs[$i];
-        my $rel_di = $release->disc($i + 1);
+        my $rel_di = $audio_discs[$i];
         push @release_probs, ( disc_track_problems($rel_di, $di->{tracks}) );
     }
     return @release_probs;
@@ -995,7 +1068,7 @@ sub disc_track_problems {
     # So they are not currently checked at all.
 
     # No reason can be found for the tracks to disagree.
-    return 1;
+    return @problems;
 }
 
 # Subroutine: release_artist_agrees($discogs_release, $release_artist)
@@ -1006,6 +1079,9 @@ sub disc_track_problems {
 #   0 otherwise.
 sub release_artist_agrees {
     my ($release, $artist) = @_;
+    $artist =~ s/\AVarious\s+Artists\z/Various/xms;
+    #return 1
+    #    if ($artist eq 'Various Artists' && $release->artist_string eq 'Various');
     for my $a (@{$release->artists()}) {
         return 0 if index ($artist, $a->name) == -1;
         $a =~ s/\AThe\s+(\S.*\S)\z/$1, The/xms;

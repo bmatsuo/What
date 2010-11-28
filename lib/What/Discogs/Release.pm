@@ -60,7 +60,7 @@ has 'extra_artists'
 sub pos_on_disc {
     my $self = shift;
     my $pos = $self->position();
-    $pos =~ s/.*-([A-Z]*\d+)\z/$1/xms;
+    $pos =~ s/.*[-.]\s*([A-Z]*\d+)\z/$1/xms;
     return $pos;
 }
 
@@ -88,6 +88,8 @@ has 'tracks'
     => (isa => 'ArrayRef[What::Discogs::Release::Track]', 
         is => 'rw',
         default => sub { [] });
+has 'media'
+    => (isa => 'Str', is => 'rw', default => "CD");
 
 # Subroutine: $disc->num_tracks()
 # Type: INSTANCE METHOD
@@ -130,7 +132,7 @@ has 'artist_joins'
 has 'formats' 
     => (isa => 'ArrayRef[What::Discogs::Release::Format]', 
         is => 'rw', 
-        required => 1);
+        required => 0);
 has 'labels' 
     => (isa => 'ArrayRef[What::Discogs::Release::Label]', 
         is => 'rw',
@@ -138,7 +140,7 @@ has 'labels'
 has 'country' 
     => (isa => 'Str', 
         is => 'rw', 
-        required => 1);
+        required => 0);
 has 'genres' 
     => (isa => 'ArrayRef[Str]', 
         is => 'rw', 

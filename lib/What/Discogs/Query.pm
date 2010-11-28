@@ -487,9 +487,11 @@ sub release {
                 $disc_num = $dno; 
             }
         } 
-        elsif ($pos !~ m/\A(?: [a-zA-Z0-9]+- )? \d+\w*\z/xms && $pos !~ m/\A (?: [a-zA-Z0-9]+-)? [A-Z]+\d*\w* \z/xms) {
+        elsif ($pos !~ m/\A(?: [a-zA-Z0-9]+\s*[-.]\s*)? \d+\w*\z/xms 
+                && $pos !~ m/\A (?: [a-zA-Z0-9]+\s*[-.]\s*)? [A-Z]+\d*\w* \z/xms) {
             # $pos should just be a number or a vinyl side+num.
             # This is mostly for debugging failure.
+            # See What::Discogs::Release to see how positions are parsed.
             croak("Can't understand track position '$pos'.");
         }
 
