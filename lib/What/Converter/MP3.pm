@@ -146,9 +146,9 @@ sub copy_remaining_tags {
 
     # Set ID3v2 tags;
     if (exists $mp3->{ID3v2}) {
-        for my $flac_tag (keys %song_tag) {
-            my $tag_val = $song_tag{$flac_tag};
-            my $id3_tag = $id3v2_tag{uc $flac_tag};
+        for my $flac_tag (keys %id3v2_tag) {
+            my $tag_val = $self->flac->tag($flac_tag);
+            my $id3_tag = $id3v2_tag{$flac_tag};
             if (defined $tag_val and defined $id3_tag) {
                 #print {\*STDERR} "\nSetting $flac_tag: $tag_val";
                 $mp3->set_id3v2_frame($id3_tag, $tag_val);
@@ -156,9 +156,11 @@ sub copy_remaining_tags {
         }
         #print {\*STDERR} "\n";
         my ($t_num, $t_tot) 
-            = ($song_tag{'TRACKNUMBER'}, $song_tag{'TRACKTOTAL'});
+            = ($self->flac->tag('TRACKNUMBER'),
+                $self->flac->tag('TRACKTOTAL'));
         my ($d_num, $d_tot) 
-            = ($song_tag{'DISCNUMBER'}, $song_tag{'DISCTOTAL'});
+            = ($self->flac->tag('DISCNUMBER'),
+                $self->flac->tag('DISCTOTAL'));
         # Compute track number tag value, if it exists.
         my $t_val 
             = defined $t_num && defined $t_tot  ? "$t_num/$t_tot"
