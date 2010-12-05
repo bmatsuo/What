@@ -118,7 +118,7 @@ sub read_flac {
     
     my $head = Audio::FLAC::Header->new($flac_path);
     my %tag_map = uniform_tag_map($head);
-    print {\*STDERR} "Found tags ", join (q{, }, values %tag_map);
+    #print {\*STDERR} "Found tags ", join (q{, }, values %tag_map);
 
     return What::Format::FLAC->new(
         path => $flac_path,
