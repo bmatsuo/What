@@ -56,7 +56,7 @@ sub image_options {
     my $img = $self->temp_img_path;
     my $img_size = -s $img;
     if ($img_size < 128 * (1 << 10)) {
-        return ('--ti', $self->temp_img_path) 
+        return ('--ti', $self->temp_img_path);
     }
     return ();
 }

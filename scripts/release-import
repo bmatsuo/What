@@ -100,48 +100,12 @@ sub main{
     $subsys->exec(@link) == 0 
         or die "Halting import: Couldn't create link release.";
 
+    if ( $ok_snatch ) {
+        print {\*STDERR} "Creating nfo and Info.txt files.\n";
+        my @mkinfo = ('release-mkinfo', '--nfo-as-info');
+        $subsys->exec(@mkinfo) == 0
+            or die "Problem encountered creating info.";
 
-    my $desc_path = do {
-        my $desc_temp = File::Temp->new(
-            TEMPLATE => '.desc.XXXX', 
-            DIR => whatrc->rip_dir, 
-            SUFFIX => ".tmp",
-            UNLINK => 0,);
-        print {$desc_temp} $info_stub;
-        $desc_temp->filename;};
-    
-    my $editor_exitcode 
-        = $subsys->exec(whatrc->editor, $desc_path);
-    if ($editor_exitcode != 0) {
-        print {\*STDERR}
-            "Editor reported error creating the description. ",
-            "Removing temporary files and halting...\n";
-        $subsys->exec('rm', $desc_path) == 0
-            or die "Failed to remove temporary file $desc_path.";
-        print {\*STDERR}
-            "Run mkrelease when you have created an Info.txt file.\n";
-        exit(1);
-    }
-
-    open my $desc_fh, "<", $desc_path
-        or die "Can't read from temporary file $desc_path";
-    my $desc = do {local $/; <$desc_fh>};
-    close $desc_fh;
-    $subsys->exec('rm', $desc_path) == 0
-        or die "Failed to remove temporary file $desc_path.";
-
-    $desc = join "\n", (grep {$_ !~ m/ \A [#] /xms} split ("\n", $desc));
-    $desc =~ s/(?:\s*\n)+\z/\n/xms;
-    if ($desc eq q{}) {
-        print {\*STDERR} "warning: Info.txt will be empty.\n";
-    }
-
-    open my $info, ">", whatrc->rip_dir."/Info.txt"
-        or die "Couldn't write to Info.txt";
-    print {$info} $desc;
-    close $info;
-
-    if ($ok_snatch) {
         my @mkrelease = ('mkrelease', 
             '--artist', $release->{artist},
             '--title', $release->{title},

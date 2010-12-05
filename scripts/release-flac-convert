@@ -214,7 +214,9 @@ sub main{
         my $flac = basename($flac_path);
 
         if ($opt{'--verbose'}) {
-            print sprintf ("[ %02d %s:", $flac_obj->tag('tracknumber'),$flac_obj->tag('title'));
+            print sprintf (
+                "[ %02d %s:", 
+                (map {$flac_obj->tag($_)} qw{TRACKNUMBER TITLE}));
         }
 
         if ($should_create_wav) {

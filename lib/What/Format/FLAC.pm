@@ -68,7 +68,7 @@ sub _tag_name_ {
 }
 
 ### INSTANCE METHOD
-# Subroutine: tag_value
+# Subroutine: tag
 # Usage: 
 #   $flac->tag( $tag )
 #   $flac->tag( $tag, $new_value )
@@ -117,12 +117,13 @@ sub read_flac {
     my ($flac_path) = @_;
     
     my $head = Audio::FLAC::Header->new($flac_path);
-    my %tag_map = uniform_tag_map($head->{info});
+    my %tag_map = uniform_tag_map($head);
+    print {\*STDERR} "Found tags ", join (q{, }, values %tag_map);
 
     return What::Format::FLAC->new(
         path => $flac_path,
         head => $head, 
-        tag_map => \%tag_map);
+        tag_map => {%tag_map});
 }
 
 ### INTERFACE SUBROUTINE
