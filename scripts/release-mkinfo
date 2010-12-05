@@ -190,16 +190,17 @@ sub main{
             if $discogs_id =~ m/\d+/xms;
 
         if (defined $release) {
-            my $is_consistent 
-                = 0 == scalar (release_conflicts(
+            my @conflicts = release_conflicts(
                     release => $release, 
                     title => $release_title,
                     artist => $release_artist,
                     year => $release_year,
-                    discs => [values %disc],));
-            if (!$is_consistent) {
+                    discs => [values %disc],);
+            if (@conflicts) {
                 # Die if the discsogs release is not conistent with the files.
-                print {\*STDERR} "Inconsistent release info and tag info.\n";
+                print {\*STDERR} "Inconsistent release info and tag info.\n",
+                    join ("\n", @conflicts);
+
                 exit 1;
             }
         }
@@ -974,8 +975,11 @@ sub release_conflicts {
 #   0 otherwise.
 sub release_title_agrees {
     my ($release, $title) = @_;
-    return 1 if ($release->title() eq $title);
-    return 1 if (-1 != index $title, $release->title);
+    my $t = lc $title;
+    my $rt = lc $release->title;
+    return 1 if ($rt eq $t);
+    return 1 if (-1 != index $t, $rt);
+    return 1 if (-1 != index $rt, $t);
     return 0;
 }
 

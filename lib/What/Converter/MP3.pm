@@ -51,7 +51,15 @@ sub is_valid_bitrate {
     return;
 }
 
-sub image_options { my $self = shift; return ('--ti', $self->temp_img_path) }
+sub image_options { 
+    my $self = shift; 
+    my $img = $self->temp_img_path;
+    my $img_size = -s $img;
+    if ($img_size < 128 * (1 << 10)) {
+        return ('--ti', $self->temp_img_path) 
+    }
+    return ();
+}
 sub can_embed_img { return 1 }
 sub format_descriptor { my $self = shift; return uc $self->bitrate }
 sub ext { return 'mp3'; }

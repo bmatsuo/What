@@ -70,7 +70,7 @@ my $subsystem = What::Subsystem->new(
 # main() - main program execution 
 sub main{
     my @release_files = find_hierarchy(whatrc->rip_dir);
-    my @tiffs = grep { $_ =~ /\. tiff \z/ixms } @release_files;
+    my @tiffs = grep { $_ =~ /\. $ok_img_format \z/ixms } @release_files;
     my @scores = map { score_img_name($_) } @tiffs;
     my @order = sort { $scores[$b] <=> $scores[$a] } (0 ... $#scores);
     #print "@tiffs\n";
@@ -84,8 +84,16 @@ sub main{
         default => 0,
         text    => "Which image is the cover?", );
     my $i = $img_choose_p->prompt_user();
-    my $small_file = scale_down( $tiffs[$i] );
-    #print "$small_file\n";
+    my $cover_art = $tiffs[$i];
+    my $small_file = scale_down( $cover_art );
+    if (!defined $small_file) {
+        die "Couldn't create a small enough version of $cover_art\n."
+    }
+
+    if ($opt{'--verbose'}) {
+        my $small_size = size_in_KB($small_file);
+        print "Attaching image with size $small_size.\n";
+    }
 
     my @flac_paths = grep { m/\.flac\z/xms } @release_files;
     #my @flacs = map { read_flac($_) } @flac_paths;
@@ -190,12 +198,12 @@ sub scale_down {
     my $min_scale   =350;
     my $scaled = scale_img_to_size($img, $scale_pixels);
     while (size_in_KB($scaled) > $max_img_size) {
-        my $scale_pixels -= $scale_delta;
-        my $scaled = scale_img_to_size($img, $scale_pixels);
+        $scale_pixels -= $scale_delta;
+        $scaled = scale_img_to_size($img, $scale_pixels);
         if ($scale_pixels < $min_scale) {
-            my $size = size_in_KB($scaled).'KB';
-            my $geometry = sprintf "%dx%d", $min_scale, $min_scale;
             if ($opt{'--verbose'}) {
+                my $size = size_in_KB($scaled).'KB';
+                my $geometry = sprintf "%dx%d", $min_scale, $min_scale;
                 print {\*STDERR} "Giving up on scaling."
                     . "Picture is smaller than $geometry."
                     . "Picture size is $size.";
@@ -290,6 +298,8 @@ release-embed-image [options]
 =head1 OPTIONS
 
 =over
+
+=item --verbose
 
 =item --version
 

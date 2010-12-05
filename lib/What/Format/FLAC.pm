@@ -37,7 +37,7 @@ our @EXPORT = qw{
 # Throws: Nothing
 sub has_image {
     my $self = shift;
-    return exists $self->{'picture'};
+    return exists $self->head->{'picture'};
 }
 
 ### INSTANCE METHOD
