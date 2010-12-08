@@ -173,7 +173,7 @@ sub artist_string {
         my $artist = $artists[$i]->name();
         my $join = $joins[$i];
         $str .= (defined $join and $join =~ /./xms) ? "$artist $join " : $artist;
-        if ($i < $#artists) {
+        if ($i < $#artists && !defined $join) {
             $str .= ', ';
         }
     }

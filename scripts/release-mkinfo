@@ -721,7 +721,7 @@ sub find_release_in_artist_page {
     return $choice if defined $choice;
     $choice = choose_close_match(\@close_calls, \@close_conflicts)  if @close_calls;
     return $choice if defined $choice;
-    $choice = choose_near_miss(\@near_misses, \@near_misses)        if @near_misses;
+    $choice = choose_near_miss(\@near_misses, \@near_miss_conflicts)if @near_misses;
     return $choice if defined $choice;
 
     return;
@@ -796,7 +796,7 @@ sub _conflict_choose_ {
 
         my @possibilities = map {
             summarize_match(@{$_})
-        } (map {[$releases[$_], @{$conflicts[$_]}]} 0 ... $#releases);
+        } (map {[$releases[$_], @{$conflicts[$_] || []}]} 0 ... $#releases);
         push @possibilities, "No, these choices do not resemble my copy.";
 
         my $class_description 
@@ -1084,9 +1084,11 @@ sub disc_track_problems {
 sub release_artist_agrees {
     my ($release, $artist) = @_;
     $artist =~ s/\AVarious\s+Artists\z/Various/xms;
+    my @ras = @{$release->artists()};
+    return 1 if ($artist eq 'Various' && scalar(@ras) > 1);
     #return 1
     #    if ($artist eq 'Various Artists' && $release->artist_string eq 'Various');
-    for my $a (@{$release->artists()}) {
+    for my $a (@ras) {
         return 0 if index ($artist, $a->name) == -1;
         $a =~ s/\AThe\s+(\S.*\S)\z/$1, The/xms;
         return 0 if index ($artist, $a->name) == -1;
