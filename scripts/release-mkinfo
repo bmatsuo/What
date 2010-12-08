@@ -118,9 +118,11 @@ sub main{
             my $matching_result_list 
                 = $artist_search_results->grep(
                     sub {my $a = shift;  
+                        my $no_copy_num = $a->title;
+                        $no_copy_num =~ s/\s+[(]\d+[)]\z//xms;
                         $a->type eq 'artist'
                         && !$checked_artist{$a->title} 
-                        && align($a->title, $release_artist) > 0.83});
+                        && align($no_copy_num, $release_artist) > 0.83});
             my $num_matches = $matching_result_list->num_results;
             print "Found $num_matches (new) matching artists.\n";
             if ( $num_matches > 0) {
@@ -572,10 +574,12 @@ sub find_release_in_search_results {
 
         # Test to see if the release title is the same.
         my $release_title_string = "$artist - $title";
+        my $no_copy_num = $result->title;
+        $no_copy_num =~ s/\s+ [(] \d+ [)] \s - \s / - /xms;
         my $release_matches 
-            = uc $release_title_string eq uc $result->title
-            || 0 == index $release_title_string, $result->title
-            || 0 == index $result->title, $release_title_string;
+            = uc $release_title_string eq uc $no_copy_num
+            || 0 == index $release_title_string, $no_copy_num
+            || 0 == index $no_copy_num, $release_title_string;
         if ($release_matches) {
             my $sr = get_release(
                 id => $result->uri_identifier,
