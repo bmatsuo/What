@@ -27,6 +27,7 @@ use What::Subsystem;
 use What::Discogs;
 use What::Utils;
 use What::WhatRC;
+use What::BBCode;
 use What::Prompt;
 use What::Prompt::Choose;
 use What::Prompt::YesNo;
@@ -278,10 +279,43 @@ Catno.........$release_catno
 
 EOIHEAD
 
+    my $bbrelease = bbcode->size( 
+        scale => 3, 
+        text => bbcode->artist(name => $release_artist));
+    $bbrelease 
+        = join q{ }, 
+        $bbrelease, '-',
+        bbcode->size(
+            scale => 4,
+            text => $release_title),
+        "";
+    $bbrelease = bbcode->bold(text=>$bbrelease);
+    $bbrelease .= bbcode->size(
+            scale => 3,
+            text => "[$release_year]");
+    $bbrelease = bbcode->align(
+        justify => 'center',
+        text => $bbrelease);
+
+    my $bbinfo = "$bbrelease\n";
+
+    $bbinfo 
+        .= join q{ }, 
+            $release_label, 
+            "(", $release_country, $release_date,
+            '|', $release_format, 
+            '|', $release_catno,
+            "):\n";
+    my $bbtrack_format # requires args %s, %s, %d, %02d
+        = join q{ }, 
+            bbcode->bold(text => "%s. "), 
+            "%s", "[%d:%02d]";
+
     for my $disc_d (@disc_dirs) {
         if (@disc_dirs > 1) {
             my $disc_name = basename($disc_d);
             $info .= "$disc_name\n";
+            $bbinfo .= bbcode->bold(text=>$disc_name)."\n";
         }
 
         my $disc = $disc{$disc_d};
@@ -291,14 +325,19 @@ EOIHEAD
             my ($min, $sec) = (floor($dur / 60), floor($dur % 60));
             $info .= sprintf "%s %s [%d:%02d]",
                 $track->{position}, $track->{title}, $min, $sec;
+            $bbinfo .= sprintf $bbtrack_format, 
+                $track->{position}, $track->{title}, $min, $sec;
             if ($release_artist eq 'Various Artists') {
                 $info .= " ($track->{artist})";
+                $bbinfo .= " (" . bbcode->artist(name => $track->{artist}) . ")";
             }
             $info .= "\n";
+            $bbinfo .= "\n"
         }
 
         if (@disc_dirs > 1) {
             $info .= "\n";
+            $bbinfo .= "\n";
         }
     }
 
@@ -306,22 +345,24 @@ EOIHEAD
     # OUTPUT INFO #
     #-------------#
     my $info_filename = "$release_artist - $release_title ($release_year).nfo";
+    my $bbinfo_filename = "Info.txt";
     $info_filename =~ s![/:]!_!gxms;
     my $info_path = whatrc->rip_dir."/$info_filename";
+    my $bbinfo_path = whatrc->rip_dir."/$bbinfo_filename";
     die "Info file exists at $info_path." 
+        if -e $info_path;
+    die "BBCode Info file exists at $bbinfo_path." 
         if -e $info_path;
 
     open my $ifh, ">", $info_path
         or die "couldn't open $info_path.";
-
     print {$ifh} $info;
-
     close $ifh;
 
-    if ($opt{'--nfo-as-info'}) {
-        subsystem(
-            cmd => ['cp', $info_filename, whatrc->rip_dir."/Info.txt"]);
-    }
+    open my $bbfh, ">", $bbinfo_path
+        or die "couldn't open $bbinfo_path.";
+    print {$bbfh} $bbinfo;
+    close $bbfh;
 
     exit $exitcode;
 }
