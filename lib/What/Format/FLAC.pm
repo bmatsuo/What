@@ -42,6 +42,20 @@ sub has_image {
 
 ### INSTANCE METHOD
 # Subroutine: image_info
+# Usage: $flac->all_image_info(  )
+# Purpose: Find info about all embedded images.
+# Returns: A hash;
+# Throws: Nothing
+sub all_image_info {
+    my $self = shift;
+    #open my $metaflac, '-|', 'metaflac', '--list', $self->flac_path
+    #    or croak("Couldn't read FLAC block info.");
+    return $self->head->picture('all') if $self->has_image();
+    return;
+}
+
+### INSTANCE METHOD
+# Subroutine: image_info
 # Usage: $flac->image_info(  )
 # Purpose: Find info about embedded cover art.
 # Returns: A hash with keys 'block' and 'type';
@@ -53,6 +67,43 @@ sub image_info {
     return $self->head->picture(3) if $self->has_image();
     return;
 }
+
+### INSTANCE METHOD
+# Subroutine: image_block
+# Usage: $flac->image_block(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub image_block {
+    my $self = shift;
+    open my $metaflac, '-|', 'metaflac', '--list', $self->path
+        or croak("Couldn't read FLAC block info.");
+    my ($block_num, $block_type, $image_type);
+    SCANFLAC:
+    while (!defined $image_type || $image_type != 3) {
+        my $flac_line = <$metaflac>;
+        if ($flac_line =~ m/\A METADATA \s block \s [#] (\d+) \n? \z/xms) {
+            $block_num = $1;
+            $block_type = undef;
+            $image_type = undef;
+        }
+        elsif ($flac_line =~ m/\A\s+ type: \s+ (\d+) \s+ [(] (.*) [)] \n? \z/xms) {
+            my $type = $1;
+            if (defined $block_type) {
+                if ($block_type == 6) { # Picture
+                    $image_type = $type;
+                }
+            }
+            else {
+                $block_type = $type;
+            }
+        }
+    }
+    close $metaflac;
+    return $block_num if $image_type == 3;
+    return;
+}
+
 
 ### INSTANCE METHOD
 # Subroutine: _tag_name_

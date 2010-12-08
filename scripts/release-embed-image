@@ -22,7 +22,9 @@ use What::WhatRC;
 use What::Utils;
 use What::Subsystem;
 use What::Prompt::Choose;
+use What::Prompt::YesNo;
 use What::Format::FLAC;
+use Data::Dumper;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -70,7 +72,14 @@ my $subsystem = What::Subsystem->new(
 # main() - main program execution 
 sub main{
     my @release_files = find_hierarchy(whatrc->rip_dir);
+    my @flac_paths = grep { m/\.flac\z/xms } @release_files;
+    if (!should_embed_images(@flac_paths)) {
+        print "Cancelling image embedding.\n";
+        exit 0;
+    }
+
     my @tiffs = grep { $_ =~ /\. $ok_img_format \z/ixms } @release_files;
+
     my @scores = map { score_img_name($_) } @tiffs;
     my @order = sort { $scores[$b] <=> $scores[$a] } (0 ... $#scores);
     #print "@tiffs\n";
@@ -94,8 +103,6 @@ sub main{
         my $small_size = size_in_KB($small_file);
         print "Attaching image with size $small_size.\n";
     }
-
-    my @flac_paths = grep { m/\.flac\z/xms } @release_files;
     #my @flacs = map { read_flac($_) } @flac_paths;
     add_img_to_flacs($small_file, @flac_paths);
 
@@ -106,6 +113,45 @@ sub main{
 ########################################################################
 # SUPPORTING SUBROUTINES
 ########################################################################
+
+### INTERNAL UTILITY
+# Subroutine: should_embed_images
+# Usage: should_embed_images( @flac_paths )
+# Purpose: 
+#   Determine if the program should continue to embed images in the FLAC files.
+# Returns: Boolean value.
+# Throws: Nothing
+sub should_embed_images {
+    my ( @flac_paths ) = @_;
+    my @flacs_with_images = grep {flac_has_cover_img($_)} @flac_paths;
+    if (@flacs_with_images) {
+        print {\*STDERR} 
+            sprintf ("Warning: cover images present in %d files\n", 
+                scalar @flacs_with_images);
+        my $overwrite_p = What::Prompt::YesNo->new(
+            question => "Should existing images be replaced?",
+            default => "yes",);
+        print img_block($flacs_with_images[0]),"\n";
+        return if $overwrite_p->prompt_user() =~ m/\An/ixms;
+        print "Removing existing album artwork...";
+        for my $fpath (@flacs_with_images) {
+            my $iblock = img_block($fpath);
+            if (!defined $iblock) {
+                die "Unexpected undefined image block";
+            }
+            my $rm_status = $subsystem->exec(
+                'metaflac','--dont-use-padding', 
+                    "--block-number=$iblock", '--remove',
+                    $fpath);
+            if ($rm_status != 0) {
+                die "Error removing image artwork for $fpath.\n$@";
+            }
+        }
+        print "Done\n";
+    }
+    return 1;
+}
+
 
 ### INTERNAL UTILITY
 # Subroutine: add_img_to_flacs
@@ -124,6 +170,34 @@ sub add_img_to_flacs {
     print "Done\n";
     return;
 }
+
+### INTERNAL UTILITY
+# Subroutine: img_block
+# Usage: img_block( $flac_path )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub img_block {
+    my ( $flac_path ) = @_;
+
+    my $flac = read_flac($flac_path);
+
+    return $flac->image_block() if $flac->has_image();
+    return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: flac_has_cover_img
+# Usage: flac_has_cover_img( $flac_path )
+# Purpose: Evaluate proposition "$flac_path has an embeded cover image."
+# Returns: Nothing
+# Throws: Nothing
+sub flac_has_cover_img {
+    my ($flac_path) = @_;
+    my $flac = read_flac($flac_path);
+    return $flac->has_image();
+}
+
 
 ### INTERNAL UTILITY
 # Subroutine: score_img_name
@@ -160,7 +234,7 @@ sub score_img_name {
 # Throws: Nothing
 sub remove_temporary_images {
     my @temp_imgs = find_file_pattern('*', $temp_img_dir);
-    $subsystem->exec('rm', @temp_imgs) == 0
+    $subsystem->exec('rm', '-f', @temp_imgs) == 0
         or croak("Couldn't remove @temp_imgs\n\n$?\n\n");
     return;
 }
