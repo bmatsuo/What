@@ -61,6 +61,11 @@ sub main{
     die sprintf ("Couldn't find FLAC release %s.", $fd_name)
         if !-d $flac_dir;
 
+    my @rip_files = find_file_pattern("*", $whatrc->rip_dir);
+    if (@rip_files) {
+        die "There are files in the rip directory.\n";
+    }
+
     my @rip_files = find_file_pattern('*', $flac_dir);
     my @cp_rip = ('cp', '-r', @rip_files, whatrc->rip_dir);
     $subsystem->exec(@cp_rip) == 0
