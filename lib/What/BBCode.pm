@@ -472,10 +472,6 @@ The above code will print the string
 
 Where <this wiki article> is actually a hyper link with text "this wiki article".
 
-=head1 AUTHOR
-
-Bryan Matsuo [bryan.matsuo@gmail.com]
-
 =head1 BUGS
 
 There is no way to 'trigger' markup tags. 
@@ -485,6 +481,10 @@ This is implemented with the "[n]" tag in BBCode.
 =over
 
 =back
+
+=head1 AUTHOR
+
+dieselpowered
 
 =head1 COPYRIGHT & LICENCE
 
