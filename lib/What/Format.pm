@@ -68,7 +68,7 @@ for my $cbr (@mp3_cbr_bitrates) {
     $ext_of{$cbr} = 'mp3';
 }
 for my $vbr (@mp3_vbr_qualities) {
-    $is_possible{$vbr} = 1
+    $is_possible{$vbr} = 1;
     $ext_of{$vbr} = 'mp3';
 }
 
