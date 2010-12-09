@@ -8,6 +8,7 @@ use What::Utils;
 use What::Subsystem;
 use What::Format;
 use MP3::Tag;
+use Exception::Class ('QualityException');
 
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
@@ -40,6 +41,24 @@ my %lame_tag = (
     #COMPOSER => '--writer',
 );
 
+my %is_valid_cbr  = (
+    32 => 1,
+    40 => 1,
+    48 => 1,
+    56 => 1,
+    64 => 1,
+    80 => 1,
+    96 => 1,
+    112 => 1,
+    128 => 1,
+    160 => 1,
+    192 => 1,
+    224 => 1,
+    256 => 1,
+    320 => 1,
+);
+
+
 # Subroutine: is_valid_bitrate($bitrate)
 # Type: INTERNAL UTILITY
 # Purpose: Determine if a given bitrate is valid (320, V0, or V2).
@@ -67,7 +86,6 @@ sub needs_wav { return 1; }
 sub program { return "lame"; }
 sub program_description { return `lame --version | head -n 1`; }
 
-#TODO: Fill in the next three subroutines!
 sub audio_quality_options { 
     my $self = shift;
 
@@ -75,14 +93,20 @@ sub audio_quality_options {
 
     my $bitrate = $self->bitrate;
 
-    if ($bitrate eq 'V0') {
-        push @opts, qw{-V0 --vbr-new};
+    if ($bitrate =~ m/\A V([0-9]) \z/ixms) {
+        my $vbr_qual = $1;
+        push @opts, "-V$vbr_qual", '--vbr-new';
     }
-    elsif ($bitrate eq 'V2') {
-        push @opts, qw{-V2 --vbr-new};
+    elsif ($bitrate =~ m/\A V(.*) \z/ixms) {
+        my $VBR_qual = $1;
+        QualityException->throw(error => "bad vbr quality '$VBR_qual'\n");
     }
-    elsif ($bitrate eq '320') {
-        push @opts, qw{--cbr -b320 -h};
+    elsif ($is_valid_cbr{$bitrate}) {
+        push @opts, '--cbr', "-b$bitrate", '-h'};
+    }
+    else {
+        my $bad_bitrate = $bitrate || q{};
+        QualityException->throw(error => "Bad MP3 quality '$bad_bitrate'.")
     }
 
     return @opts;
