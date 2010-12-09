@@ -72,6 +72,36 @@ my $hit_char = '*';
 
 # main() - main program execution 
 sub main{
+    my @nfos = find_file_pattern('*.nfo', whatrc->rip_dir);
+    my $bbinfo_filename = "Info.txt";
+    my $generate_info = 1;
+    my $generate_bbinfo = 1;
+    my $fetch_image = !has_images(whatrc->rip_dir);
+    my $bbinfo_path = whatrc->rip_dir."/$bbinfo_filename";
+    if (@nfos) {
+        my $err = "Info file exists at @nfos.";
+        if ($opt{'--skip-existing'}) {
+            print "$err\n" if $opt{'--verbose'};
+            $generate_info = 0
+        }
+        else{
+            die $err;
+        }
+    }
+    if (-e $bbinfo_path) {
+        my $err = "BBCode Info.txt exists at $bbinfo_path.";
+        if ($opt{'--skip-existing'}) {
+            print "$err\n" if $opt{'--verbose'};
+            $generate_bbinfo = 0
+        }
+        else{
+            die $err;
+        }
+    }
+    if ( !($generate_info || $generate_bbinfo || $fetch_image) ) {
+        print "Nothing to fetch from online databases.\n";
+        exit 0;
+    }
 
     #-------------------#
     # ANALYZE FILE TAGS #
@@ -349,24 +379,22 @@ EOIHEAD
     # OUTPUT INFO #
     #-------------#
     my $info_filename = "$release_artist - $release_title ($release_year).nfo";
-    my $bbinfo_filename = "Info.txt";
     $info_filename =~ s![/:]!_!gxms;
     my $info_path = whatrc->rip_dir."/$info_filename";
-    my $bbinfo_path = whatrc->rip_dir."/$bbinfo_filename";
-    die "Info file exists at $info_path." 
-        if -e $info_path;
-    die "BBCode Info file exists at $bbinfo_path." 
-        if -e $info_path;
 
-    open my $ifh, ">", $info_path
-        or die "couldn't open $info_path.";
-    print {$ifh} $info;
-    close $ifh;
+    if ($generate_info) {
+        open my $ifh, ">", $info_path
+            or die "couldn't open $info_path.";
+        print {$ifh} $info;
+        close $ifh;
+    }
 
-    open my $bbfh, ">", $bbinfo_path
-        or die "couldn't open $bbinfo_path.";
-    print {$bbfh} $bbinfo;
-    close $bbfh;
+    if ($generate_bbinfo) {
+        open my $bbfh, ">", $bbinfo_path
+            or die "couldn't open $bbinfo_path.";
+        print {$bbfh} $bbinfo;
+        close $bbfh;
+    }
 
     fetch_cover_art($release) if defined $release;
 
@@ -1230,7 +1258,7 @@ sub has_images {
         TIFF => 1,
     );
     # Grep file extensions for images.
-    my @imgs = grep {$is_img{$_}}map {m/\.(\w+)\z/xms} find_hierarchy($dir);
+    my @imgs = grep {$is_img{uc $_}}map {m/\.(\w+)\z/xms} find_hierarchy($dir);
     return @imgs;
 }
 
@@ -1308,6 +1336,10 @@ release-mkinfo [options]
 =head1 OPTIONS
 
 =over
+
+=item --skip-existing | -s
+
+If Info.txt or a .nfo file exist already, do not try to generate them.
 
 =item --verbose
 
