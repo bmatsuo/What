@@ -132,7 +132,7 @@ sub link_dirs {
             if (!-e $mirror_file) {
                 my $ext = $filename;
                 if ($ext =~ s/\A .+ \.([^.]+) \z/$1/xms) {
-                    if (!$accepted_ext{$ext}) {
+                    if (!$accepted_ext{lc $ext}) {
                         print {\*STDERR} 
                             "Not linking file with unknown extension;"
                             . " $filename\n";

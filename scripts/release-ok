@@ -80,7 +80,7 @@ sub main{
         print {\*STDERR} "$num_discs discs found.\n";
     }
 
-    my @images = grep {m/\.(?: jpeg | jpg | tiff | png )\z/xms} @release_files;
+    my @images = grep {m/\.(?: jpeg | jpg | tiff | png )\z/ixms} @release_files;
     if (!@images){
         print {\*STDERR} "No images found.\n";
         $exitcode = 1;
@@ -123,7 +123,7 @@ sub main{
         $exitcode = 1 if !$opt{'--no-log'};
     }
 
-    my @cue_files = grep {m/\.cue\z/xms} @release_files;
+    my @cue_files = grep {m/\.cue\z/ixms} @release_files;
     my @discs_w_cue;
     for my $cue (@cue_files) {
         my $cue_disc = dirname($cue);
@@ -218,7 +218,7 @@ sub main{
         elsif ($ext eq 'cue') {}
         elsif ($ext eq 'm3u') {}
         elsif ($ext eq 'nfo') {}
-        elsif ($ext =~ m/\A(?: tiff | jpeg | jpg | png )\z/xms) {}
+        elsif ($ext =~ m/\A(?: tiff | jpeg | jpg | png )\z/ixms) {}
         elsif ($file eq "$rip_dir/Info.txt") {}
         elsif (-d $file) {} # Ignore directories.
         # Any other files are not expected.
