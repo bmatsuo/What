@@ -66,11 +66,11 @@ None by default.
 
 =head1 AUTHOR
 
-Bryan Matsuo, <bryan.matsuo@gmail.com>
+dieselpowered
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010 by Bryan Matsuo
+Copyright (C) 2010 by The What team.
 
 This file is part of What.
 

@@ -147,7 +147,7 @@ Originally created on 09/18/10 23:46:19
 
 =head1 AUTHOR
 
-Bryan Matsuo (bryan.matsuo@gmail.com)
+dieselpowered
 
 =head1 BUGS
 
@@ -156,3 +156,5 @@ Bryan Matsuo (bryan.matsuo@gmail.com)
 =back
 
 =head1 COPYRIGHT
+
+(c) The What team.

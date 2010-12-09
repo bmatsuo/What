@@ -183,10 +183,8 @@ Add a specified release to the user's music library.
 
 =back
 
-=head1 AUTHORS
-
-Bryan Matsuo [bryan.matsuo@gmail.com] (primary author)
-
 =head1 COPYRIGHT 
 
-(c) Bryan Matsuo [bryan.matsuo@gmail.com]
+(c) The What team
+
+=cut

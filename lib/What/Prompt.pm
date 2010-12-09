@@ -79,7 +79,7 @@ can also handle automatic retrying of invalid responses.
 
 =head1 AUTHOR
 
-Bryan Matsuo (bryan.matsuo@gmail.com)
+dieselpowered
 
 =head1 BUGS
 
@@ -87,7 +87,9 @@ Bryan Matsuo (bryan.matsuo@gmail.com)
 
 =back
 
-=head1 COPYRIGHT
+=head1 COPYRIGHT & License
+
+(c) The What team.
 
 This file is part of What.
 

@@ -488,4 +488,4 @@ This is implemented with the "[n]" tag in BBCode.
 
 =head1 COPYRIGHT & LICENCE
 
-(c) Bryan Matsuo [bryan.matsuo@gmail.com]
+(c) The What team.

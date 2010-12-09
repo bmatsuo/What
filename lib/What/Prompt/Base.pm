@@ -178,17 +178,19 @@ This Module contains the What::Prompt class of object. It can handle
 prompting the user through STDOUT and reading a response via STDIN. It
 can also handle automatic retrying of invalid responses.
 
-=head1 AUTHOR
-
-Bryan Matsuo (bryan.matsuo@gmail.com)
-
 =head1 BUGS
 
 =over
 
 =back
 
-=head1 COPYRIGHT
+=head1 AUTHOR
+
+dieselpowered
+
+=head1 COPYRIGHT & LICENSE
+
+(c) 2010 by The What team.
 
 This file is part of What.
 

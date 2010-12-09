@@ -33,7 +33,7 @@ Originally created on 11/21/10 05:34:13
 
 =head1 AUTHOR
 
-Bryan Matsuo [bryan.matsuo@gmail.com]
+dieselpowered
 
 =head1 BUGS
 
@@ -43,4 +43,4 @@ Bryan Matsuo [bryan.matsuo@gmail.com]
 
 =head1 COPYRIGHT & LICENCE
 
-(c) Bryan Matsuo [bryan.matsuo@gmail.com]
+(c) The What team.

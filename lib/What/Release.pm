@@ -600,11 +600,11 @@ mkrelease, release-flac-convert, release-mktorrent, release-scaffold
 
 =head1 AUTHOR
 
-Bryan Matsuo, E<lt>bryan.matsuo@gmail.comE<gt>
+dieselpowered
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010 by Bryan Matsuo
+Copyright (C) 2010 by The What team.
 
 This file is part of What.
 
