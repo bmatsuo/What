@@ -1309,11 +1309,6 @@ release-mkinfo [options]
 
 =over
 
-=item --nfo-as-info
-
-Copy the .nfo file to Info.txt. This will likely be replaced when templating is implemented, 
-as Info.txt should be BBCode enhanced.
-
 =item --verbose
 
 =item --dry-run
