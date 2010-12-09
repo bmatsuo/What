@@ -103,24 +103,30 @@ sub main{
 
     my $flac_dir = $release->format_dir('FLAC');
 
-    # Look for all the release files (TODO: CHECK IF THIS IS ACTUALLY WORKING!!).
-    my @release_files = bsd_glob("$rip_dir/*");
+    # Look for all the base level files.
+    my @release_files = find_file_pattern('*', $rip_dir);
 
     # Look for existing playlists.
     my @existing_m3us = grep {$_ =~ m/\.m3u\z/xms} @release_files;
     my $root_has_m3u = @existing_m3us > 0;
-    if (!$root_has_m3u && $opt{'--verbose'}) { print "No M3U found @existing_m3us\n"; }
+    if (!$root_has_m3u && $opt{'--verbose'}) { 
+        print "No M3U found at the root level\n";
+    }
 
     # Look for file 'Info.txt', and remove it from the @release_files list.
+    my $info_path = whatrc->rip_dir."/Info.txt";
     my $file_is_info = sub {$_[0] =~ m/Info\.txt\z/xms};
     my @info 
         = defined $opt{'--bandcamp'} ? ("") 
         : grep {$file_is_info->($_)} @release_files;
-    if (!@info) {
-        print {\*STDERR} "Error: Can't find Info.txt.\n";
-        exit(1);
-    }
+    #if (!@info) {
+    #    print {\*STDERR} "Error: Can't find Info.txt.\n";
+    #    exit(1);
+    #}
     @release_files = grep {!$file_is_info->($_)} @release_files;
+    # Create Info.txt, .nfo, and get cover art if necessary.
+    $subsystem->exec('release-mkinfo', '--skip-existing') == 0
+        or die "Couldn't generate release information; $?\n";
 
     # Check the release and make any necessary M3U files.
     if (!$opt{'--bandcamp'}) {
@@ -167,7 +173,7 @@ sub main{
         my @move_release = ('mv', @release_files, $flac_dir);
         $subsystem->exec(@move_release) == 0 or die;
         my @move_info 
-        = ('mv', $info[0], $release->dir());
+        = ('mv', $info_path, $release->dir());
         $subsystem->exec(@move_info) == 0 or die;
 
         # Convert the FLAC into any other requested formats.

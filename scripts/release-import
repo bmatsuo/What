@@ -101,10 +101,11 @@ sub main{
         or die "Halting import: Couldn't create link release.";
 
     if ( $ok_snatch ) {
-        print {\*STDERR} "Creating nfo and Info.txt files.\n";
-        my @mkinfo = ('release-mkinfo', '--nfo-as-info');
-        $subsys->exec(@mkinfo) == 0
-            or die "Problem encountered creating info.";
+        # This has been moved to mkrelease.
+        #print {\*STDERR} "Creating nfo and Info.txt files.\n";
+        #my @mkinfo = ('release-mkinfo', '--nfo-as-info');
+        #$subsys->exec(@mkinfo) == 0
+        #    or die "Problem encountered creating info.";
 
         my @mkrelease = ('mkrelease', 
             '--artist', $release->{artist},

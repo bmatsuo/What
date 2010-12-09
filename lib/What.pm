@@ -26,7 +26,7 @@ our @EXPORT = qw(
     tracker_url
     );
 
-our $VERSION = '0.00_29';
+our $VERSION = '0.00_31';
 
 my $whome = safe_path("~/.what");
 
