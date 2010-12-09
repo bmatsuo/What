@@ -14,6 +14,7 @@ use Carp;
 use POSIX;
 
 # Include CPAN modules.
+use Data::Dumper;
 use Getopt::Euclid qw{ :vars<opt_> };
 use Audio::FLAC::Header;
 use Exception::Class (
@@ -55,6 +56,9 @@ my %checked_release;
 my %checked_artist;
 
 my $prompt = What::Prompt->new();
+my $subsystem = What::Subsystem->new(
+    verbose => $opt{'--verbose'},
+    dry_run => $opt{'-dry_run'});
 
 my $known_miss_char = 'x';
 my $miss_char = '.';
@@ -363,6 +367,8 @@ EOIHEAD
         or die "couldn't open $bbinfo_path.";
     print {$bbfh} $bbinfo;
     close $bbfh;
+
+    fetch_cover_art($release) if defined $release;
 
     exit $exitcode;
 }
@@ -1208,6 +1214,72 @@ sub common_prefix_pair {
     return $prefix;
 }
 
+### INTERNAL UTILITY
+# Subroutine: has_images
+# Usage: has_images( $dir )
+# Purpose: look for images in $dir.
+# Returns: The images found.
+# Throws: Nothing
+sub has_images {
+    my ($dir) = @_;
+
+    my %is_img = (
+        JPG => 1,
+        JPEG => 1,
+        PNG => 1,
+        TIFF => 1,
+    );
+    # Grep file extensions for images.
+    my @imgs = grep {$is_img{$_}}map {m/\.(\w+)\z/xms} find_hierarchy($dir);
+    return @imgs;
+}
+
+### INTERNAL UTILITY
+# Subroutine: fetch_cover_art
+# Usage: fetch_cover_art( $discogs_release )
+# Purpose: Fetch default artwork for a release.
+# Returns: 
+#   The path of the image if it was successfully downloaded,
+#   an undefined value otherwise.
+# Throws: Nothing
+sub fetch_cover_art {
+    my ( $discogs_release ) = @_;
+    #my $rd = Dumper $discogs_release;
+    #print {\*STDERR} $rd,"\n";
+    return if has_images(whatrc->rip_dir);
+    if (!$discogs_release->has_images()) {
+        print "No images could be found for the discogs release.\n";
+        return;
+    }
+
+    # Get the image uri, and its filetype (extension).
+    my $img_uri = $discogs_release->image(0);
+    if ($img_uri !~ m/\.(\w+)\z/xms) {
+        die "Couldn't can't determine image extension; '$img_uri'";
+    }
+    my $img_ext = $1;
+
+    # Create a path for the download.
+    my $cover_name = "Cover.$img_ext";
+    my $img_path = join '/', whatrc->rip_dir, $cover_name;
+
+    # Try to download the image.
+    print "Attempting to fetch image", ($opt{'--verbose'} ? ".\n" : " ... ");
+    my $dl_err 
+        = $subsystem->exec(
+            'wget', 
+            ($opt{'--verbose'} ? '--no-verbose' : '--quiet'), 
+            $img_uri, '-O', $img_path);
+    if ($dl_err) {
+        warn "Couldn't fetch $img_path from $img_uri; ($dl_err)\n$?\n";
+        return;
+    }
+    print "Done.\n" if !$opt{'--verbose'};
+
+    # Return the image path.
+    return $img_path;
+}
+
 # Finally, kickstart the script
 main();
 
@@ -1241,6 +1313,10 @@ release-mkinfo [options]
 
 Copy the .nfo file to Info.txt. This will likely be replaced when templating is implemented, 
 as Info.txt should be BBCode enhanced.
+
+=item --verbose
+
+=item --dry-run
 
 =item --version
 

@@ -11,6 +11,30 @@ has 'query' => ('isa' => 'What::Discogs::Query::Base', 'is' => 'rw', 'required' 
 has 'images' => ('isa' => 'ArrayRef[Str]', 'is' => 'rw', 'required' => 0,
     default => sub { [] });
 
+### INSTANCE METHOD
+# Subroutine: has_images
+# Usage: $discogs_obj->has_images(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub has_images {
+    my $self = shift;
+    return 1 if scalar (@{$self->images} > 0);
+    return;
+}
+
+### INSTANCE METHOD
+# Subroutine: image
+# Usage: discogs_obj->image( $ind )
+# Purpose: Get the uri of the $ind-th image, starting at 0.
+# Returns: Nothing
+# Throws: Nothing
+sub image {
+    my $self = shift;
+    my ( $ind ) = @_;
+    return $self->images->[$ind];
+}
+
 1;
 __END__
 # Below is stub documentation for your module. You'd better edit it!

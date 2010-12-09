@@ -13,7 +13,7 @@ sub get_urls {
 
 sub get_images {
     my ($node) = @_;
-    return get_text_list('images', 'image', $node);
+    return map {$_->{att}->{uri}} get_node_list('images', 'image', $node);
 }
 
 sub get_artists {
@@ -212,8 +212,8 @@ sub artist {
 
     #print {\*STDERR} "Got artist name\n";
 
-    my @images 
-        = map {$_->text} get_node_list('images','image',$artist_root);
+    my @images = What::Discogs::Query::Utils::get_images($artist_root);
+    #= map {$_->text} get_node_list('images','image',$artist_root);
 
     my @aliases 
         = map {$_->text} get_node_list('aliases','name',$artist_root);
@@ -400,6 +400,8 @@ sub release {
     }
     $release{extra_artists} = \@eas if @eas;
 
+    my @images = What::Discogs::Query::Utils::get_images($release_root);
+    $release{images} = \@images if @images;
 
     my @formats;
     my @format_nodes 
@@ -628,8 +630,8 @@ sub label {
 
     #print {\*STDERR} "Got label name\n";
 
-    my @images 
-        = map {$_->text} get_node_list('images','image',$label_root);
+    my @images = What::Discogs::Query::Utils::get_images($label_root);
+    #= map {$_->text} get_node_list('images','image',$label_root);
 
     my @sublabels 
         = map {$_->text} get_node_list('aliases','name',$label_root);
