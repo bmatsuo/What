@@ -68,6 +68,10 @@ sub main{
     my ($artist, $year, $title) 
         = map {$release->{$_}} qw{artist year title};
 
+    # Create Info.txt, .nfo, and get cover art if necessary.
+    $subsystem->exec('release-mkinfo', '--skip-existing') == 0
+        or die "Couldn't generate release information; $?\n";
+
     # Figure out the torrent formats requested and do book-keeping.
     # Create a list of lossy format arguments and their names.
     my @lossy_args                  
@@ -124,9 +128,6 @@ sub main{
     #    exit(1);
     #}
     @release_files = grep {!$file_is_info->($_)} @release_files;
-    # Create Info.txt, .nfo, and get cover art if necessary.
-    $subsystem->exec('release-mkinfo', '--skip-existing') == 0
-        or die "Couldn't generate release information; $?\n";
 
     # Check the release and make any necessary M3U files.
     if (!$opt{'--bandcamp'}) {
