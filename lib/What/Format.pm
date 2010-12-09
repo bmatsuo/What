@@ -31,8 +31,10 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
     formats
+    all_formats
     format_normalized
     format_is_accepted
+    format_is_possible
     format_extension
     transcode_path
 );
@@ -47,7 +49,6 @@ my %is_accepted = (
     V0      => 1,
     V2      => 1,
 );
-
 my %ext_of = (
     FLAC    => 'flac',
     OGG     => 'ogg',
@@ -57,13 +58,35 @@ my %ext_of = (
     V2      => 'mp3',
 );
 
+my %is_possible = ( %is_accepted );
+
+my @mp3_cbr_bitrates = qw{32 40 48 56 64 80 96 112 128 160 192 224 256 320};
+my @mp3_vbr_qualities = qw{V0 V1 V2 V3 V4 V5 V6 V7 V8 V9};
+
+for my $cbr (@mp3_cbr_bitrates) {
+    $is_possible{$cbr} = 1;
+    $ext_of{$cbr} = 'mp3';
+}
+for my $vbr (@mp3_vbr_qualities) {
+    $is_possible{$vbr} = 1
+    $ext_of{$vbr} = 'mp3';
+}
+
 # Subroutine: formats()
 # Type: INTERFACE SUB
-# Returns: List of the valid formats.
+# Returns: List of the What.CD-accepted formats.
 sub formats {
     return keys %is_accepted;
 }
 
+### INTERFACE SUB
+# Subroutine: all_formats
+# Usage: all_formats(  )
+# Returns: List of all possible formats for a conversion.
+# Throws: Nothing
+sub all_formats {
+    return keys %is_possible;
+}
 
 # INTERFACE METHOD (no class arg);
 sub format_normalized {
@@ -75,6 +98,18 @@ sub format_normalized {
 sub format_is_accepted{
     my $format = format_normalized(shift @_);
     return if !$is_accepted{$format};
+    return $format;
+}
+
+### INTERFACE SUB
+# Subroutine: format_is_possible
+# Usage: format_is_possible( $format )
+# Returns: Boolean value determining if format name $format can be created.
+# Throws: Nothing
+sub format_is_possible {
+    my ( $format ) = @_;
+    $format = format_normalized(shift @_);
+    return if !$is_possible{$format};
     return $format;
 }
 
