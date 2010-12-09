@@ -19,7 +19,7 @@ my $setup_err_msg
     . "\n    See 'INSTALL' or the wiki page for more information.";
 
 
-ok(What->embedded_art_size_limit == 256);
+ok(What->embedded_art_size_limit <= 256);
 my $outgoing_ok = -d What::outgoing_dir();
 if (!$outgoing_ok) {
     die "\n\n$setup_err_msg\n\n\n";
