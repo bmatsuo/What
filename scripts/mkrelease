@@ -69,8 +69,11 @@ sub main{
         = map {$release->{$_}} qw{artist year title};
 
     # Create Info.txt, .nfo, and get cover art if necessary.
-    $subsystem->exec('release-mkinfo', '--skip-existing') == 0
-        or die "Couldn't generate release information; $?\n";
+    $subsystem->exec(
+            'release-mkinfo',
+            ($opt{'--no-nfo'} ? '--no-nfo' : ()),
+            '--skip-existing'
+        ) == 0 or die "Couldn't generate release information; $?\n";
 
     # Figure out the torrent formats requested and do book-keeping.
     # Create a list of lossy format arguments and their names.
@@ -388,6 +391,10 @@ Release the file regardless of whether or not it has a cue file.
 =item --no-log
 
 Release the file regardless of whether or not it has a cue file.
+
+=item --no-nfo
+
+Don't try to generate an info file.
 
 =item -w | --add-to-watch
 
