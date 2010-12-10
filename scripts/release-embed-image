@@ -267,7 +267,7 @@ sub scale_down {
     return $img if $init_size <= $max_img_size;
 
     # Make a square $square_pixels wide.
-    my $scale_pixels=800;
+    my $scale_pixels=600;
     my $scale_delta =10;
     my $min_scale   =350;
     my $scaled = scale_img_to_size($img, $scale_pixels);
