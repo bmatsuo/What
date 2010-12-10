@@ -8,8 +8,13 @@ use strict;
 use warnings;
 use Carp;
 use File::Basename;
+use What::Converter::Ogg;
+use What::Converter::MP3;
+use What::Converter::AAC;
 
-use Exception::Class ('ExtensionException');
+use Exception::Class (
+    'ExtensionException',
+    'FormatException',);
 
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
@@ -23,15 +28,15 @@ our @ISA = qw(Exporter);
 # This allows declaration	use what ':all';
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
 # will save memory.
-our %EXPORT_TAGS = ( 'all' => [ qw(
-	
-) ] );
+our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
     formats
     all_formats
+    file_format_of
+    format_needs_wav
     format_normalized
     format_is_accepted
     format_is_possible
@@ -58,6 +63,18 @@ my %ext_of = (
     V2      => 'mp3',
 );
 
+# Map various names to specifc file formats (e.g. 'V0' => 'MP3').
+my %file_format_of = (
+    FLAC    => 'FLAC',
+    OGG     => 'OGG',
+    Q8      => 'OGG',
+    AAC     => 'AAC',
+    MP3     => 'MP3',
+    320     => 'MP3',
+    V0      => 'MP3',
+    V2      => 'MP3',
+);
+
 my %is_possible = ( %is_accepted );
 
 my @mp3_cbr_bitrates = qw{32 40 48 56 64 80 96 112 128 160 192 224 256 320};
@@ -66,10 +83,12 @@ my @mp3_vbr_qualities = qw{V0 V1 V2 V3 V4 V5 V6 V7 V8 V9};
 for my $cbr (@mp3_cbr_bitrates) {
     $is_possible{$cbr} = 1;
     $ext_of{$cbr} = 'mp3';
+    $file_format_of{$cbr} = 'MP3';
 }
 for my $vbr (@mp3_vbr_qualities) {
     $is_possible{$vbr} = 1;
     $ext_of{$vbr} = 'mp3';
+    $file_format_of{$vbr} = 'MP3';
 }
 
 # Subroutine: formats()
@@ -88,6 +107,16 @@ sub all_formats {
     return keys %is_possible;
 }
 
+### INTERFACE SUB
+# Subroutine: file_format
+# Usage: file_format( $name )
+# Returns: A file format (e.g. 'MP3', or 'AAC')
+# Throws: Nothing
+sub file_format_of {
+    my ( $name ) = @_;
+    return $file_format_of{$name};
+}
+
 # INTERFACE METHOD (no class arg);
 sub format_normalized {
     my $format = shift;
@@ -99,6 +128,27 @@ sub format_is_accepted{
     my $format = format_normalized(shift @_);
     return if !$is_accepted{$format};
     return $format;
+}
+
+### INTERFACE SUB
+# Subroutine: format_needs_wav
+# Usage: format_needs_wav( $format )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub format_needs_wav {
+    my ( $format ) = @_;
+    if ( !defined $format ) {
+        FormatException->throw(error => "Format is not defined.");
+    }
+    my $fformat = $file_format_of{$format};
+    my $need_wav = $fformat eq 'MP3' ? What::Converter::MP3->new(bitrate => 320, id => 999)->needs_wav()
+        : $fformat eq 'AAC' ? What::Converter::AAC->new(id => 998)->needs_wav()
+        : $fformat eq 'OGG' ? What::Converter::OGG->new(id => 997)->needs_wav()
+        : $fformat eq 'FLAC' ? FormatException->throw(error => "Can't convert to FLAC")
+        : !defined $fformat ? FormatException->throw(error => "Unrecognized format")
+        : FormatException->throw(error => "Unknown format $fformat.\n");
+    return $need_wav;
 }
 
 ### INTERFACE SUB

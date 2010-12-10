@@ -102,11 +102,11 @@ sub audio_quality_options {
         QualityException->throw(error => "bad vbr quality '$VBR_qual'\n");
     }
     elsif ($is_valid_cbr{$bitrate}) {
-        push @opts, '--cbr', "-b$bitrate", '-h'};
+        push @opts, '--cbr', "-b$bitrate", '-h';
     }
     else {
         my $bad_bitrate = $bitrate || q{};
-        QualityException->throw(error => "Bad MP3 quality '$bad_bitrate'.")
+        QualityException->throw(error => "Bad MP3 quality '$bad_bitrate'.");
     }
 
     return @opts;

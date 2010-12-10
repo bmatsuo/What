@@ -43,7 +43,7 @@ use What::Format::FLAC;
 use What::Converter::WAVE;
 use What::Converter::MP3;
 use What::Converter::AAC;
-use What::Converter::OGG;
+use What::Converter::Ogg;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -91,8 +91,11 @@ sub main{
     my $release = What::Release->new( %release_info );
     my @existing_formats = $release->existing_formats();
 
+    my @mp3_opts = map {uc $_} @{$opt{'--mp3'}};
+    my @allowed_format_opts = map {$opt{"--$_"} ? $_ : () } (formats());
+    my @format_opts = (@allowed_format_opts, @mp3_opts);
     my @desired_formats;
-    for my $f (map {$opt{"--$_"} ? $_ : () } qw{v0 v2 320 ogg aac}) {
+    for my $f (@format_opts) {
         my $format_exists = $release->exists($f);
         if ($format_exists) {
             my $fnorm = format_normalized($f);
@@ -118,7 +121,7 @@ sub main{
         ogg => 0,);
     my $should_create_wav
         = scalar 
-            (map {$format_needs_wav{$_} ? ($_) : ()} @desired_formats);
+            (map {format_needs_wav($_) ? ($_) : ()} @desired_formats);
 
 
     my %converted_to;
@@ -252,21 +255,16 @@ sub main{
                     ? "/".basename(dirname($flac_path)) : "";
             my $dest_dir = $dest_for{$format};
             $dest_dir .= $disc_subdir;
+            my $file_format = file_format_of($uc_format);
 
             # Select the converter to use.
             my $conv 
-                = $uc_format eq '320'   ? What::Converter::MP3->new (
-                                            bitrate => '320',
+                = $file_format eq 'MP3'   ? What::Converter::MP3->new (
+                                            bitrate => $uc_format,
                                             id => $converter_id++, )
-                : $uc_format eq 'V0'    ? What::Converter::MP3->new (
-                                            bitrate => 'V0',
+                : $file_format eq 'OGG'   ? What::Converter::Ogg->new (
                                             id => $converter_id++, )
-                : $uc_format eq 'V2'    ? What::Converter::MP3->new (
-                                            bitrate => 'V2',
-                                            id => $converter_id++, )
-                : $uc_format eq 'OGG'   ? What::Converter::Ogg->new (
-                                            id => $converter_id++, )
-                : $uc_format eq 'AAC'   ? What::Converter::AAC->new (
+                : $file_format eq 'AAC'   ? What::Converter::AAC->new (
                                             id => $converter_id++,)
                 : undef;
 
@@ -604,7 +602,22 @@ Convert FLAC release to an AAC ~256kbps ABR release.
 
 =item --all
 
-Produce releases in all possible formats and bitrates (not recommended).
+Produce releases in all What.CD allowed formats and bitrates (not recommended).
+
+=item --mp3 <quality> | --MP3 <quality>
+
+Specify creation of CBR bitrate or VBR quality release. 
+<quality> can be any of the following:
+
+    32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320
+
+or 
+
+    V1, V2, V3, V4, V5, V6, V7, V8, V9
+
+=for Euclid:
+    repeatable
+    quality.type: string, quality =~ m/V[0-9]|32|40|48|56|64|80|96|112|128|160|192|224|256|320/
 
 =item --force-flac | -f
 

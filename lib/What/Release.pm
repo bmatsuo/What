@@ -537,7 +537,7 @@ sub existing_formats {
         my $name = basename($subdir);
         if ($name =~ m/ \[ ([A-Z0-9]+) \] \z/xms) {
             my $fname = $1;
-            if (my $f = format_is_accepted($fname)) {
+            if (my $f = format_is_possible($fname)) {
                 push @formats, $f;
             }
             else {
