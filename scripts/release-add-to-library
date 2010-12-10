@@ -58,6 +58,7 @@ sub main{
     die "Format isn't $format recognized" if (!format_is_possible($format));
     my $file_type = file_format_of($format);
     die "Can't recognize the file type of $format" if !defined $file_type;
+    my $format_arg = $file_type eq 'MP3' ? "--mp3 $format" : "--$format";
 
     die "There is no release named '$rname' in the upload hierarchy."
         if !$release->exists();
@@ -71,7 +72,7 @@ sub main{
                 '--artist', $release->{artist},
                 '--title', $release->{title},
                 '--year', $release->{year},
-                ($file_type eq 'MP3' ? "--mp3 $format" : "--$format"),
+                $format_arg,
             ],
         ) or die "Couldn't create $format release!";
 
@@ -105,7 +106,7 @@ sub main{
                 '--artist', $release->{artist},
                 '--title', $release->{title},
                 '--year', $release->{year},
-                "--$format",
+                $format_arg,
             ],
         ) or die "Couldn't remove temporary $format release!";
     }

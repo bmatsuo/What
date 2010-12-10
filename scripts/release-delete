@@ -316,7 +316,7 @@ or
 
 =for Euclid:
     repeatable
-    quality.type: string, quality =~ m/V[0-9]|32|40|48|56|64|80|96|112|128|160|192|224|256|320/
+    quality.type: string, quality =~ m/[vV][0-9]|32|40|48|56|64|80|96|112|128|160|192|224|256|320/
 
 =item -f | --force
 
