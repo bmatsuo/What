@@ -19,6 +19,7 @@ use What;
 use What::WhatRC;
 use What::Release;
 use What::Subsystem;
+use What::Format;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -53,7 +54,10 @@ sub main{
 
     my $rname = $release->name();
     my $had_to_create_format = 0;
-    my $format = whatrc->preferred_format;
+    my $format = uc whatrc->preferred_format;
+    die "Format isn't $format recognized" if (!format_is_possible($format));
+    my $file_type = file_format_of($format);
+    die "Can't recognize the file type of $format" if !defined $file_type;
 
     die "There is no release named '$rname' in the upload hierarchy."
         if !$release->exists();
@@ -67,7 +71,7 @@ sub main{
                 '--artist', $release->{artist},
                 '--title', $release->{title},
                 '--year', $release->{year},
-                "--$format",
+                ($file_type eq 'MP3' ? "--mp3 $format" : "--$format"),
             ],
         ) or die "Couldn't create $format release!";
 
