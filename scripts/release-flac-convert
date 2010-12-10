@@ -432,7 +432,9 @@ sub main{
                 '--artist', $release->{artist}, 
                 '--title', $release->{title},
                 '--year', $release->{year},
-                map {"--$_"} @desired_formats);
+                map {
+                    file_format_of($_) eq 'MP3' ? "--mp3 $_" : "--$_"
+                } @desired_formats );
         print {\*STDERR} "Removing partially transcoded releases.\n";
         $subsystem->exec(@rm_partials) == 0
             or croak("Couldn't remove partially transcoded releases"
