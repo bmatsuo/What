@@ -65,8 +65,9 @@ sub main{
         year => $opt{'--year'},);
     
     # Make a list of unwanted formats and find their locations.
-    my @undesireds = grep {$opt{"--$_"}} formats();
-    @undesireds = formats() if $opt{'--all'};
+    my @mp3_opts = map {uc $_} @{$opt{'--mp3'}};
+    my @undesireds = $opt{'--all'} ? all_formats() 
+        : ((grep {$opt{"--$_"}} formats()), @mp3_opts);
     my @existing;
     for my $f (@undesireds) {
         if ($release->exists($f)) {
@@ -146,7 +147,7 @@ sub main{
         # Determine if format $f can/should really be deleted.
         if (!-e $format_dir) {
             print {\*STDERR} "Warning: no $f release exists.\n"
-                if $opt{'--verbose'};
+                if $opt{'--verbose'} && !$opt{'--all'};
             next REMOVEDIRS;
         }
         if (!-d $format_dir) { 
@@ -301,6 +302,21 @@ Remove any FLAC release.
 
 Remove all present formats. 
 This requires confirmation without the --force option.
+
+=item --mp3 <quality> | --MP3 <quality>
+
+Specify deletion of CBR bitrate or VBR quality release. 
+<quality> can be any of the following:
+
+    32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320
+
+or 
+
+    V1, V2, V3, V4, V5, V6, V7, V8, V9
+
+=for Euclid:
+    repeatable
+    quality.type: string, quality =~ m/V[0-9]|32|40|48|56|64|80|96|112|128|160|192|224|256|320/
 
 =item -f | --force
 
