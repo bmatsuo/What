@@ -116,7 +116,8 @@ sub main{
     my $release_date = $release_year;
 
     print "Presumed release title: ";
-    print "$release_artist - $release_title [$release_year]\n";
+    my $print_year = $release_date || "?";
+    print "$release_artist - $release_title [$print_year]\n";
 
     my $release_country;
     my $release_label;
@@ -462,12 +463,12 @@ sub analyze_release {
             my $album_artist = $tags{ALBUMARTIST} || $tags{albumartist} || $tags{Albumartist};
             my $date = $tags{date} || $tags{DATE} || $tags{Date};
             my $year;
-            if ($date =~ m/(\d{4})/xms) {
+            if ($date && $date =~ m/(\d{4})/xms) {
                 $year = $1;
             }
             else {
                 print {\*STDERR}
-                    "Warning: Can't find year in release\n";
+                    "Warning: Can't find year in release track '$title'.\n";
             }
             my $release_title = $tags{ALBUM} || $tags{album} || $tags{Album};
             if (defined $album_artist) { 

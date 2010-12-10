@@ -75,7 +75,8 @@ sub main{
         }
         else {
             my $fnorm = format_normalized($f);
-            print {\*STDERR} "Warning: No $fnorm release exists.\n";
+            print {\*STDERR} "Warning: No $fnorm release exists.\n"
+                if !$opt{'--all'};
         }
     }
     @undesireds = @existing;

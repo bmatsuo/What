@@ -111,12 +111,13 @@ sub main{
             '--artist', $release->{artist},
             '--title', $release->{title},
             '--year', $release->{year},
+            '--no-art',
             ($opt{'--add-to-library'} ? qw{--add-to-library} : () ),
             (grep {$opt{$_}} qw{--flac --ogg --aac --320 --v0 --v2}),
             ($opt{'--add-to-watch'} ? qw{--add-to-watch} : ()),
             ($opt{'--no-cue'} ? qw{--no-cue} : ()),
             ($opt{'--no-log'} ? qw{--no-log} : ()), 
-            ($opt{'--no-nfo'} ? qw{--no-nfo} : ()), );
+            ($opt{'--no-nfo'} ? qw{--no-nfo} : ()),);
         $subsys->exec(@mkrelease) == 0
             or die "Import failed. ",
                 "Fix specified problems then try running mkrelease.\n";

@@ -54,7 +54,7 @@ if (!-d $temp_img_dir) {
 }
 
 my $ok_img_format 
-    = qr{(?: tiff | jpg | png )}xms;
+    = qr{(?: tiff | jpe?g | png )}ixms;
 
 my $kilo = 2<<9;
 
