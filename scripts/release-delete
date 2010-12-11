@@ -59,10 +59,11 @@ my $FLAC = format_normalized('flac');
 
 # main() - main program execution 
 sub main{
+    load_context();
     my $release = What::Release->new(
-        artist => $opt{'--artist'},
-        title => $opt{'--title'},
-        year => $opt{'--year'},);
+        artist => context->artist,
+        title => context->title,
+        year => context->year,);
     
     # Make a list of unwanted formats and find their locations.
     my @mp3_opts = map {uc $_} @{$opt{'--mp3'}};
@@ -248,6 +249,12 @@ release-delete [options]
 
 =over
 
+=back
+
+=head1 OPTIONS
+
+=over
+
 =item --artist <artist>
 
 Release artist.
@@ -269,11 +276,6 @@ Release year.
 =for Euclid:
     year.type: /\d{4}/
 
-=back
-
-=head1 OPTIONS
-
-=over
 
 =item --v0 | --V0
 
