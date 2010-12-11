@@ -22,11 +22,9 @@ our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-our @EXPORT = qw(
-    tracker_url
-    );
+our @EXPORT = qw(tracker_url);
 
-our $VERSION = '0.00_43';
+our $VERSION = '0.00_81';
 
 my $whome = safe_path("~/.what");
 
@@ -36,6 +34,7 @@ my $temp_wav = "$sandbox_base/wav";
 my $temp_img = "$sandbox_base/img";
 
 my $ice_dir = "$whome/ice";
+my $context_dir = "$whome/context";
 
 my $img_limit_in_KB = '250';
 # LAME requires images to be at most 128K (How fucking lame is that? ^_^ )
@@ -56,6 +55,13 @@ sub embedded_art_size_limit($) { return $img_limit_in_KB; }
 # Purpose: Accessor for the path of the outgoing music directory.
 # Returns: Path of the outgoing music directory.
 sub outgoing_dir { return $outgoing; }
+
+### CLASS METHOD
+# Subroutine: context_dir
+# Usage: What::context_dir(  )
+# Purpose: Accessor for the path of the release context directory.
+# Returns: Path of the release_context directory.
+sub context_dir { return $context_dir; }
 
 ### CLASS METHOD
 # Subroutine: temp_wav_dir

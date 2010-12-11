@@ -13,6 +13,7 @@ t/110-What-WhatRC.t
 t/100-What.t
 t/140-What-BBCode.t
 t/150-What-M3U.t
+t/160-What-Context.t
 t/130-What-XMLLib.t
 t/120-What-Format.t
 t/220-What-Discogs.t
@@ -29,6 +30,7 @@ lib/What/WhatRC.pm
 lib/What/Release.pm
 lib/What/Utils.pm
 lib/What/M3U.pm
+lib/What/Context.pm
 lib/What/Format.pm
 lib/What/XMLLib.pm
 lib/What/Discogs.pm

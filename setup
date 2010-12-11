@@ -15,6 +15,8 @@ OUTGOING="$WORK/outgoing"
 # A directory for saving a release for later (putting it on ice) in case a coding 
 # error keeps a workflow from completing.
 ICE="$WHAT/ice"
+# A directory for saving the release (artist, title, year) that is being worked on.
+CONTEXT="$WHAT/context"
 
 [[ -d $WHAT ]] || mkdir $WHAT
 
@@ -24,6 +26,7 @@ ICE="$WHAT/ice"
 [[ -d $OUTGOING ]] || mkdir $OUTGOING
 
 [[ -d $ICE ]] || mkdir $ICE
+[[ -d $CONTEXT ]] || mkdir $CONTEXT
 
 WHATRC=~/.whatrc
 DIST_WHATRC="whatrc"
