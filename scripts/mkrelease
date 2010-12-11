@@ -72,7 +72,8 @@ sub main{
     $subsystem->exec(
             'release-mkinfo',
             ($opt{'--no-nfo'} ? '--no-nfo' : ()),
-            '--skip-existing'
+            '--skip-existing',
+            '--set-context',
         ) == 0 or die "Couldn't generate release information; $?\n";
 
     # Figure out the torrent formats requested and do book-keeping.
@@ -235,6 +236,17 @@ sub main{
             '--title', $opt{'--title'},
             '--year', $opt{'--year'}, );
         $subsystem->exec(@add_to_lib) == 0 or die;
+    }
+
+    if ($opt{'--remember-context'}) {
+        print "The context has not been forgotten. ",
+            "You can still run 'release-flac-convert' ",
+            "and 'release-mktorrent' on the release.\n";
+    }
+    else {
+        print "Forgetting context ..." if $opt{'--verbose'};
+        rm_contexts();
+        print "Done.\n" if $opt{'--verbose'};
     }
 
     exit($exitcode);
@@ -413,6 +425,10 @@ Add created torrents to the watch directory specified in '~/.whatrc'.
 =item -L | --add-to-library
 
 Add your preferred format to your music library.
+
+=item -c | --remember-context
+
+Don't forget the release context after finishing workflow.
 
 =item --dry-run
 
