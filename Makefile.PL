@@ -32,6 +32,8 @@ WriteMakefile(
         scripts/release-mkinfo
         scripts/release-rm-badchar
         scripts/release-stage-rip
+        scripts/release-set-context
+        scripts/release-forget-context
         scripts/release-ok
         scripts/mkrelease
     }],
