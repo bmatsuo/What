@@ -20,6 +20,7 @@ use Readonly;
 
 # Include private modules.
 use What;
+use What::Context;
 use What::Utils;
 use What::WhatRC;
 use What::Release;

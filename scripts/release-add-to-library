@@ -16,6 +16,7 @@ use Getopt::Euclid qw{ :vars<opt_> };
 
 # Include private modules.
 use What;
+use What::Context;
 use What::WhatRC;
 use What::Release;
 use What::Subsystem;
@@ -71,9 +72,6 @@ sub main{
         0 == subsystem(
             cmd => [
                 'release-flac-convert', 
-                '--artist', $release->{artist},
-                '--title', $release->{title},
-                '--year', $release->{year},
                 $format_arg,
             ],
         ) or die "Couldn't create $format release!";
@@ -105,9 +103,6 @@ sub main{
         0 == subsystem(
             cmd => [
                 'release-delete',
-                '--artist', $release->{artist},
-                '--title', $release->{title},
-                '--year', $release->{year},
                 $format_arg,
             ],
         ) or die "Couldn't remove temporary $format release!";

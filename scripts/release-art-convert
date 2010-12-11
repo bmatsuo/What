@@ -19,6 +19,7 @@ use Readonly;
 
 # Include private modules.
 use What;
+use What::Context;
 use What::Release;
 use What::WhatRC;
 
@@ -47,10 +48,11 @@ my $exitcode = 0;
 
 # main() - main program execution 
 sub main{
+    load_context();
     my $release = What::Release->new(
-        artist => $opt{'--artist'},
-        title => $opt{'--title'},
-        year => $opt{'--year'},);
+        artist => context->artist,
+        title => context->title,
+        year => context->year,);
     my $release_name = $release->name();
 
     my $source_dir 
@@ -106,6 +108,12 @@ convert-art [options]
 
 =over
 
+=back
+
+=head1 OPTIONS
+
+=over
+
 =item --artist <artist>
 
 Release artist.
@@ -126,12 +134,6 @@ Release year.
 
 =for Euclid:
     year.type: /\d{4}/
-
-=back
-
-=head1 OPTIONS
-
-=over
 
 =item --output-dir <dest> | -o <dest>
 

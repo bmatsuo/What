@@ -20,6 +20,7 @@ use Readonly;
 # Include private modules.
 use What::WhatRC;
 use What::Release;
+use What::Context;
 use What::M3U;
 use What::Utils;
 
