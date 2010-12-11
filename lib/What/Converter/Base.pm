@@ -82,6 +82,14 @@ sub output_path($) {
     return "$d/$n";
 }
 
+### INSTANCE METHOD
+# Subroutine: embed_image_in_output
+# Usage: $converter->embed_image_in_output(  )
+# Purpose: Embed an image in the output after conversion.
+# Returns: Nothing
+# Throws: Nothing
+sub embed_image_in_output { }
+
 # Subroutine: $converter->options(
 #   input => $lossles_path,
 #   flac => $flac_path,
@@ -297,6 +305,8 @@ sub convert {
         dry_run => $self->dry_run(),
         #($self->needs_silencing() ? (redirect_to => '/dev/null') : ()), #This didn't work...
     );
+
+    $self->embed_image_in_output();
 
     # Destroy the WAVE if necessary.
     #if ($self->needs_wav()) {
