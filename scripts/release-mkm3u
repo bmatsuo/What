@@ -48,10 +48,11 @@ my $exitcode = 0;
 
 # main() - main program execution 
 sub main{
+    load_context();
     my $rip_dir = whatrc->rip_dir;
-    my $artist = $opt{'--artist'};
-    my $title = $opt{'--title'};
-    my $year = $opt{'--title'};
+    my $artist = context->artist;
+    my $title = context->title;
+    my $year = context->year;
     my $release = What::Release->new(
         artist => $artist,
         title => $title,
@@ -117,6 +118,12 @@ release-mkm3u [options]
 
 =over
 
+=back
+
+=head1 OPTIONS
+
+=over
+
 =item --artist <artist>
 
 Release artist.
@@ -137,12 +144,6 @@ Release year.
 
 =for Euclid:
     year.type: /\d{4}/
-
-=back
-
-=head1 OPTIONS
-
-=over
 
 =item --version
 
