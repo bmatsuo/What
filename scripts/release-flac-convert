@@ -39,6 +39,7 @@ use What::WhatRC;
 use What::Release;
 use What::Format;
 use What::Subsystem;
+use What::Context;
 use What::Format::FLAC;
 use What::Converter::WAVE;
 use What::Converter::MP3;
@@ -80,10 +81,11 @@ my $subsystem = What::Subsystem->new(
 
 # main() - main program execution 
 sub main{
+    load_context();
     local $| = 1;
-    my $artist = $opt{'--artist'};
-    my $title = $opt{'--title'};
-    my $year = $opt{'--year'};
+    my $artist = context->artist;
+    my $title = context->title;
+    my $year = context->year;
 
     my %release_info
         = (artist => $artist, title => $title, year => $year);
@@ -429,9 +431,6 @@ sub main{
     if ($thread_error) {
         my @rm_partials = 
             ('release-delete', 
-                '--artist', $release->{artist}, 
-                '--title', $release->{title},
-                '--year', $release->{year},
                 map {
                     file_format_of($_) eq 'MP3' ? "--mp3 $_" : "--$_"
                 } @desired_formats );
