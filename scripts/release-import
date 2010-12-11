@@ -19,6 +19,7 @@ use Readonly;
 
 # Include private modules.
 use What::WhatRC;
+use What::Context;
 use What::Release;
 use What::Subsystem;
 use What::Prompt;
@@ -57,11 +58,12 @@ EOSTUB
 
 # main() - main program execution 
 sub main{
+    load_context();
     my $snatch = $opt{'--snatch'};
     my $release = What::Release->new(
-        artist => $opt{'--artist'},
-        title => $opt{'--title'},
-        year => $opt{'--year'},);
+        artist => context->artist,
+        title => context->title,
+        year => context->year,);
     my $subsys = What::Subsystem->new(
         verbose => 0,
         dry_run => 0,);
@@ -108,9 +110,6 @@ sub main{
         #    or die "Problem encountered creating info.";
 
         my @mkrelease = ('mkrelease', 
-            '--artist', $release->{artist},
-            '--title', $release->{title},
-            '--year', $release->{year},
             '--no-art',
             ($opt{'--add-to-library'} ? qw{--add-to-library} : () ),
             (grep {$opt{$_}} qw{--flac --ogg --aac --320 --v0 --v2}),
@@ -170,6 +169,12 @@ release-import [options]
 =for Euclid:
     dlpath.type: readable, -d dlpath
 
+=back
+
+=head1 OPTIONS
+
+=over
+
 =item --artist <artist>
 
 Release artist.
@@ -190,12 +195,6 @@ Release year.
 
 =for Euclid:
     year.type: /\d{4}/
-
-=back
-
-=head1 OPTIONS
-
-=over
 
 =item --flac | --FLAC
 
