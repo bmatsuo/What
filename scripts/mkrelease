@@ -61,13 +61,6 @@ my $subsystem = What::Subsystem->new(
 
 # main() - main program execution 
 sub main{
-    my $release = What::Release->new(
-        artist => $opt{'--artist'},
-        title => $opt{'--title'},
-        year => $opt{'--year'},);
-    my ($artist, $year, $title) 
-        = map {$release->{$_}} qw{artist year title};
-
     # Create Info.txt, .nfo, and get cover art if necessary.
     $subsystem->exec(
             'release-mkinfo',
@@ -75,6 +68,14 @@ sub main{
             '--skip-existing',
             '--set-context',
         ) == 0 or die "Couldn't generate release information; $?\n";
+
+    load_context();
+    my $release = What::Release->new(
+        artist => context->artist,
+        title => context->title,
+        year => context->year,);
+    my ($artist, $year, $title) 
+        = map {$release->{$_}} qw{artist year title};
 
     # Figure out the torrent formats requested and do book-keeping.
     # Create a list of lossy format arguments and their names.
@@ -337,6 +338,12 @@ mkrelease [options]
 
 =over
 
+=back
+
+=head1 OPTIONS
+
+=over
+
 =item --artist <artist>
 
 Release artist.
@@ -357,12 +364,6 @@ Release year.
 
 =for Euclid:
     year.type: /\d{4}/
-
-=back
-
-=head1 OPTIONS
-
-=over
 
 =item --v0 | --V0
 
