@@ -17,6 +17,7 @@ use Getopt::Euclid qw{ :vars<opt_> };
 # Include private modules.
 use What::Utils;
 use What::WhatRC;
+use What::Context;
 use What::Release;
 use What::Subsystem;
 
@@ -47,10 +48,11 @@ my $subsystem = What::Subsystem->new();
 
 # main() - main program execution 
 sub main{
+    load_context();
     my $release = What::Release->new(
-        artist => $opt{'--artist'},
-        title => $opt{'--title'},
-        year => $opt{'--year'}, );
+        artist => context->artist,
+        title => context->title,
+        year => context->year, );
 
     die sprintf ("Couldn't find release %s.", $release->name())
         if !$release->exists();
@@ -106,6 +108,12 @@ release-stage-rip [options]
 
 =over
 
+=back
+
+=head1 OPTIONS
+
+=over
+
 =item --artist <artist>
 
 Release artist.
@@ -126,12 +134,6 @@ Release year.
 
 =for Euclid:
     year.type: /\d{4}/
-
-=back
-
-=head1 OPTIONS
-
-=over
 
 =item --version
 
