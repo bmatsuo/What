@@ -152,10 +152,7 @@ sub main{
 
         # Create any necessary m3u files.
         print {\*STDERR} "Creating any necessary M3U playlists.\n";
-        my @mkm3u = ('release-mkm3u', 
-            '--artist', $opt{'--artist'},
-            '--title', $opt{'--title'},
-            '--year', $opt{'--year'},);
+        my @mkm3u = ('release-mkm3u' );
         $subsystem->exec(@mkm3u) == 0 or die;
 
         # Add any created M3U files to the set of release files.
@@ -166,10 +163,7 @@ sub main{
 
     # Create the release directory structure.
     print {\*STDERR} "Creating upload hierarchy directories.\n";
-    my @scaffold = ('release-scaffold', 
-        '--artist', $opt{'--artist'},
-        '--title', $opt{'--title'},
-        '--year', $opt{'--year'},
+    my @scaffold = ('release-scaffold',
         ($opt{'--verbose'} ? '--verbose' : ()),
         ($opt{'--dry-run'} ? '--dry-run' : (),));
     $subsystem->exec(@scaffold ) == 0 or die;
@@ -195,9 +189,6 @@ sub main{
             my $should_delete_pformat = 0;
             print {\*STDERR} "Converting release to @lossy_formats.\n";
             my @convert = ('release-flac-convert', 
-                '--artist', $opt{'--artist'},
-                '--title', $opt{'--title'},
-                '--year', $opt{'--year'},
                 (grep {not $_ eq '--flac'} @fargs),
                 ($opt{'--verbose'} ? '--verbose' : ()),
                 ($opt{'--dry-run'} ? '--dry-run' : ()),);
@@ -209,9 +200,6 @@ sub main{
     if ($user_wants_a_format) {
         print {\*STDERR} "Create torrent file(s).\n";
         my @mktorrent = ('release-mktorrent', 
-            '--artist', $opt{'--artist'},
-            '--title', $opt{'--title'},
-            '--year', $opt{'--year'},
             (grep {$opt{$_}} qw{--flac --v0 --v2 --320 --ogg --aac}),
             ($opt{'--verbose'} ? '--verbose' : ()),
             ($opt{'--dry-run'} ? '--dry-run' : ()),
@@ -232,10 +220,7 @@ sub main{
     #   add the release to the users music library if desired.
     if ($opt{'--add-to-library'}) {
         print {\*STDERR} "Adding release to music library.\n";
-        my @add_to_lib = ( 'release-add-to-library',
-            '--artist', $opt{'--artist'},
-            '--title', $opt{'--title'},
-            '--year', $opt{'--year'}, );
+        my @add_to_lib = ( 'release-add-to-library',);
         $subsystem->exec(@add_to_lib) == 0 or die;
     }
 
