@@ -17,6 +17,7 @@ use Getopt::Euclid qw{ :vars<opt_> };
 
 # Include private modules.
 use What::WhatRC;
+use What::Context;
 use What::Release;
 use What::Format;
 use What::Subsystem;

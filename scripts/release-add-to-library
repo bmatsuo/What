@@ -19,6 +19,7 @@ use What;
 use What::WhatRC;
 use What::Release;
 use What::Subsystem;
+use What::Context;
 use What::Format;
 
 ########################################################################
@@ -46,10 +47,11 @@ my $exitcode = 0;
 
 # main() - main program execution 
 sub main{
+    load_context();
     my $release = What::Release->new(
-        artist => $opt{'--artist'},
-        title => $opt{'--title'},
-        year => $opt{'--year'},
+        artist => context->artist,
+        title => context->title,
+        year => context->year,
     );
 
     my $rname = $release->name();
@@ -139,6 +141,12 @@ release-add-to-library [options]
 
 =over
 
+=back
+
+=head1 OPTIONS
+
+=over
+
 =item --artist <artist>
 
 Release artist.
@@ -159,12 +167,6 @@ Release year.
 
 =for Euclid:
     year.type: /\d{4}/
-
-=back
-
-=head1 OPTIONS
-
-=over
 
 =item --version
 
