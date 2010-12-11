@@ -67,7 +67,7 @@ sub main{
             'release-mkinfo',
             ($opt{'--no-nfo'} ? '--no-nfo' : ()),
             '--skip-existing',
-            '--set-context',
+            ($opt{'--dont-set-context'} ? () : ('--set-context')),
         ) == 0 or die "Couldn't generate release information; $?\n";
 
     load_context();
@@ -412,6 +412,10 @@ Add created torrents to the watch directory specified in '~/.whatrc'.
 =item -L | --add-to-library
 
 Add your preferred format to your music library.
+
+=item -C | --dont-set-context
+
+Don't let release-mkinfo set the release-context (this is used for testing).
 
 =item -c | --remember-context
 
