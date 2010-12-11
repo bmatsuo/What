@@ -48,14 +48,15 @@ my $exitcode = 0;
 
 # main() - main program execution 
 sub main{
+    load_context();
     my ($artist, $year, $title) 
-        = map {$opt{$_}} qw{--artist --year --title};
+        = map {context->{$_}} qw{artist year title};
     my $num_discs = $opt{"--num-discs"};
 
     my $release = What::Release->new(
-        artist => $opt{'--artist'},
-        title => $opt{'--title'},
-        year => $opt{'--year'},
+        artist => context->artist,
+        title => context->title,
+        year => context->year,
         discs => $opt{'--num-discs'});
 
     my $rip_root = whatrc->upload_root;
@@ -119,6 +120,12 @@ album-scaffold [options]
 
 =over
 
+=back
+
+=head1 OPTIONS
+
+=over
+
 =item --artist [=] <artist>
 
 Release artist
@@ -139,12 +146,6 @@ Release year
 
 =for Euclid:
     year.type: /\d{4}/
-
-=back
-
-=head1 OPTIONS
-
-=over
 
 =item --num-discs [=] <discs>
 
