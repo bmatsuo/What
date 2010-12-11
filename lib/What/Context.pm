@@ -38,9 +38,9 @@ use Exception::Class (
 
 use MooseX::Singleton;
 
-has 'artist' => (isa => 'Str', is => 'rw');
-has 'title' => (isa => 'Str', is => 'rw');
-has 'year' => (isa => 'Str', is => 'rw');
+has 'artist' => (isa => 'Str', is => 'rw', required => 1);
+has 'title' => (isa => 'Str', is => 'rw', required => 1);
+has 'year' => (isa => 'Str', is => 'rw', required => 1);
 
 my $context_is_loaded = 0;
 ### INTERFACE SUB

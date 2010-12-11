@@ -399,6 +399,14 @@ EOIHEAD
 
     fetch_cover_art($release) if defined $release;
 
+    if ($opt{'--set-context'}) {
+        set_context(
+            artist => $release_artist,
+            title => $release_title,
+            year => $release_year,);
+        context->save();
+    }
+
     exit $exitcode;
 }
 
@@ -1345,6 +1353,10 @@ Don't generate an nfo file.
 =item --skip-existing | -s
 
 If Info.txt or a .nfo file exist already, do not try to generate them.
+
+=item --set-context
+
+Set the release context after matching the release.
 
 =item --verbose
 
