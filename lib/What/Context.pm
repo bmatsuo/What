@@ -6,6 +6,7 @@ use warnings;
 use Data::Dumper;
 use What::Utils;
 use What::Prompt::Choose;
+use What::Subsystem;
 use What;
 
 our $VERSION = "00.00_01";
@@ -22,6 +23,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw{
     set_context
     load_context
+    rm_contexts
     context
 };
 
@@ -31,7 +33,8 @@ use Exception::Class (
     'ExceptionSaveError',
     'NoContextError',
     'ContextLoadError',
-    'ContextYearException',);
+    'ContextYearException',
+    'ContextDeleteError',);
 
 use MooseX::Singleton;
 
@@ -81,7 +84,7 @@ sub load_context {
         ContextLoadedError->throw(
             error => 'A context has already been set for this program.');
     }
-    my @context_paths = find_file_pattern('*', What::context_dir);
+    my @context_paths = find_file_pattern('*.context', What::context_dir);
 
     my $read_context = sub {
         my $context_path = shift;
@@ -91,7 +94,7 @@ sub load_context {
         my $context_str = do {local $/; <$ch>};
         close $ch;
 
-        my $context = eval $context_str;
+        my $context = eval 'my '.$context_str;
         if ($@ =~ m/./xms) {
             ContextLoadError->throw(error => "Parsing Error: $@");
         }
@@ -110,7 +113,7 @@ sub load_context {
     }
     else { $context = $read_context->($context_paths[0]); }
 
-    What::Context->initialize(%{$context});
+    What::Context->initialize( %{$context} );
     $context_is_loaded = 1;
 }
 
@@ -127,6 +130,26 @@ sub context() {
     ContextUnloadedError->throw(
         error => "No context has been loaded yet."
             . "Can't use context instance.");
+}
+### INTERFACE SUB
+# Subroutine: rm_contexts
+# Usage: 
+#   rm_contexts( 
+#       verbose => $echo_command,
+#       dry_run => $dont_execute)
+# Purpose: Delete the context file from the context directory.
+# Returns: Nothing
+# Throws: Nothing
+sub rm_contexts {
+    my %arg = @_;
+    my @verbose_arg = ($arg{verbose} ? (verbose => 1) : ());
+    my @dry_run_arg = ($arg{dry_run} ? (dry_run => 1) : ());
+    my @contexts = find_file_pattern('*.context', What::context_dir);
+    return if !@contexts;
+    subsystem(cmd => ['rm', @contexts], @verbose_arg, @dry_run_arg) == 0
+        or ContextDeleteError->throw(
+            error => "Couldn't remove contexts @contexts.");
+    return;
 }
 
 ### INSTANCE METHOD
