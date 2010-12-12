@@ -54,11 +54,7 @@ sub main{
         = map {context->{$_}} qw{artist year title};
     my $num_discs = $opt{"--num-discs"};
 
-    my $release = What::Release->new(
-        artist => context->artist,
-        title => context->title,
-        year => context->year,
-        discs => $opt{'--num-discs'});
+    my $release = release();
 
     my $rip_root = whatrc->upload_root;
 

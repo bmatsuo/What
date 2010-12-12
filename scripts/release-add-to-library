@@ -49,11 +49,7 @@ my $exitcode = 0;
 # main() - main program execution 
 sub main{
     load_context();
-    my $release = What::Release->new(
-        artist => context->artist,
-        title => context->title,
-        year => context->year,
-    );
+    my $release = release();
 
     my $rname = $release->name();
     my $had_to_create_format = 0;

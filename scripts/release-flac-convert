@@ -87,9 +87,7 @@ sub main{
     my $title = context->title;
     my $year = context->year;
 
-    my %release_info
-        = (artist => $artist, title => $title, year => $year);
-
+    my $release = release();
     my $release = What::Release->new( %release_info );
     my @existing_formats = $release->existing_formats();
 

@@ -54,11 +54,7 @@ sub main{
     my $artist = context->artist;
     my $title = context->title;
     my $year = context->year;
-    my $release = What::Release->new(
-        artist => $artist,
-        title => $title,
-        year => $year,
-    );
+    my $release = release();
     $rip_dir =~ s/"/\\"/xms;
     my @files = split "\n", `find "$rip_dir"`;
     my @flac_files = grep {m/ \.flac \z/xms} @files;

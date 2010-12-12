@@ -71,10 +71,7 @@ sub main{
         ) == 0 or die "Couldn't generate release information; $?\n";
 
     load_context();
-    my $release = What::Release->new(
-        artist => context->artist,
-        title => context->title,
-        year => context->year,);
+    my $release = release();
     my ($artist, $year, $title) 
         = map {$release->{$_}} qw{artist year title};
 

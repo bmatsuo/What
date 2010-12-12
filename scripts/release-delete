@@ -61,10 +61,7 @@ my $FLAC = format_normalized('flac');
 # main() - main program execution 
 sub main{
     load_context();
-    my $release = What::Release->new(
-        artist => context->artist,
-        title => context->title,
-        year => context->year,);
+    my $release = release();
     
     # Make a list of unwanted formats and find their locations.
     my @mp3_opts = map {uc $_} @{$opt{'--mp3'}};
