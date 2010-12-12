@@ -28,11 +28,13 @@ lib/What/Prompt/Choose.pm
 lib/What/Prompt/YesNo.pm
 lib/What/WhatRC.pm
 lib/What/Release.pm
+lib/What/Release/Directory.pm
 lib/What/Utils.pm
 lib/What/M3U.pm
 lib/What/Context.pm
 lib/What/Format.pm
 lib/What/XMLLib.pm
+lib/What/Exceptions/Common.pm
 lib/What/Discogs.pm
 lib/What/Discogs/Base.pm
 lib/What/Discogs/Discography.pm

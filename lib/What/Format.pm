@@ -69,6 +69,7 @@ my %file_format_of = (
     OGG     => 'OGG',
     Q8      => 'OGG',
     AAC     => 'AAC',
+    M4A     => 'AAC',
     MP3     => 'MP3',
     320     => 'MP3',
     V0      => 'MP3',
