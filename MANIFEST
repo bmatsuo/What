@@ -18,6 +18,7 @@ t/130-What-XMLLib.t
 t/120-What-Format.t
 t/220-What-Discogs.t
 t/200-What-Release.t
+t/230-What-Release-Directory.t
 t/210-What-Converter.t
 lib/What.pm
 lib/What/BBCode.pm

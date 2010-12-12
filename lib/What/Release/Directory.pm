@@ -21,6 +21,16 @@ use What::Format;
 use What::Utils qw{:files :dirs};
 use What::Exceptions::Common;
 
+require Exporter;
+use AutoLoader qw(AUTOLOAD);
+push our @ISA, 'Exporter';
+
+# If you do not need this, 
+#   moving things directly into @EXPORT or @EXPORT_OK will save memory.
+our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
+our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+our @EXPORT = qw{scan_release_dir};
+
 use Exception::Class (
     'NoAudioError', 
     'MultipleFormatsError', 'UnknownFormatError',
@@ -65,12 +75,12 @@ sub scan_release_dir {
     
     # Detect format and find the disc directories.
     my @files = find_hierarchy($dir);
-    my @audio_files = grep {m/\. (flac | mp3 | ogg | m4a) \z/ixms}
+    my @audio_files = grep {m/\. (flac | mp3 | ogg | m4a) \z/ixms} @files;
     if (!@audio_files) {
         NoAudioError->throw(error => "No audio files found.");
     }
     my @audio_types = map {m/\. (\w+) \z/xms} @audio_files;
-    my %has_audio_file_format = (map {($_ => 1)} @audio_files);
+    my %has_audio_file_format = (map {($_ => 1)} @audio_types);
     @audio_types = keys %has_audio_file_format;
     if (!@audio_types) {
         NoAudioError->throw(error => "Couldn't detect any audio file types.");
@@ -83,7 +93,7 @@ sub scan_release_dir {
         my $format = file_format_of($audio_types[0]);
 
         # This should never be thrown.
-        UnknownFormatError->throw(error => 'Unknown format; $audio_types[0]') 
+        UnknownFormatError->throw(error => "Unknown format; $audio_types[0]") 
             if !defined $format;
 
         $rdir{file_format} = $format;
@@ -116,19 +126,20 @@ sub scan_release_dir {
             logs => [],
             other_files => []);
 
-        my $disc_name = substr $disc_path, $path_len + 1, length ($disc_path) - $path_len - 1;
+        my $disc_name = substr $disc_path, $path_len, length ($disc_path) - $path_len - 1;
+        $disc_name =~ s!\A /!!xms;
         $disc_name =~ s!/! - !xms;
         $disc{name} = $disc_name;
         $root_is_disc_dir = 1 if $disc_name eq q{};
 
-        my $disc_files = find_hierarchy($disc_path);
+        my @disc_files = find_hierarchy($disc_path);
         for my $disc_file (@disc_files) {
             my $file_ext = $disc_file =~ m/\. (\w+) \z/xms ? lc $1 : undef;
             if (!defined $file_ext) {
                 # Classify non-subdirectories with no extension.
                 push @{$disc{other_files}}, $disc_file if !-d $disc_file;
             }
-            elsif ($file =~ m/ Info\.txt \z/xms) {
+            elsif ($disc_file =~ m/ Info\.txt \z/xms) {
                 # Pass on these files.
             }
             elsif ($file_ext =~ m/\A $audio_ext \z/xms) {
@@ -192,7 +203,7 @@ sub scan_release_dir {
             push @{$rdir{images}}, $file
         }
         else {
-            push @{$rder{other_files}}, $file if !$in_a_disc;
+            push @{$rdir{other_files}}, $file if !$in_a_disc;
         }
     }
 

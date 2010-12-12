@@ -115,7 +115,7 @@ sub all_formats {
 # Throws: Nothing
 sub file_format_of {
     my ( $name ) = @_;
-    return $file_format_of{$name};
+    return $file_format_of{uc $name};
 }
 
 # INTERFACE METHOD (no class arg);
