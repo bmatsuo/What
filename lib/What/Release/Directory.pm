@@ -28,6 +28,36 @@ sub files {
         @{$self->songs},
         @{$self->other_files});
 }
+### INSTANCE METHOD
+# Subroutine: has_m3u
+# Usage: $disc_directory->has_m3u(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub has_m3u {
+    my $self = shift;
+    return @{$self->m3us} > 0;
+}
+### INSTANCE METHOD
+# Subroutine: has_cue
+# Usage: $disc_directory->has_cue(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub has_cue {
+    my $self = shift;
+    return @{$self->cues} > 0;
+}
+### INSTANCE METHOD
+# Subroutine: has_log
+# Usage: $disc_directory->has_log(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub has_log {
+    my $self = shift;
+    return @{$self->logs} > 0;
+}
 
 package What::Release::Directory;
 use strict;

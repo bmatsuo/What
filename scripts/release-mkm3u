@@ -20,6 +20,7 @@ use Readonly;
 # Include private modules.
 use What::WhatRC;
 use What::Release;
+use What::Release::Directory;
 use What::Context;
 use What::M3U;
 use What::Utils;
@@ -57,40 +58,31 @@ sub main{
     my $release = release();
     my $m3u_base = $release->name();
 
-    # Find the disc directories.
-    my @files = find_hierarchy($rip_dir);
-    my @flac_files = grep {m/ \.flac \z/xms} @files;
-    my @music_directories = map {dirname($_)} @flac_files;
-    my %disc_dir_keys = map {($_ => 1)} @music_directories;
-    my @disc_dirs = keys %disc_dir_keys;
+    my $rip = scan_rip_dir();
 
     # Create M3U files for the disc directories.
-    for my $disc_dir (@disc_dirs) {
+    for my $disc (@{$rip->discs}) {
         # Look for existing playlists.
-        my @existing_m3us = bsd_glob(glob_safe($disc_dir)."/*.m3u");
-        if (@existing_m3us > 0) {
-            print "M3U found in $disc_dir. Skipping...\n" if $opt{'--verbose'};
+        if ( $disc->has_m3u() ) {
+            my $name = $disc->name;
+            $name = "release directory" if $name eq q{};
+            print "M3U found in $name. Skipping.\n" if $opt{'--verbose'};
             next;
         }
 
         # Generate a name for a disc playlist.
-        my @disc_flacs = bsd_glob(glob_safe($disc_dir)."/*.flac");
-        my $disc_dir_rel = $disc_dir;
-        substr $disc_dir_rel, 0, length $rip_dir, q{};
-        $disc_dir_rel =~ s!\A / !!xms;
-        my $m3u_name = $disc_dir_rel;
-        $m3u_name =~ s!/! - !xms;
-        $m3u_name 
-            = $m3u_name =~ m/./xms ? "$m3u_base - $m3u_name.m3u"
+        my $m3u_name = $disc->name;
+        $m3u_name = $m3u_name =~ m/./xms ? "$m3u_base - $m3u_name.m3u"
             : "$m3u_base.m3u";
-        my $m3u_path = "$disc_dir/$m3u_name";
+        my $m3u_path = sprintf "%s/%s", $disc->path, $m3u_name;
 
         # Create the disc playlist.
-        print "Creating playlist $m3u_path...\n" if $opt{'--verbose'};
+        print "Creating playlist $m3u_path ... " if $opt{'--verbose'};
         open my $m3u, ">", $m3u_path
             or die "Couldn't open M3U file $m3u_path";
-        print {$m3u} mkm3u(files => \@disc_flacs);
+        print {$m3u} mkm3u(files => $disc->songs);
         close $m3u;
+        print "Done.\n" if $opt{'--verbose'};
     }
     exit($exitcode);
 }
@@ -149,6 +141,8 @@ Release year.
 
 =for Euclid:
     year.type: /\d{4}/
+
+=item --verbose
 
 =item --version
 
