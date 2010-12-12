@@ -582,6 +582,17 @@ sub artist_releases {
     return find_subdirs($adir);
 }
 
+### INSTANCE METHOD
+# Subroutine: directory
+# Usage: $release->directory( $format )
+# Purpose: Scan $release's $format directory.
+# Returns: Nothing
+# Throws: Nothing
+sub directory {
+    my $self = shift;
+    my ( $format ) = @_;
+    return scan_release_dir( $self->format_dir($format) );
+}
 
 1;
 __END__
