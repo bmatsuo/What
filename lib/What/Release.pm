@@ -7,6 +7,7 @@ use File::Basename;
 use File::Glob 'bsd_glob';
 
 use What::Context;
+use What::Release::Directory;
 use What::Utils qw{:all};
 use What::Format;
 use What::Subsystem;
