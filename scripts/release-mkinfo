@@ -297,6 +297,15 @@ sub main{
     #        $release_edition .= " ($release_country)";
     #    }
     #}
+  
+
+    set_context(
+        artist => $release_artist,
+        title => $release_title,
+        year => $release_year,);
+    if ($opt{'--set-context'}) {
+        context->save();
+    }
 
     #---------------#
     # GENERATE INFO #
@@ -379,7 +388,7 @@ EOIHEAD
     #-------------#
     # OUTPUT INFO #
     #-------------#
-    my $info_filename = "$release_artist - $release_title ($release_year).nfo";
+    my $info_filename = sprintf "%s.nfo", release->name();
     $info_filename =~ s![/:]!_!gxms;
     my $info_path = whatrc->rip_dir."/$info_filename";
 
@@ -398,14 +407,6 @@ EOIHEAD
     }
 
     fetch_cover_art($release) if defined $release;
-
-    if ($opt{'--set-context'}) {
-        set_context(
-            artist => $release_artist,
-            title => $release_title,
-            year => $release_year,);
-        context->save();
-    }
 
     exit $exitcode;
 }

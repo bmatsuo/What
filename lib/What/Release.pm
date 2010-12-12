@@ -92,7 +92,7 @@ sub dup {
 # Purpose: Get a release from the current context information
 # Returns: Nothing
 # Throws: Nothing
-sub release {
+sub release() {
     my $new_r = What::Release->new(%{ context() });
     return $new_r;
 }
