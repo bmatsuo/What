@@ -21,6 +21,7 @@ use Readonly;
 use What::Release;
 use What::WhatRC;
 use What::Utils;
+use What::Release::Directory;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -55,133 +56,62 @@ sub main{
         print {\*STDERR} "Can't find rip directory $rip_dir.\n";
     }
 
-    # TODO: This is not ideal. I should fix multi-CD releases.
-    my @release_files 
-        = find_hierarchy($rip_dir, 1);
-        # = (bsd_glob("$rip_dir/*"), bsd_glob("$rip_dir/CD*/*"));
-
-    my @flac_files = grep {m/\.flac\z/xms} @release_files;
-    if (!@flac_files) {
-        print {\*STDERR} "No FLAC files found in FLAC directory.\n";
+    my $rip = scan_rip_dir();
+    if ( !(uc $rip->file_format eq 'FLAC') ) {
+        print {\*STDERR} "Rip directory contents are not FLAC.\n";
         $exitcode = 1;
     }
-    if ($opt{'--verbose'}) {
-        print {\*STDERR} scalar(@flac_files)." FLAC files found.\n";
+    else {
+        if ($opt{'--verbose'}) {
+            my $num_discs = scalar @{$rip->discs};
+            my $num_songs = 0;
+            for my $disc (@{$rip->discs}) {
+                $num_songs += scalar @{$disc->songs};
+            }
+            print {\*STDERR} sprintf (
+                    "%d FLAC files found across %d discs.\n",
+                    $num_songs, $num_discs);
+        }
     }
 
-    my %disc_files = (map {($_ => [])} map {dirname($_)} @flac_files);
-    my @disc_dirs = keys %disc_files;
-    my $num_discs = scalar @disc_dirs;
-    if ($num_discs == 0) {
-        print {\*STDERR} "Unexpected error: No discs found?! o.O\n";
-        $exitcode = 1;
-    }
-    if ($opt{'--verbose'}) {
-        print {\*STDERR} "$num_discs discs found.\n";
-    }
+    my @all_files = find_hierarchy($rip_dir, 1);
+    my @directories = grep {-d $_} @all_files;
 
-    my @images = grep {m/\.(?: jpeg | jpg | tiff | png )\z/ixms} @release_files;
+    my @images = @{$rip->images};
     if (!@images){
         print {\*STDERR} "No images found.\n";
         $exitcode = 1;
     }
     if ($opt{'--verbose'}) {
-        print {\*STDERR} scalar(@images)." Images found.\n";
+        print {\*STDERR} sprintf "%d image(s) found.\n", scalar @images;
     }
 
     # Handles for finding discs missing files.
     my %good_disc;
     my @bad_discs;
 
-    my @log_files = grep {m/\.log\z/xms} @release_files;
-    my @discs_w_log;
-    for my $log (@log_files) {
-        my $log_disc = dirname($log);
-        if (!defined $disc_files{$log_disc}) {
-            # One *might* put logs in rip_dir, or in a separate log dir.
-            # This is not common, and it's hard to match up in a script.
-            # So it is an error.
-            print {\*STDERR} "Log found in directory w/o FLAC files; ",
-                $log, "\n";
-            $exitcode = 1;
+    for my $disc (@{$rip->discs}) {
+        if (scalar @{$disc->logs} == 0) {
+            if (!$opt{'--no-log'}) {
+                my $disc_log_err 
+                    = $disc->name eq q{} ? "Release has no log file.\n"
+                    : sprintf "Disc %s has no log file", $disc->name;
+                print {\*STDERR} $disc_log_err;
+                $exitcode = 1;
+            }
         }
-        else {
-            push @{$disc_files{$log_disc}}, $log;
-            push @discs_w_log, $log_disc;
+        if (scalar @{$disc->cues} == 0) {
+            if (!$opt{'--no-cue'}) {
+                my $disc_cue_err 
+                    = $disc->name eq q{} ? "Release has no cue file.\n"
+                    : sprintf "Disc %s has no cue file", $disc->name;
+                print {\*STDERR} $disc_cue_err;
+                $exitcode = 1;
+            }
         }
-    }
-    if (@discs_w_log < @disc_dirs) {
-        my @discs_wo_log = do {
-            %good_disc = (map {($_ => 1)} @discs_w_log);
-            @bad_discs = grep {!defined $good_disc{$_}} @disc_dirs;
-            @bad_discs;
-        };
-        my $num_wo_log = scalar @discs_wo_log;
-        print {\*STDERR} ($opt{'--no-log'} ? "Warning: " : q{}),
-            "Found $num_wo_log discs w/o rip logs;\n",
-            join ("\n\t", @discs_wo_log), "\n";
-        $exitcode = 1 if !$opt{'--no-log'};
     }
 
-    my @cue_files = grep {m/\.cue\z/ixms} @release_files;
-    my @discs_w_cue;
-    for my $cue (@cue_files) {
-        my $cue_disc = dirname($cue);
-        if (!defined $disc_files{$cue_disc}) {
-            # It doesn't make much sense to put a cue in a non-disc dir.
-            print {\*STDERR} "Cue found in directory w/o FLAC files; ",
-                $cue, "\n";
-            $exitcode = 1;
-        }
-        else {
-            push @{$disc_files{$cue_disc}}, $cue;
-            push @discs_w_cue, $cue_disc;
-        }
-    }
-    if (@discs_w_cue < @disc_dirs) {
-        my @discs_wo_cue = do {
-            %good_disc = (map {($_ => 1)} @discs_w_cue);
-            @bad_discs = grep {!defined $good_disc{$_}} @disc_dirs;
-            @bad_discs;
-        };
-        my $num_wo_cue = scalar @discs_wo_cue;
-        print {\*STDERR} ($opt{'--no-cue'} ? "Warning: " : q{}),
-            "Found $num_wo_cue discs w/o a cue file;\n",
-            join ("\n\t", @discs_wo_cue), "\n";
-        $exitcode = 1 if !$opt{'--no-cue'};
-    }
-
-    my @m3u_files = grep {m/\.m3u\z/xms} @release_files;
-    my @discs_w_m3u;
-    for my $m3u (@m3u_files) {
-        my $m3u_disc = dirname($m3u);
-        if (!defined $disc_files{$m3u_disc}) {
-            print {\*STDERR} "warning:",
-                "M3U found in directory w/o FLAC files; $m3u\n";
-            # For now, this is not considered an error.
-            # You might want to put multiple discs into an extra m3u.
-            # $exitcode = 1;
-        }
-        if (defined $disc_files{$m3u}) {
-            push @{$disc_files{$m3u_disc}}, $m3u;
-            push @discs_w_m3u, $m3u_disc;
-        }
-    }
-    if (@discs_w_m3u < @disc_dirs) {
-        # This isn't actually a big deal; mkm3u will find and make.
-        # my @discs_wo_m3u = do {
-        #     %good_discs = (map {($_ => 1)} @discs_w_m3u);
-        #     @bad_discs = grep {!defined $good_disc{$_}} @disc_dirs;
-        #     @bad_discs;
-        # };
-        # my $num_wo_m3u = scalar @discs_wo_m3u;
-        # print {\*STDERR} 
-        #     "Found $num_wo_m3u discs w/o an m3u playlist;\n",
-        #     join ("\n", @discs_wo_m3u);
-        # $exitcode = 1;
-    }
-
-    my $info_file = find_file_pattern("Info.txt", $rip_dir);
+    my $info_file = grep {m/ Info\.txt \z/xms} @{$rip->other_files};
     if (!defined $info_file) {
         print {\*STDERR}
             "Info.txt was not found the rip directory.\n";
@@ -191,52 +121,43 @@ sub main{
         print {\*STDERR} "Info.txt found.\n";
     }
 
-    my @hidden_files 
-        = grep {basename($_) =~ m!\A\..*\z!xms} @release_files;
-    if (scalar @hidden_files) {
-        print {\*STDERR} "Hidden files found; @hidden_files\n";
-        $exitcode = 1;
-    }
-
     # Run over all the files to look for errors and unexpected files.
-    for my $file (@release_files) {
+    for my $file ($rip->files, @directories) {
         my $name = basename($file);
 
-        # Check the file name for illegal characters.
-        if ($name =~ $illegal_chars) {
-            print {\*STDERR} 
-                "Illegal character $1 in filename '$name'.\n";
+        if ($name =~ m!\A\..*\z!xms) {
+            print {\*STDERR} "Hidden file found; $name\n";
             $exitcode = 1;
         }
 
-        # Extract the file's extension
-        my $ext = $file =~ m/ \. ([^.]+) \z/xms ? lc $1 : "";
+        # Check the file name for illegal characters.
+        if ($name =~ $illegal_chars) {
+            print {\*STDERR} "Illegal character $1 in filename '$name'.\n";
+            $exitcode = 1;
+        }
+    }
 
-        # Categorize the file.
-        if ($ext eq 'flac') {}
-        elsif ($ext eq 'log') {}
-        elsif ($ext eq 'cue') {}
-        elsif ($ext eq 'm3u') {}
-        elsif ($ext eq 'nfo') {}
-        elsif ($ext =~ m/\A(?: tiff | jpeg | jpg | png )\z/ixms) {}
-        elsif ($file eq "$rip_dir/Info.txt") {}
-        elsif (-d $file) {} # Ignore directories.
+    for my $other (@{$rip->other_files}, (map {@{$_->other_files}} @{$rip->discs})) {
+        # Extract the file's extension
+        my $ext = $other =~ m/ \. ([^.]+) \z/xms ? lc $1 : "";
+
+        if ($other =~ m/Info\.txt\z/xms) {}
         # Any other files are not expected.
         # This may turn into an error at some point.
         elsif ($ext eq '') {
             print {\*STDERR} 
-                "warning: Unexpected extension-less file $file found.\n";
+                "warning: Unexpected extension-less file $other found.\n";
         }
         else {
             print {\*STDERR} 
-                "warning: Unexpected file of type $ext found; $file\n";
+                "warning: Unexpected file of type $ext found; $other\n";
         }
     }
 
     if ($opt{'--verbose'}) {
         if (!$exitcode) {
             print {\*STDERR}
-                "Release is ready to be moved and converted to MP3.\n";
+                "Release is ready to be moved and converted to other formats.\n";
         }
         else {
             print {\*STDERR} 

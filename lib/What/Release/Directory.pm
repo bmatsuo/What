@@ -13,6 +13,22 @@ has 'm3us' => (isa => 'ArrayRef[Str]', is => 'rw');
 has 'songs' => (isa => 'ArrayRef[Str]', is => 'rw');
 has 'other_files' => (isa => 'ArrayRef[Str]', is => 'rw');
 
+### INSTANCE METHOD
+# Subroutine: files
+# Usage: $disc_directory->files(  )
+# Purpose: Create a list of all the files in the disc directory.
+# Returns: Nothing
+# Throws: Nothing
+sub files {
+    my $self = shift;
+    return (
+        @{$self->logs},
+        @{$self->cues},
+        @{$self->m3us},
+        @{$self->songs},
+        @{$self->other_files});
+}
+
 package What::Release::Directory;
 use strict;
 use warnings;
@@ -77,7 +93,7 @@ sub scan_release_dir {
     my $path_len = length $dir;
     
     # Detect format and find the disc directories.
-    my @files = find_hierarchy($dir);
+    my @files = find_hierarchy($dir, 1);
     my @audio_files = grep {m/\. (flac | mp3 | ogg | m4a) \z/ixms} @files;
     if (!@audio_files) {
         NoAudioError->throw(error => "No audio files found.");
@@ -220,6 +236,33 @@ sub scan_release_dir {
 # Returns: A new What::Release::Directory object.
 # Throws: Nothing
 sub scan_rip_dir { return scan_release_dir(whatrc->rip_dir); }
+
+### INSTANCE METHOD
+# Subroutine: audio_files
+# Usage: $release_directory->audio_files(  )
+# Purpose: Create a list of all audio files in the release.
+# Returns: A list of audio file paths.
+# Throws: Nothing
+sub audio_files {
+    my $self = shift;
+    return (map {@{$_->songs}} @{$self->discs});
+}
+
+### INSTANCE METHOD
+# Subroutine: files
+# Usage: $release_directory->files(  )
+# Purpose: Create a list of all the files in the release.
+# Returns: A list of file paths.
+# Throws: Nothing
+sub files {
+    my $self = shift;
+    return (
+        $self->nfo,
+        @{$self->m3us},
+        @{$self->images},
+        @{$self->other_files},
+        (map {$_->files()} @{$self->discs}));
+}
 
 return 1;
 __END__
