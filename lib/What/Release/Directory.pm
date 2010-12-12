@@ -17,6 +17,7 @@ package What::Release::Directory;
 use strict;
 use warnings;
 use File::Basename;
+use What::WhatRC;
 use What::Format;
 use What::Utils qw{:files :dirs};
 use What::Exceptions::Common;
@@ -29,7 +30,9 @@ push our @ISA, 'Exporter';
 #   moving things directly into @EXPORT or @EXPORT_OK will save memory.
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-our @EXPORT = qw{scan_release_dir};
+our @EXPORT = qw{
+    scan_release_dir
+    scan_rip_dir};
 
 use Exception::Class (
     'NoAudioError', 
@@ -209,6 +212,14 @@ sub scan_release_dir {
 
     return What::Release::Directory->new(%rdir);
 }
+
+### INTERFACE SUB
+# Subroutine: scan_rip_dir
+# Usage: scan_rip_dir(  )
+# Purpose: Scan the release contained in the rip directory.
+# Returns: A new What::Release::Directory object.
+# Throws: Nothing
+sub scan_rip_dir { return scan_release_dir(whatrc->rip_dir); }
 
 return 1;
 __END__
