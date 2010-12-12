@@ -19,7 +19,6 @@ use Readonly;
 
 # Include private modules.
 use What::WhatRC;
-use What::Context;
 use What::Release;
 use What::Subsystem;
 use What::Prompt;
@@ -58,12 +57,7 @@ EOSTUB
 
 # main() - main program execution 
 sub main{
-    load_context();
     my $snatch = $opt{'--snatch'};
-    my $release = What::Release->new(
-        artist => context->artist,
-        title => context->title,
-        year => context->year,);
     my $subsys = What::Subsystem->new(
         verbose => 0,
         dry_run => 0,);

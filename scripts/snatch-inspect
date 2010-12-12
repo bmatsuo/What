@@ -76,13 +76,19 @@ sub main{
     #$subsystem->exec(@inspect_flacs) == 0
     #    or die "Couldn't open flac files.";
 
-    check_tags(@flacs);
+    my $tags_are_good = check_tags(@flacs);
 
-    $prompt->text("Do the tags look good enough?[Y/n]");
-    $prompt->validator(
-        sub {my $r = shift; $r =~ m/\A(?: [yYnN] | \z )/xms});
-    my $resp = $prompt->prompt_user();
-    my $tags_are_good = $resp =~ m/\A(?: y | \z)/ixms;
+    my $resp;
+    if ($tags_are_good) {
+        $prompt->text("Do the tags look good enough?[Y/n]");
+        $prompt->validator(
+            sub {my $r = shift; $r =~ m/\A(?: [yYnN] | \z )/xms});
+        $resp = $prompt->prompt_user();
+        $tags_are_good = $resp =~ m/\A(?: y | \z)/ixms;
+    }
+    else {
+        print "Tags were missing. They will have to be fixed.\n";
+    }
 
     $prompt->text("Do you want to look at some spectrals?[Y/n]");
     $resp = $prompt->prompt_user();
@@ -160,20 +166,26 @@ sub check_tags {
     my @missing_artist;
     my @missing_date;
 
+    my $all_tags_present = 1;
+
     for my $i (0 ... $#flacs) {
         my $i_missing = $missing[$i];
         for my $m (@{$i_missing}) {
             if ($m eq 'TRACKNUMBER') {
                 push @missing_track_num, $flacs[$i];
+                $all_tags_present = 0;
             }
             if ($m eq 'ARTIST') {
                 push @missing_artist, $flacs[$i];
+                $all_tags_present = 0;
             }
             if ($m eq 'TITLE') {
                 push @missing_title, $flacs[$i];
+                $all_tags_present = 0;
             }
             if ($m eq 'DATE') {
                 push @missing_date, $flacs[$i];
+                $all_tags_present = 0;
             }
         }
     }
@@ -242,7 +254,7 @@ sub check_tags {
         }
     }
 
-    return;
+    return $all_tags_present;
 }
 
 ### INTERNAL UTILITY
