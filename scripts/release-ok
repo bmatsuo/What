@@ -91,7 +91,7 @@ sub main{
     my @bad_discs;
 
     for my $disc (@{$rip->discs}) {
-        if (scalar @{$disc->logs} == 0) {
+        if (!$disc->has_log()) {
             if (!$opt{'--no-log'}) {
                 my $disc_log_err 
                     = $disc->name eq q{} ? "Release has no log file.\n"
@@ -100,7 +100,7 @@ sub main{
                 $exitcode = 1;
             }
         }
-        if (scalar @{$disc->cues} == 0) {
+        if (!$disc->has_cue()) {
             if (!$opt{'--no-cue'}) {
                 my $disc_cue_err 
                     = $disc->name eq q{} ? "Release has no cue file.\n"
