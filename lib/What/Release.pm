@@ -93,7 +93,7 @@ sub dup {
 # Returns: Nothing
 # Throws: Nothing
 sub release {
-    my $new_r = What::Release->new(%{context});
+    my $new_r = What::Release->new(%{ context() });
     return $new_r;
 }
 
