@@ -6,6 +6,7 @@ use Carp;
 use File::Basename;
 use File::Glob 'bsd_glob';
 
+use What::Context;
 use What::Utils qw{:all};
 use What::Format;
 use What::Subsystem;
@@ -18,7 +19,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-our @EXPORT = qw();
+our @EXPORT = qw(release);
 
 our $VERSION = '0.0_3';
 
@@ -84,6 +85,16 @@ sub dup {
     my $self = shift;
     # TODO: Values may still be tied together (dangerous).
     return What::Release->new(%{$self});
+}
+### INTERFACE SUB
+# Subroutine: release
+# Usage: release(  )
+# Purpose: Get a release from the current context information
+# Returns: Nothing
+# Throws: Nothing
+sub release {
+    my $new_r = What::Release->new(%{context});
+    return $new_r;
 }
 
 ### INSTANCE METHOD
