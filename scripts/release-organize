@@ -57,7 +57,8 @@ sub main{
 
     # Move NFO file.
     my $nfo_path =  $rdir->nfo;
-    $rdir->nfo( rename_file(path => $nfo_path, release => $release) );
+    $rdir->nfo( rename_file(path => $nfo_path, release => $release) )
+        if defined $nfo_path;
 
     # Create an image directory and move images.
     my $subdir_of = sub {
