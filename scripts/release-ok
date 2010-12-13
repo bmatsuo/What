@@ -77,7 +77,7 @@ sub main{
     my @all_files = find_hierarchy($rip_dir, 1);
     my @directories = grep {-d $_} @all_files;
 
-    my @images = @{$rip->images};
+    my @images = $rip->all_images();
     if (!@images){
         print {\*STDERR} "No images found.\n";
         $exitcode = 1;
@@ -90,7 +90,7 @@ sub main{
     my %good_disc;
     my @bad_discs;
 
-    for my $disc (@{$rip->discs}) {
+    for my $disc ($rip->discs()) {
         if (!$disc->has_log()) {
             if (!$opt{'--no-log'}) {
                 my $disc_log_err 
@@ -137,7 +137,7 @@ sub main{
         }
     }
 
-    for my $other (@{$rip->other_files}, (map {@{$_->other_files}} @{$rip->discs})) {
+    for my $other (@{$rip->other_files}, (map {@{$_->other_files}} $rip->discs)) {
         # Extract the file's extension
         my $ext = $other =~ m/ \. ([^.]+) \z/xms ? lc $1 : "";
 

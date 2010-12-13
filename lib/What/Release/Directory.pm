@@ -48,6 +48,77 @@ has 'is_disc' => (isa => 'Bool', is => 'rw', default => 0);
 has 'is_root' => (isa => 'Bool', is => 'rw', default => 0);
 
 ### INSTANCE METHOD
+# Subroutine: subdirs_rec
+# Usage: $dir->subdirs_rec( $filter )
+# Purpose: 
+# Returns: 
+#   A list of all contained directories s.t. $filter->($dir) is true.
+#   A list of all contained directories otherwise.
+# Throws: Nothing
+sub subdirs_rec {
+    my $self = shift;
+    my ($filter) = @_;
+    $filter = $filter || sub { 1 };
+    my @all_subdirs;
+    my @subdirs = @{$self->subdirs};
+    for my $d (@subdirs) {
+        push @all_subdirs, ( $filter->($d) ? $d : () ), $d->subdirs_rec();
+    }
+    return @all_subdirs;
+}
+### INSTANCE METHOD
+# Subroutine: dirs
+# Usage: $dir->dirs( $filter )
+# Purpose: 
+# Returns: 
+#   A list of all contained directories s.t. $filter->($dir) is true.
+#   A list of all contained directories otherwise.
+# Throws: Nothing
+sub dirs {
+    my $self = shift;
+    my ($filter) = @_;
+    $filter = $filter || sub { 1 };
+    my @all_dirs;
+    push @all_dirs, $self if $filter->( $self );
+    push @all_dirs, $self->subdirs_rec( $filter );
+    return @all_dirs;
+}
+
+### INSTANCE METHOD
+# Subroutine: image_dirs
+# Usage: $dir->image_dirs(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub image_dirs {
+    my $self = shift;
+    return $self->dirs(sub {scalar (@{$_[0]->images})});
+}
+### INSTANCE METHOD
+# Subroutine: all_images
+# Usage: $dir->all_images(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub all_images {
+    my $self = shift;
+    return ( map { (@{$_->images}) } $self->image_dirs );
+}
+
+### INSTANCE METHOD
+# Subroutine: non_discs
+# Usage: $dir->non_discs(  )
+# Purpose: Find all the non-disc directories at or below $dir.
+# Returns: A list of What::Release::Directory objects.
+# Throws: Nothing
+sub non_discs {
+    my $self = shift;
+    my @discs;
+    push @discs, $self if $self->is_disc;
+    push @discs, $self->contained_non_discs();
+    return @discs;
+}
+### INSTANCE METHOD
 # Subroutine: discs
 # Usage: $dir->discs(  )
 # Purpose: Find all the disc directories at or below $dir.
@@ -69,7 +140,17 @@ sub discs {
 # Throws: Nothing
 sub contained_discs {
     my $self = shift;
-    return (map {$_->discs()} @{$self->subdirs});
+    return $self->subdirs_rec(sub {$_[0]->is_disc});
+}
+### INSTANCE METHOD
+# Subroutine: contained_non_discs
+# Usage: $dir->contained_non_discs(  )
+# Purpose: Find all the non-disc directories contained strictly below in $dir.
+# Returns: A list of What::Release::Directory objects.
+# Throws: Nothing
+sub contained_non_discs {
+    my $self = shift;
+    return $self->subdirs_rec(sub {!$_[0]->is_disc});
 }
 
 ### INSTANCE METHOD
