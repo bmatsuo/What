@@ -78,32 +78,20 @@ sub main{
         $rdir->images(\@images);
     }
 
-    # Move M3U files.
-    my @m3us = @{$rdir->m3us};
-    for my $m3u_ind (0 ... $#m3us) {
-        my $m3u = $m3us[$m3u_ind];
-        if ( $rdir->path eq dirname($m3u) ) {
-            $m3us[$m3u_ind] = rename_file(
-                path => $m3u,
-                release => $release,
-            );
+    my @non_discs = $rdir->non_discs;
+    for my $dir (@non_discs) {
+        # Move dir M3U files.
+        my @m3us = @{$dir->m3us};
+        for my $m3u_ind (0 ... $#m3us) {
+            my $m3u = $m3us[$m3u_ind];
+            $m3us[$m3u_ind] 
+                = rename_file(
+                    path => $m3u,
+                    release => $release,
+                    disc => $dir->name);
         }
-        else {
-            my $rel_dir = dirname($m3u);
-            prefix( 
-                string => $rel_dir, 
-                prefix => sprintf ("%s/", $rdir->path),
-                replace => q{},);
-            my $suffix = $rel_dir;
-            $rel_dir =~ s!/! - !xms;
-            $m3us[$m3u_ind] = rename_file(
-                path => $m3u,
-                release => $release,
-                disc => $suffix,
-            );
-        }
+        $dir->m3us([@m3us]);
     }
-    $rdir->m3us([@m3us]);
 
     my @discs = $rdir->discs;
     for my $disc (@discs) {
