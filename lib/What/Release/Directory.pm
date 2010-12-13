@@ -175,7 +175,7 @@ sub scan_release_dir {
             logs => [],
             other_files => []);
 
-        my $disc_name = substr $disc_path, $path_len, length ($disc_path) - $path_len - 1;
+        my $disc_name = substr $disc_path, $path_len, length ($disc_path) - $path_len;
         $disc_name =~ s!\A /!!xms;
         $disc_name =~ s!/! - !xms;
         $disc{name} = $disc_name;
