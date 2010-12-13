@@ -1,0 +1,158 @@
+#!/usr/bin/env perl
+# Use perldoc or option --man to read documentation
+###################################################
+
+our $VERSION = "00.00_01";
+# Originally created: 12/12/10 18:21:43.
+
+# Include core modules.
+use strict;
+use warnings;
+use File::Basename;
+use Carp;
+
+# Include CPAN modules.
+use Getopt::Euclid qw{ :vars<opt_> };
+
+# Include private modules.
+use What::WhatRC;
+use What::Context;
+use What::Subsystem;
+use What::Release;
+use What::Release::Directory;
+
+########################################################################
+# GENERAL GLOBAL VARIABLES
+########################################################################
+
+# Basic program information.
+my $prog_incantation  = $0;
+my $prog_dir          = dirname($0);
+my $prog_name         = basename($0);
+
+# Command-line option hash.
+my %opt = %ARGV;
+
+# Global program exitcode.
+my $exitcode = 0;
+
+########################################################################
+# PROGRAM SPECIFIC GLOBALS
+########################################################################
+
+my $subsystem = What::Subsystem->new(
+    verbose => $opt{'--verbose'},
+    dry_run => $opt{'--dry-run'},);
+
+########################################################################
+# MAIN FUNCTION
+########################################################################
+
+# main() - main program execution 
+sub main{
+    load_context();
+    my $release = release();
+    my $rname = $release->name();
+    my $rdir = $release->directory();
+
+    # Move NFO file.
+    # Create an image directory and move images.
+    # Move M3U files.
+    # Move CUE files.
+    # Move Log files (?).
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+### INTERNAL UTILITY
+# Subroutine: prefix
+# Usage: 
+#   prefix( 
+#       string  => $str, 
+#       prefix  => $pre,
+#       replace => $rep,)
+# Purpose: 
+#   Check if $str has prefix $pre.
+#   If so, when $rep exists the prefix in $str is replaced with $rep.
+#   When $rep is not defined, or $str does not have prefix $pre,
+#   $str is not altered in any way.
+# Returns: A boolean value, true iff $str has prefix $pre.
+# Throws: Nothing
+sub prefix {
+    my %arg = @_;
+    my ($str, $pre, $rep) = @arg{qw{string prefix replace}};
+    my $pre_len = length $pre;
+    my $prefix = substr $str, 0, $pre_len;
+    if ($prefix eq $pre) {
+        if (defined $rep) {
+            my $str_ind 
+                = grep {$_[$_] eq 'string'} ( map {2 * $_} (0 ... (@_ / 2 + 1)) );
+            #print {\*STDERR} "String index of (@_) is $str_ind.\n";
+            die "Couldn't find the string entry of (@_)." if !defined $str_ind;
+            substr $_[$str_ind], 0, $pre_len, $rep;
+        }
+        return 1;
+    }
+    return 0;
+}
+
+# Finally, kickstart the script
+main();
+
+__END__
+
+=head1 NAME
+
+release-organize
+-- Organize the rip directorys contents.
+
+=head1 VERSION
+
+Version 00.00_01
+
+=head1 USAGE
+
+release-organize [options]
+
+=head1 REQUIRED ARGUMENTS
+
+=over
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+=item --usage
+
+=item --help
+
+=item --man
+
+Print the usual program information
+
+=back
+
+=head1 DESCRIPTION
+
+Organize the rip directorys contents.
+
+=head1 BUGS
+
+=over
+
+=back
+
+=head1 AUTHORS
+
+Bryan Matsuo [bryan.matsuo@gmail.com] (primary author)
+
+=head1 COPYRIGHT 
+
+(c) Bryan Matsuo [bryan.matsuo@gmail.com]

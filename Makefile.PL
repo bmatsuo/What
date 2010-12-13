@@ -35,6 +35,7 @@ WriteMakefile(
         scripts/release-set-context
         scripts/release-forget-context
         scripts/release-ok
+        scripts/release-organize
         scripts/mkrelease
     }],
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
