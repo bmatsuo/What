@@ -20,6 +20,10 @@ our @ISA = qw(Exporter);
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
 # will save memory.
 my @INTERFACE_SUBS = qw{
+    all_equal
+    common_prefix
+    suffixes
+    common_prefix_pair
     format_args
     get_flac_tag
     get_flac_tags
@@ -43,6 +47,8 @@ our %EXPORT_TAGS = (
     'all' => [ @INTERFACE_SUBS ], 
     'http' => [ qw( format_args ) ],
     'flac' => [qw(  get_flac_tag    get_flac_tags )], 
+    'strings' => [qw(   all_equal   common_prefix
+                        suffixes    common_prefix_pair  )],
     'files' => [ qw(find_file_pattern               search_hierarchy 
                     glob_safe       safe_path       what_glob       expand_home
                     has_bad_chars   bad_chars       replace_bad_chars )],
@@ -65,6 +71,77 @@ our @EXPORT_OK = (
 our @EXPORT = (@INTERFACE_SUBS);
 
 our $VERSION = '0.00_02';
+
+##################
+# STRING METHODS #
+##################
+
+# Subroutine: all_equal(@strings)
+# Type: INTERNAL UTILITY
+# Purpose: Check if all strings in a list are equal.
+# Returns: True if all the strings are the same.
+sub all_equal {
+    my @strings = @_;
+    my $last;
+    for my $str (@strings) {
+        if (!defined $last) {
+            $last = $str;
+        }
+        else {
+            return if not $last eq $str;
+        }
+    }
+    return 1;
+}
+
+# Subroutine: common_prefix(@strings)
+# Type: INTERNAL UTILITY
+# Purpose: Find the longest prefix string common to a list.
+# Returns: 
+#   Returns the longest prefix string. 
+#   If no non-trivial prefix exists then an empty string is returned.
+sub common_prefix {
+    my @strings = @_;
+    my $prefix = shift @strings || '';
+    for my $s (@strings) { $prefix = common_prefix_pair($prefix, $s) }
+    return $prefix;
+}
+
+# Subroutine: suffixes(@strings)
+# Type: INTERNAL UTILITY
+# Purpose: Remove the common prefix from all argument strings.
+# Returns: A list of strings with the common prefix removed.
+sub suffixes {
+    my @strings = @_;
+    my $prefix = common_prefix(@strings);
+    my $rm_len = length $prefix;
+    map {substr $_, 0, $rm_len, q()} @strings;
+    return @strings;
+}
+
+
+# Subroutine: common_prefix_pair($s1, $s2)
+# Type: INTERNAL UTILITY
+# Purpose: Find the longest prefix string common to strings $s1 and $s2.
+# Returns: 
+#   Returns the longest prefix string. 
+#   If no non-trivial prefix exists then an empty string is returned.
+sub common_prefix_pair {
+    my ($s1, $s2) = @_;
+    my ($len1, $len2) = map {length $_} ($s1, $s2);
+    my $max_len = $len1 > $len2 ? $len1 : $len2;
+    my $prefix = '';
+    for my $i (0 ... $max_len - 1) {
+        my ($sub1, $sub2) = map {substr $_, $i, 1} ($s1, $s2);
+        if ($sub1 eq $sub2) {
+            $prefix .= $sub1;
+        }
+        else {
+            last;
+        }
+    }
+    return $prefix;
+}
 
 ################
 # FLAC METHODS #

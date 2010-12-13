@@ -13,7 +13,7 @@ use Readonly;
 use Audio::FLAC::Header;
 
 # include any private modules
-# ...
+use What::Utils qw{:strings};
 
 our @EXPORT = qw(
     mkm3u_info
@@ -62,28 +62,40 @@ sub mkm3u {
 sub mkm3u_info {
     my %arg = @_;
     my %file_info = %{$arg{info}};
+    my $common_directory = common_prefix(keys %file_info);
+    $common_directory =~ s! [^/]+ \z!!xms;
+    my $rm_common_dir
+        = sub {my $s = $_[0]; substr $s, 0, length $common_directory, q{}; $s};
+    my %filename_info
+        = (map { ($rm_common_dir->($_) => $file_info{$_}) } (keys %file_info));
     my %track_with_num;
 
-    for my $flac (keys %file_info) {
-        my $info = $file_info{$flac};
+    for my $flac (keys %filename_info) {
+        my $info = $filename_info{$flac};
         my $track_number = get_flac_tag($info, 'tracknumber');
         if (!defined $track_number) {
             croak("File $flac has no track number.");
         }
-        if (defined $track_with_num{$track_number}) {
-            croak("Duplicate track number $track_number found;\n"
-                ."$flac\n$track_with_num{$track_number}\n");
-        }
-        $track_with_num{$track_number} = $flac;
+        #if (defined $track_with_num{$track_number}) {
+        #    croak("Duplicate track number $track_number found;\n"
+        #        ."$flac\n$track_with_num{$track_number}\n");
+        #}
+        $track_with_num{sprintf "%s %02d", dirname($flac),  $track_number} = $flac;
     }
 
-    my @given_track_numbers = sort {$a <=> $b} keys %track_with_num;
+    my @given_track_numbers = sort {$a cmp $b} keys %track_with_num;
 
     my $last = 0;
     for my $num (@given_track_numbers) {
         my $expected = $last + 1;
+        my $num = $num =~ m/\s(\d+)\z/xms ? $1 : undef;
         if ($expected != $num) {
-            croak("Missing track number $expected.");
+            if ($num == 1) {
+                $expected = 1;
+            }
+            else {
+                croak("Missing track number $expected.");
+            }
         }
         $last = $num;
     }
@@ -93,11 +105,11 @@ sub mkm3u_info {
 
     my $m3u = "#EXTM3U\n";
     for my $flac (@ordered_tracks) {
-        my $length_in_sec = $file_info{$flac}->{trackTotalLengthSeconds};
+        my $length_in_sec = $filename_info{$flac}->{trackTotalLengthSeconds};
         $length_in_sec =~ s/\.\d+\z//xms;
         $m3u .= "#EXTINF:$length_in_sec,"
-            . describe_track($file_info{$flac}) . "\n";
-        $m3u .= basename($flac) . "\n";
+            . describe_track($filename_info{$flac}) . "\n";
+        $m3u .= $flac . "\n";
     }
 
     return $m3u;

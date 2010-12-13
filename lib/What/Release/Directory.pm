@@ -172,7 +172,8 @@ sub contains_discs {
 # Throws: Nothing
 sub audio_files {
     my $self = shift;
-    return (map {@{$_->songs}} $self->discs());
+    return @{$self->songs}if $self->is_disc();
+    return (map {($_->audio_files())} @{$self->subdirs});
 }
 
 ### INSTANCE METHOD

@@ -61,7 +61,7 @@ sub main{
     my $rip = scan_rip_dir();
 
     # Create M3U files for the disc directories.
-    for my $disc (@{$rip->discs}) {
+    for my $disc ($rip->discs) {
         # Look for existing playlists.
         if ( $disc->has_m3u() ) {
             my $name = $disc->name;
@@ -81,6 +81,31 @@ sub main{
         open my $m3u, ">", $m3u_path
             or die "Couldn't open M3U file $m3u_path";
         print {$m3u} mkm3u(files => $disc->songs);
+        close $m3u;
+        print "Done.\n" if $opt{'--verbose'};
+    }
+
+    for my $dir ($rip->dirs(sub {my $r = shift; !$r->is_disc && $r->contains_discs()})) {
+        # Look for existing playlists.
+        if ( $dir->has_m3u() ) {
+            my $name = $dir->name;
+            $name = "release directory" if !defined $name || $name eq q{};
+            print "M3U found in $name. Skipping.\n" if $opt{'--verbose'};
+            next;
+        }
+
+        # Generate a name for a disc playlist.
+        my $m3u_name = $dir->name || q{};
+        $m3u_name 
+            = $m3u_name =~ m/./xms ? "$m3u_base - $m3u_name.m3u"
+            : "$m3u_base.m3u";
+        my $m3u_path = sprintf "%s/%s", $dir->path, $m3u_name;
+
+        # Create the disc playlist.
+        print "Creating playlist $m3u_path ... " if $opt{'--verbose'};
+        open my $m3u, ">", $m3u_path
+            or die "Couldn't open M3U file $m3u_path";
+        print {$m3u} mkm3u(files => [$dir->audio_files()]);
         close $m3u;
         print "Done.\n" if $opt{'--verbose'};
     }
