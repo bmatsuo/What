@@ -130,13 +130,24 @@ sub exists {
     return -d $self->dir();
 }
 
+### INSTANCE METHOD
+# Subroutine: short_name
+# Usage: $release->short_name(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub short_name {
+    my $self = shift;
+    return sprintf "%s (%s)", $self->{title}, $self->{year};
+}
+
 # Subroutine: name()
 # Type: INSTANCE METHOD
 # Purpose: Compute the name of a release.
 # Returns: String containing the name of the release.
 sub name() {
     my $self = shift;
-    my $name = "$self->{artist} - $self->{title} ($self->{year})";
+    my $name = sprintf "%s - %s", $self->{artist}, $self->short_name();
     return $name;
 }
 
