@@ -191,7 +191,18 @@ sub files {
         @{$self->cues},
         @{$self->images},
         @{$self->other_files},
-        (map {$_->files()} @{$self->subdirs}));
+        (map {$_->path()} @{$self->subdirs}));
+}
+
+### INSTANCE METHOD
+# Subroutine: all_files
+# Usage: $release_directory->all_files(  )
+# Purpose: Create a list of all the files in the release.
+# Returns: A list of file paths.
+# Throws: Nothing
+sub all_files {
+    my $self = shift;
+    return ($self->files(), (map {$_->all_files()} @{$self->subdirs}));
 }
 
 ### INSTANCE METHOD
@@ -329,7 +340,7 @@ sub _parse_directory {
     
     # Detect format and find the disc directories.
     my @hidden_files = find_file_pattern('.*', $dir);
-    $rdir{hidden_files} = [@hidden_files];
+    $rdir{hidden_files} = [@hidden_files[2 ... $#hidden_files]];
 
     my @files = find_file_pattern('*', $dir);
 

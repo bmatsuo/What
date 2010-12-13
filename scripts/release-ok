@@ -121,38 +121,7 @@ sub main{
         print {\*STDERR} "Info.txt found.\n";
     }
 
-    # Run over all the files to look for errors and unexpected files.
-    for my $file ($rip->files, @directories) {
-        my $name = basename($file);
-
-        if ($name =~ m!\A\..*\z!xms) {
-            print {\*STDERR} "Hidden file found; $name\n";
-            $exitcode = 1;
-        }
-
-        # Check the file name for illegal characters.
-        if ($name =~ $illegal_chars) {
-            print {\*STDERR} "Illegal character $1 in filename '$name'.\n";
-            $exitcode = 1;
-        }
-    }
-
-    for my $other (@{$rip->other_files}, (map {@{$_->other_files}} $rip->discs)) {
-        # Extract the file's extension
-        my $ext = $other =~ m/ \. ([^.]+) \z/xms ? lc $1 : "";
-
-        if ($other =~ m/Info\.txt\z/xms) {}
-        # Any other files are not expected.
-        # This may turn into an error at some point.
-        elsif ($ext eq '') {
-            print {\*STDERR} 
-                "warning: Unexpected extension-less file $other found.\n";
-        }
-        else {
-            print {\*STDERR} 
-                "warning: Unexpected file of type $ext found; $other\n";
-        }
-    }
+    for my $d ($rip->dirs()) { validate_dir($d); }
 
     if ($opt{'--verbose'}) {
         if (!$exitcode) {
@@ -172,100 +141,100 @@ sub main{
 # SUPPORTING SUBROUTINES
 ########################################################################
 
-# Subroutine: release_dir_is_complete($dir)
-# Type: INTERFACE SUB
-# Purpose: Check that all desired files are in a release directory.
-# Returns: 
-sub release_dir_is_complete {
+sub validate_dir {
     my $dir = shift;
+    if (@{$dir->hidden_files} > 0) {
+        print {\*STDERR} 
+            sprintf "Hidden files found in directory '%s'\n", $dir->path;
+        $exitcode = 1;
+    }
+    for my $f ($dir->files()) {
+        my $filename = basename($f);
+        # Check the file name for illegal characters.
+        if ($filename =~ $illegal_chars) {
+            my $illegal = $1;
+            print {\*STDERR} 
+                sprintf "Illegal character '%s' in filename '%s'.\n",
+                    $illegal, $filename;
+            $exitcode = 1;
+        }
+    }
+    for my $other ( @{$dir->other_files} ) {
+        # Extract the file's extension
+        my $ext = $other =~ m/ \. ([^.]+) \z/xms ? lc $1 : "";
 
-    my $disc_dir_pattern = "$dir/CD*";
+        if ($other =~ m/Info\.txt\z/xms) {
+            if (!$dir->is_root) {
+                print {\*STDERR} "Info.txt found in non-root directory.\n";
+                $exitcode = 1;
+            }
 
-    my @discs = bsd_glob($disc_dir_pattern);
+        }
+        # Any other files are not expected.
+        # This may turn into an error at some point.
+        elsif ($ext eq '') {
+            print {\*STDERR} 
+                "warning: Unexpected extension-less file $other found.\n";
+        }
+        else {
+            print {\*STDERR} 
+                "warning: Unexpected file of type $ext found; $other\n";
+        }
+    }
 
-    my $is_multidisc = scalar @discs;
-
-    push @discs, "" if !$is_multidisc;
-
-    find_supplemental_files($dir);
-
-    for my $disc_dir (@discs) { check_music_dir($disc_dir); }
-
-    return;
+    if ($dir->is_disc) {
+        validate_disc($dir);
+    }
+    else {
+        validate_non_disc($dir);
+    }
 }
 
-sub find_supplemental_files {
+sub validate_disc {
+    my $disc_dir = shift;
+    if (@{$disc_dir->m3us} > 1) {
+        print {\*STDERR} 
+            sprintf "Multiple M3Us in disc directory '%s'\n", $disc_dir->path;
+        $exitcode = 1;
+    }
+    if (@{$disc_dir->cues} > 1) {
+        print {\*STDERR} 
+            sprintf "Multiple cues in disc directory '%s'\n", $disc_dir->path;
+        $exitcode = 1;
+    }
+
+    if (!$disc_dir->has_log()) {
+        if (!$opt{'--no-log'}) {
+            my $disc_log_err 
+                = $disc_dir->name eq q{} ? "Release has no log file.\n"
+                : sprintf "Disc %s has no log file", $disc_dir->name;
+            print {\*STDERR} $disc_log_err;
+        $exitcode = 1;
+        }
+    }
+    if (!$disc_dir->has_cue()) {
+        if (!$opt{'--no-cue'}) {
+            my $disc_cue_err
+                = $disc_dir->name eq q{} ? "Release has no cue file.\n"
+                : sprintf "Disc %s has no cue file", $disc_dir->name;
+            print {\*STDERR} $disc_cue_err;
+            $exitcode = 1;
+        }
+    }
+}
+
+sub validate_non_disc {
     my $dir = shift;
-    my $supplements_ok = 1;
-
-    # Find release description text file, Info.txt.
-    my $info = "$dir/Info.txt";
-
-    if (!-e $info) {
-        print {\*STDERR} "Can't find description $info.\n";
+    if ($dir->has_log()) {
+        print {\*STDERR} 
+            sprintf "Log found in non-disc directory '%s'\n", $dir->path;
         $exitcode = 1;
-        $supplements_ok = 0;
     }
-
-    # Find images (JPEG, TIFF, PNG)
-    my @images = grep {
-        m/\. (jpg | tiff | png) \z/xms;
-    } bsd_glob("$dir/*.*");
-
-    if (!@images) {
-        print {\*STDERR} "No images were found.\n";
+    if ($dir->has_cue()) {
+        print {\*STDERR} 
+            sprintf "Cue found in non-disc directory '%s'\n", $dir->path;
         $exitcode = 1;
-        $supplements_ok = 0;
     }
-
-    return $supplements_ok;
-}
-
-sub check_music_dir {
-    my $dir = shift;
-    my $music_dir_ok = 1;
-
-    my @flac_files = bsd_glob("$dir/*.flac");
-
-    if (!@flac_files) {
-        print {\*STDERR} "No FLAC audio files found in $dir.\n";
-        $exitcode = 1;
-        $music_dir_ok = 0;
-    }
-
-    my @log_files = bsd_glob("$dir/*.log");
-
-    if (!@log_files) {
-        print {\*STDERR} ($opt{'--no-log'} ? "Warning: " : q{}),
-            "No rip log found in $dir.\n";
-        $exitcode = 1 if !$opt{'--no-log'};
-        $music_dir_ok = 0;
-    }
-
-    my @cue_files = bsd_glob("$dir/*.log");
-
-    if (!@cue_files) {
-        print {\*STDERR} ($opt{'--no-cue'} ? "Warning: " : q{}),
-            "No CUE file found in $dir.\n";
-        $exitcode = 1 if !$opt{'--no-cue'};
-        $music_dir_ok = 0;
-    }
-
-    if (@cue_files > 1) {
-        print {\*STDERR} "Multiple CUE files found in $dir.\n";
-        $exitcode = 1;
-        $music_dir_ok = 0;
-    }
-
-    return $music_dir_ok;
-}
-
-sub check_cue_file {
-    my $cue_path = shift;
-}
-
-sub check_log_file {
-    my $log_path = shift;
 }
 
 # Finally, kickstart the script
