@@ -108,6 +108,8 @@ sub main{
             ($opt{'--add-to-library'} ? qw{--add-to-library} : () ),
             (grep {$opt{$_}} qw{--flac --ogg --aac --320 --v0 --v2}),
             ($opt{'--add-to-watch'} ? qw{--add-to-watch} : ()),
+            ($opt{'--dont-set-context'} ? qw{--dont-set-context} : ()),
+            ($opt{'--remember-context'} ? qw{--remember-context} : ()),
             ($opt{'--no-cue'} ? qw{--no-cue} : ()),
             ($opt{'--no-log'} ? qw{--no-log} : ()), 
             ($opt{'--no-nfo'} ? qw{--no-nfo} : ()),);
@@ -234,6 +236,14 @@ to your music library.
 =item -w | --add-to-watch
 
 Add created torrents to the watch directory specified in '~/.whatrc'.
+
+=item -C | --dont-set-context
+
+Don't let release-mkinfo set the release-context (this is used for testing).
+
+=item -c | --remember-context
+
+Don't forget the release context after finishing workflow.
 
 =item --version
 
