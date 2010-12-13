@@ -1,64 +1,6 @@
 #!/usr/bin/env perl
 # Use perldoc or option --man to read documentation
 # Originally created on 12/11/10 23:37:18
-package What::Release::DiscDirectory;
-use strict;
-use warnings;
-use Moose;
-has 'path' => (isa => 'Str', is => 'rw', required => 1);
-has 'name' => (isa => 'Str', is => 'rw', required => 1);
-has 'logs' => (isa => 'ArrayRef[Str]', is => 'rw');
-has 'cues' => (isa => 'ArrayRef[Str]', is => 'rw');
-has 'm3us' => (isa => 'ArrayRef[Str]', is => 'rw');
-has 'songs' => (isa => 'ArrayRef[Str]', is => 'rw');
-has 'other_files' => (isa => 'ArrayRef[Str]', is => 'rw');
-
-### INSTANCE METHOD
-# Subroutine: files
-# Usage: $disc_directory->files(  )
-# Purpose: Create a list of all the files in the disc directory.
-# Returns: Nothing
-# Throws: Nothing
-sub files {
-    my $self = shift;
-    return (
-        @{$self->logs},
-        @{$self->cues},
-        @{$self->m3us},
-        @{$self->songs},
-        @{$self->other_files});
-}
-### INSTANCE METHOD
-# Subroutine: has_m3u
-# Usage: $disc_directory->has_m3u(  )
-# Purpose: 
-# Returns: Nothing
-# Throws: Nothing
-sub has_m3u {
-    my $self = shift;
-    return @{$self->m3us} > 0;
-}
-### INSTANCE METHOD
-# Subroutine: has_cue
-# Usage: $disc_directory->has_cue(  )
-# Purpose: 
-# Returns: Nothing
-# Throws: Nothing
-sub has_cue {
-    my $self = shift;
-    return @{$self->cues} > 0;
-}
-### INSTANCE METHOD
-# Subroutine: has_log
-# Usage: $disc_directory->has_log(  )
-# Purpose: 
-# Returns: Nothing
-# Throws: Nothing
-sub has_log {
-    my $self = shift;
-    return @{$self->logs} > 0;
-}
-
 package What::Release::Directory;
 use strict;
 use warnings;
@@ -66,6 +8,7 @@ use File::Basename;
 use What::WhatRC;
 use What::Format;
 use What::Utils qw{:files :dirs};
+use What::Subsystem;
 use What::Exceptions::Common;
 
 require Exporter;
@@ -78,194 +21,67 @@ our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw{
     scan_release_dir
-    scan_rip_dir};
+    scan_rip_dir
+};
 
 use Exception::Class (
     'NoAudioError', 
     'MultipleFormatsError', 'UnknownFormatError',
-    'UnexpectedFile',);
+    'UnexpectedFile',
+    'NestedDiscError');
 
 use Moose;
+
+has 'name' => (isa => 'Str', is => 'rw', );
 has 'path' => (isa => 'Str', is => 'rw', required => 1);
-has 'file_format' => (isa => 'Str', is => 'rw', required => 1);
 has 'nfo' => (isa => 'Str', is => 'rw');
-has 'm3us' => (isa => 'ArrayRef[Str]', is => 'rw');
-has 'images' => (isa => 'ArrayRef[Str]', is => 'rw');
-has 'discs' 
-    => ( isa => 'ArrayRef[What::Release::DiscDirectory]',
-        is => 'rw');
-has 'other_files' => (isa => 'ArrayRef[Str]', is => 'rw');
+has 'subdirs' => (isa => 'ArrayRef[What::Release::Directory]',
+        is => 'rw', default => sub {[]});
+has 'logs' => (isa => 'ArrayRef[Str]', is => 'rw', default => sub {[]});
+has 'cues' => (isa => 'ArrayRef[Str]', is => 'rw', default => sub {[]});
+has 'songs' => (isa => 'ArrayRef[Str]', is => 'rw', default => sub {[]});
+has 'images' => (isa => 'ArrayRef[Str]', is => 'rw', default => sub {[]});
+has 'm3us' => (isa => 'ArrayRef[Str]', is => 'rw', default => sub {[]});
+has 'other_files' => (isa => 'ArrayRef[Str]', is => 'rw', default => sub {[]});
+has 'hidden_files' => (isa => 'ArrayRef[Str]', is => 'rw', default => sub {[]});
+has 'is_disc' => (isa => 'Bool', is => 'rw', default => 0);
+has 'is_root' => (isa => 'Bool', is => 'rw', default => 0);
 
-### INTERFACE SUB
-# Subroutine: scan_release_dir
-# Usage: scan_release_dir( $dir )
-# Purpose: Create a new What::Release::Directory object from the contents of $dir.
-# Returns: Nothing
+### INSTANCE METHOD
+# Subroutine: discs
+# Usage: $dir->discs(  )
+# Purpose: Find all the disc directories at or below $dir.
+# Returns: A list of What::Release::Directory objects.
 # Throws: Nothing
-sub scan_release_dir {
-    my ( $dir ) = @_;
-
-    # Check that the directory exists and is readable.
-    FileDoesNotExistError->throw(error => "Directory $dir does not exist.")
-        if !-e $dir;
-    FilePermissionsError->throw(error => "$dir is not a directory.")
-        if !-d $dir;
-    FilePermissionsError->throw(error => "Directory $dir is not readable.")
-        if !-r $dir;
-
-    # Fill out the attributes.
-    my %rdir 
-        = ( path => $dir,
-            other_files => [],
-            m3us => [],
-            images => [],
-            discs => [],);
-    my $path_len = length $dir;
-    
-    # Detect format and find the disc directories.
-    my @files = find_hierarchy($dir, 1);
-    my @audio_files = grep {m/\. (flac | mp3 | ogg | m4a) \z/ixms} @files;
-    if (!@audio_files) {
-        NoAudioError->throw(error => "No audio files found.");
-    }
-    my @audio_types = map {m/\. (\w+) \z/xms} @audio_files;
-    my %has_audio_file_format = (map {($_ => 1)} @audio_types);
-    @audio_types = keys %has_audio_file_format;
-    if (!@audio_types) {
-        NoAudioError->throw(error => "Couldn't detect any audio file types.");
-    }
-    my $audio_ext = $audio_types[0];
-    if (@audio_types > 1) {
-        MultipleFormatsError->throw(error => "Multiple audio formats found @audio_types.");
-    }
-    else {
-        my $format = file_format_of($audio_types[0]);
-
-        # This should never be thrown.
-        UnknownFormatError->throw(error => "Unknown format; $audio_types[0]") 
-            if !defined $format;
-
-        $rdir{file_format} = $format;
-    }
-    my %has_audio_files = (map {(dirname($_) => 1)} @audio_files);
-    my @disc_dir_paths = keys %has_audio_files;
-    my $root_is_disc_dir;
-    my $file_is_in_a_disc = sub {
-        my $file = shift;
-        my $d = dirname($file);
-        while ( defined $d && !($d eq q{/} || $d eq q{.}) ) {
-            return 1 if $has_audio_files{$d};
-            my $new_d = dirname($d);
-            if ($new_d eq $d) {
-                my $err = 'Unforeseen infinite loop in scan_release_dir';
-                UnknownError->throw(error => $err);
-            }
-            $d = $new_d;
-        }
-        return 0;
-    };
-
-    # Scan each disc directory.
-    for my $disc_path (@disc_dir_paths) {
-        my %disc = (
-            path => $disc_path,
-            songs => [],
-            m3us => [],
-            cues => [],
-            logs => [],
-            other_files => []);
-
-        my $disc_name = substr $disc_path, $path_len, length ($disc_path) - $path_len;
-        $disc_name =~ s!\A /!!xms;
-        $disc_name =~ s!/! - !xms;
-        $disc{name} = $disc_name;
-        $root_is_disc_dir = 1 if $disc_name eq q{};
-
-        my @disc_files = find_hierarchy($disc_path);
-        for my $disc_file (@disc_files) {
-            my $file_ext = $disc_file =~ m/\. (\w+) \z/xms ? lc $1 : undef;
-            if (!defined $file_ext) {
-                # Classify non-subdirectories with no extension.
-                push @{$disc{other_files}}, $disc_file if !-d $disc_file;
-            }
-            elsif ($disc_file =~ m/ Info\.txt \z/xms) {
-                # Pass on these files.
-            }
-            elsif ($file_ext =~ m/\A $audio_ext \z/xms) {
-                push @{$disc{songs}}, $disc_file;
-            }
-            elsif ($file_ext eq 'log') {
-                push @{$disc{logs}}, $disc_file;
-            }
-            elsif ($file_ext eq 'cue') {
-                push @{$disc{cues}}, $disc_file;
-            }
-            elsif ($file_ext eq 'm3u') {
-                push @{$disc{m3us}}, $disc_file;
-            }
-            elsif ($file_ext eq 'nfo') {
-                if ( !$disc_name eq q{} ) {
-                    push @{$disc{other_files}}, $disc_file;
-                }
-            }
-            elsif ($file_ext =~ m/\A (jpg | jpeg | png | tiff) \z/xms) {
-                # Do nothing for images.
-            }
-            else {
-                push @{$disc{other_files}}, $disc_file;
-            }
-        }
-        push @{$rdir{discs}}, What::Release::DiscDirectory->new(%disc);
-    }
-
-    for my $file (@files) {
-        my $in_a_disc = $file_is_in_a_disc->($file);
-        my $file_ext = $file =~ m/\. (\w+) \z/xms ? lc $1 : undef;
-        if (!defined $file_ext) {
-            if (!-d $file && !$in_a_disc) {
-                # Classify non-subdirectories with no extension.
-                push @{$rdir{other_files}}, $file;
-            }
-        }
-        elsif ($file =~ m/ Info\.txt \z/xms) {
-            push @{$rdir{other_files}}, $file;
-        }
-        elsif ($file_ext =~ m/\A (flac | mp3 | ogg | m4a) \z/xms) {
-            UnexpectedFile->throw(error => "Audio file not in disc; $file")
-                if !$in_a_disc;
-        }
-        elsif ($file_ext eq 'log') {
-            UnexpectedFile->throw(error => "Log not in disc; $file")
-                if !$in_a_disc;
-        }
-        elsif ($file_ext eq 'cue') {
-            UnexpectedFile->throw(error => "Cue not in disc; $file")
-                if !$in_a_disc;
-        }
-        elsif ($file_ext eq 'nfo') {
-            $rdir{nfo} = $file;
-        }
-        elsif ($file_ext eq 'm3u') {
-            push @{$rdir{m3us}}, $file if !$in_a_disc;
-        }
-        elsif ($file_ext =~ m/\A (jpg | jpeg | png | tiff) \z/xms) {
-            push @{$rdir{images}}, $file
-        }
-        else {
-            push @{$rdir{other_files}}, $file if !$in_a_disc;
-        }
-    }
-
-    return What::Release::Directory->new(%rdir);
+sub discs {
+    my $self = shift;
+    my @discs;
+    push @discs, $self if $self->is_disc;
+    push @discs, $self->contained_discs();
+    return @discs;
 }
 
-### INTERFACE SUB
-# Subroutine: scan_rip_dir
-# Usage: scan_rip_dir(  )
-# Purpose: Scan the release contained in the rip directory.
-# Returns: A new What::Release::Directory object.
+### INSTANCE METHOD
+# Subroutine: contained_discs
+# Usage: $dir->contained_discs(  )
+# Purpose: Find all the disc directories contained strictly below in $dir.
+# Returns: A list of What::Release::Directory objects.
 # Throws: Nothing
-sub scan_rip_dir { return scan_release_dir(whatrc->rip_dir); }
+sub contained_discs {
+    my $self = shift;
+    return (map {$_->discs()} @{$self->subdirs});
+}
+
+### INSTANCE METHOD
+# Subroutine: contains_discs
+# Usage: $dir->contains_discs(  )
+# Purpose: Determine if there are any discs descendant of $dir.
+# Returns: A boolean value.
+# Throws: Nothing
+sub contains_discs {
+    my $self = shift;
+    return scalar ($self->discs()) > 0;
+}
 
 ### INSTANCE METHOD
 # Subroutine: audio_files
@@ -275,7 +91,7 @@ sub scan_rip_dir { return scan_release_dir(whatrc->rip_dir); }
 # Throws: Nothing
 sub audio_files {
     my $self = shift;
-    return (map {@{$_->songs}} @{$self->discs});
+    return (map {@{$_->songs}} $self->discs());
 }
 
 ### INSTANCE METHOD
@@ -287,12 +103,241 @@ sub audio_files {
 sub files {
     my $self = shift;
     return (
-        $self->nfo,
+        ($self->nfo ? ($self->nfo) : ()),
+        @{$self->songs},
         @{$self->m3us},
+        @{$self->logs},
+        @{$self->cues},
         @{$self->images},
         @{$self->other_files},
-        (map {$_->files()} @{$self->discs}));
+        (map {$_->files()} @{$self->subdirs}));
 }
+
+### INSTANCE METHOD
+# Subroutine: file_format
+# Usage: $dir->file_format(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub file_format {
+    my $self = shift;
+    my $format;
+    if ($self->is_disc) {
+        for my $song (@{$self->songs}) {
+            my $song_format = $song =~ m/\. (\w+) \z/xms ? file_format_of($1) : undef;
+
+            UnknownError->throw(error => "No extension on '$song'") 
+                if !defined $song_format;
+
+            if (!defined $format) {
+                $format = $song_format;
+            }
+            elsif ( !($song_format eq $format) ) {
+                MultipleFormatsError->throw(
+                    error => "Found audio formats $song_format and $format");
+            }
+        }
+        return $format;
+    }
+    else {
+        my @discs = $self->discs();
+        my @disc_formats = map {$_->file_format()} @discs;
+        for my $f (@disc_formats) {
+            if (!defined $format) {
+                $format = $f;
+            }
+            elsif ( !($f eq $format) ) {
+                MultipleFormatsError->throw(
+                    error => "Found audio formats $format and $format");
+            }
+        }
+        return $format;
+    }
+}
+
+### INSTANCE METHOD
+# Subroutine: has_m3u
+# Usage: $disc_directory->has_m3u(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub has_m3u {
+    my $self = shift;
+    return @{$self->m3us} > 0;
+}
+
+### INSTANCE METHOD
+# Subroutine: has_cue
+# Usage: $disc_directory->has_cue(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub has_cue {
+    my $self = shift;
+    return @{$self->cues} > 0;
+}
+
+### INSTANCE METHOD
+# Subroutine: has_log
+# Usage: $disc_directory->has_log(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub has_log {
+    my $self = shift;
+    return @{$self->logs} > 0;
+}
+
+### INSTANCE METHOD
+# Subroutine: make_subdir
+# Usage: 
+#   $dir->make_subdir( 
+#       name    => $directory_name;
+#       verbose => $verbose, 
+#       dry_run => $dry_run
+#   )
+# Purpose: Find/create a subdirectory.
+# Returns: A What::Release::Directory instance.
+# Throws: Nothing
+sub make_subdir {
+    my $self = shift;
+    my ( %arg ) = @_;
+    my $dir_name = $arg{name};
+    if ($dir_name =~ m!/!xms) {
+        Error->throw(error => "Invalid directory name '$dir_name'");
+    }
+    my $dir_path = sprintf '%s/%s', $self->path, $dir_name;
+    for my $d (@{$self->subdirs}) { return $d if $d->path eq $dir_path; }
+    subsystem(
+        cmd => ['mkdir', $dir_path],
+        verbose => $arg{verbose}, 
+        dry_run => $arg{dry_run},
+    ) == 0
+        or Error->throw(error => "Couldn't make directory '$dir_path'.");
+    my $dir = What::Release::Directory->new(
+        path => $dir_path,
+        name => $dir_name,);
+    push @{$self->subdirs}, $dir;
+    return $dir;
+}
+
+sub _parse_directory {
+    my ( $dir, $name ) = @_;
+
+    # Check that the directory exists and is readable.
+    FileDoesNotExistError->throw(error => "Directory $dir does not exist.")
+        if !-e $dir;
+    FilePermissionsError->throw(error => "$dir is not a directory.")
+        if !-d $dir;
+    FilePermissionsError->throw(error => "Directory $dir is not readable.")
+        if !-r $dir;
+
+    # Fill out the attributes.
+    my %rdir = ( 
+        path => $dir,
+        ($name ? (name => $name) : ()),
+        songs => [],
+        m3us => [],
+        cues => [],
+        logs => [],
+        images => [],
+        other_files => [],
+        subdirs => [],
+    );
+    my $path_len = length $dir;
+    
+    # Detect format and find the disc directories.
+    my @hidden_files = find_file_pattern('.*', $dir);
+    $rdir{hidden_files} = [@hidden_files];
+
+    my @files = find_file_pattern('*', $dir);
+
+    my $audio_ext_p = qr{(?: flac | mp3 | ogg | m4a )}ixms;
+    my $is_audio_file = sub {$_[0] =~ m/\A ($audio_ext_p) \z/ixms};
+    my $img_ext_p = qr{(?: jpg | jpeg | png | tiff )}ixms;
+    my $is_image = sub {$_[0] =~ m/\A ($img_ext_p) \z/ixms};
+    my $is_bbinfo = sub {$_[0] =~ m/ Info\.txt \z/xms};
+
+    for my $file (@files) {
+        my $file_ext = $file =~ m/\. (\w+) \z/xms ? lc $1 : undef;
+        if (-d $file) {
+            my $d_name = ($name ? "$name - " : q{}) . basename($file);
+            my %d = _parse_directory($file, $d_name);
+            my $subdir = What::Release::Directory->new( %d );
+            $subdir->is_disc(1) if @{$subdir->songs};
+            push @{$rdir{subdirs}}, $subdir;
+        }
+        elsif (!defined $file_ext) { push @{$rdir{other_files}}, $file; }
+        elsif ($is_bbinfo->($file)) { push @{$rdir{other_files}}, $file; }
+        elsif ($file_ext eq 'log') { push @{$rdir{logs}}, $file; }
+        elsif ($file_ext eq 'cue') { push @{$rdir{cues}}, $file; }
+        elsif ($file_ext eq 'nfo') { $rdir{nfo} = $file; }
+        elsif ($file_ext eq 'm3u') { push @{$rdir{m3us}}, $file; }
+        elsif ($is_image->($file_ext)) { push @{$rdir{images}}, $file }
+        elsif ($is_audio_file->($file_ext)) { 
+            push @{$rdir{songs}}, $file; $rdir{is_disc} = 1; }
+        else { push @{$rdir{other_files}}, $file; }
+    }
+
+    return %rdir;
+}
+
+sub _verify_non_disc_dir {
+    my $d = shift;
+    return if $d->is_disc;
+    UnexpectedFile->throw(error => "Log file in non-disc dir.") 
+        if ($d->has_log());
+    UnexpectedFile->throw(error => "Cue file in non-disc dir.") 
+        if ($d->has_cue());
+    return;
+};
+
+sub _verify_dirs {
+    my $d = shift;
+    _verify_non_disc_dir($d);
+    for my $subd (@{$d->subdirs}) {
+        _verify_dirs($subd);
+    }
+}
+
+### INTERFACE SUB
+# Subroutine: scan_release_dir
+# Usage: scan_release_dir( $dir )
+# Purpose: Create a new What::Release::Directory object from the contents of $dir.
+# Returns: Nothing
+# Throws: Nothing
+sub scan_release_dir {
+    my ( $dir ) = @_;
+    my %rdir_attr = _parse_directory($dir);
+    $rdir_attr{is_root} = 1;
+
+    my $rdir = What::Release::Directory->new(%rdir_attr);
+
+    my $format = $rdir->file_format();
+    my @discs = $rdir->discs();
+    for my $disc (@discs) {
+        my @nested_discs = $disc->contained_discs();
+        if (@nested_discs) {
+            my @nested_disc_names = map {$_->name} @nested_discs;
+            my $nested_disc_str = join q{, }, (map {"'$_'"} @nested_disc_names);
+            my $nest_err = sprintf "Nested discs found in directory '%s'; %s",
+                $disc->name, $nested_disc_str;
+            NestedDiscError->throw(error => $nest_err);
+        }
+    }
+
+    _verify_dirs($rdir);
+
+    return $rdir;
+}
+
+### INTERFACE SUB
+# Subroutine: scan_rip_dir
+# Usage: scan_rip_dir(  )
+# Purpose: Scan the release contained in the rip directory.
+# Returns: A new What::Release::Directory object.
+# Throws: Nothing
+sub scan_rip_dir { return scan_release_dir(whatrc->rip_dir); }
 
 return 1;
 __END__

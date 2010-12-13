@@ -8,6 +8,7 @@ our $VERSION = "00.00_01";
 # Originally created on 12/12/10 00:02:02
 
 use Exception::Class (
+    'Error',
     'UnknownError',
     'ValueError', 'TypeError',
     'FileDoesNotExistError', 

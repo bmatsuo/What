@@ -53,7 +53,7 @@ sub main{
     load_context();
     my $release = release();
     my $rname = $release->short_name();
-    my $rdir = scan_rip_dir();
+    my $rdir = What::Release::Directory::scan_rip_dir();
 
     # Move NFO file.
     my $nfo_path =  $rdir->nfo;
@@ -61,45 +61,21 @@ sub main{
         if defined $nfo_path;
 
     # Create an image directory and move images.
-    my $subdir_of = sub {
-        my $path = dirname($_); 
-        prefix(
-            string => $path,
-            prefix => $rdir->path ,
-            replace => q{});
-        $path =~ s!\A /!!xms;
-        return $path;
-    };
-
     my @images = @{$rdir->images};
     if (@images > 1) {
-        my @image_subdirs
-            = map { $subdir_of->($_) } @images;
-        my @img_in_root_inds
-            = grep {$image_subdirs[$_] eq q{}} (0 ... $#image_subdirs);
-        if (@img_in_root_inds > 1) {
-            my $artwork_dir = sprintf "%s/Artwork", $rdir->path;
-            if (!-e $artwork_dir) {
-                $subsystem->exec('mkdir', $artwork_dir) == 0
-                    or die "Couldn't create artwork directory.";
-            }
-            elsif (!-d $artwork_dir) {
-                die "Why is $artwork_dir a regular file?!";
-            }
-            # So at this point, the artwork directory will exist.
-            for my $img_ind (@img_in_root_inds) {
-                my $img = $images[$_];
-                my $new_img = sprintf "%s/%s", $artwork_dir, basename($img);
-
-                die "Destination image already exists." if -e $new_img;
-
-                $subsystem->exec('mv', $img, $new_img) == 0
-                    or die "Couldn't move $img to $new_img.";
-
-                $images[$img_ind] = $new_img
-            }
+        my $artwork_dir_name = 'Artwork';
+        my $artwork_dir = $rdir->make_subdir(name => $artwork_dir_name);
+        # So at this point, the artwork directory will exist.
+        for my $img_ind (0 ... $#images) {
+            my $img = $images[$img_ind];
+            my $new_img = sprintf "%s/%s", $artwork_dir->path, basename($img);
+            die "Destination image already exists." if -e $new_img;
+            $subsystem->exec('mv', $img, $new_img) == 0
+                or die "Couldn't move $img to $new_img.";
+            @images[($img_ind)] = ();
+            push @{$artwork_dir->images}, $new_img;
         }
-        $rdir->images([@images]);
+        $rdir->images(\@images);
     }
 
     # Move M3U files.
@@ -129,7 +105,7 @@ sub main{
     }
     $rdir->m3us([@m3us]);
 
-    my @discs = @{$rdir->discs};
+    my @discs = $rdir->discs;
     for my $disc (@discs) {
         # Move disc M3U files.
         my @m3us = @{$disc->m3us};
