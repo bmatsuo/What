@@ -213,31 +213,17 @@ sub check_tags {
 
     my %vals_of = What::Format::FLAC::tag_sets(@flacs);
     my %varying_vals_of;
-    my @tag_form_head = ( 
-            '┌──────────────┬───────────────────────────────────────────────────────┐',
-            '│          TAG │ VALUE                                                 │',
-            '├──────────────┼───────────────────────────────────────────────────────┤',
-    );
-    my @tag_form_line_format = (
-            '| {>>>>>>>>>>} | {<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<} |'
-    );
-    my @tag_form_foot = (
-            '└──────────────┴───────────────────────────────────────────────────────┘'
-    );
-    my @tag_form = (@tag_form_head);
 
-
+    my @tag_val_pairs;
     for my $tag (sort keys %vals_of) {
-        my @tag_form_line = (@tag_form_line_format);
-        push @tag_form_line, $tag;
         my $val;
         if ( all_equal_strings( @{ $vals_of{$tag} } ) ) {
             $val = qq('$vals_of{$tag}->[0]');
             $val = q{} if !defined $val;
             $val =~ s/\n/\\n/gxms;
             $val =~ s/\t/\\t/gxms;
-            if (length $val >= 63 ) {
-                substr $val, 29, length ($val) - 20 - 1 - 29, q{...};
+            if (length $val >= 60 ) {
+                substr $val, 36, length ($val) - 20 - 1 - 37, q{...};
             }
         }
         else {
@@ -251,19 +237,16 @@ sub check_tags {
             my $num_tracks = scalar (@defined_vals);
 
             $val = sprintf 
-                    "<%d values%s>",
+                    "<%d different values%s>",
                     $num_unique, 
                     ($num_defined == $num_tracks ? ""
                         : sprintf (
-                            " (%d missing)", 
+                            " (%d tracks missing values)", 
                             $num_tracks - $num_defined) );
         }
-        push @tag_form_line, $val;
-        push @tag_form, @tag_form_line;
-
+        push @tag_val_pairs, [$tag, $val];
     }
-    push @tag_form, @tag_form_foot;
-    print form @tag_form;
+    print tag_val_form(@tag_val_pairs);
 
     if ($varying_vals_of{'TITLE'}) {
         $prompt->text("Would you like to inspect track numbers & titles?[Y/n]");
@@ -275,28 +258,100 @@ sub check_tags {
         if ($should_show_titles) {
             my @nts 
                 = map { 
-                    [ $vals_of{'TRACKNUMBER'}->[$_] || "" ,  $vals_of{'TITLE'}->[$_] || "" ] 
+                    [ 
+                        ( sprintf "%s-", $vals_of{'DISCNUMBER'}->[$_] || q{})
+                            . ($vals_of{'TRACKNUMBER'}->[$_] || "") ,  
+                        $vals_of{'TITLE'}->[$_] || "" ] 
                 } (0 .. scalar (@{$vals_of{'TITLE'}}) - 1);
-            my @track_form_head = ( 
-                '┌─────┬────────────────────────────────────────────────────────────────┐',
-                '│ POS │ TITLE                                                          │',
-                '├─────┼────────────────────────────────────────────────────────────────┤',
-            );
-            my @track_form_line_format = (
-                '| {>} | {[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[} |'
-            );
-            my @track_form_foot = (
-                '└─────┴────────────────────────────────────────────────────────────────┘'
-            );
-            my @track_form 
-                = ( @track_form_head,
-                    (map {(@track_form_line_format, @{$_})} @nts),
-                    @track_form_foot,);
-            print form @track_form;
+            print track_form(@nts);
         }
     }
 
     return $all_tags_present;
+}
+
+### INTERNAL UTILITY
+# Subroutine: table_form
+# Usage: 
+#   table_form(
+#       head => \@form_head, 
+#       row  => $row_format,
+#       foot => \@form_foot, 
+#       data => \@row_data, 
+#   )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub table_form {
+    my ( %arg ) = @_;
+    my @form = (
+        @{$arg{head}},
+        (map {$arg{row}, @{$_}} @{$arg{data}}),
+        @{$arg{foot}}
+    );
+    return form @form;
+}
+
+### INTERNAL UTILITY
+# Subroutine: tag_val_form
+# Usage: tag_val_form( @tag_val_pairs )
+# Purpose: Print a two column form with tag names and values.
+# Returns: A form (string).
+# Throws: Nothing
+sub tag_val_form {
+    my ( @tag_val_pairs ) = @_;
+    #my @alt_head = (
+    #    '┌──────────────┬─────────────────────────────────────────────────────────────┐',
+    #    '|          TAG | VALUE                                                       |',
+    #    '├──────────────┼─────────────────────────────────────────────────────────────┤',
+    #);
+    #my @alt_foot = (
+    #    '└──────────────┴─────────────────────────────────────────────────────────────┘',
+    #);
+    my @head = (
+        '+--------------+---------------------------------------------------------------+',
+        '|          TAG | VALUE                                                         |',
+        '+--------------+---------------------------------------------------------------+',
+    );
+    my $row = 
+        '| {>>>>>>>>>>} | {<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<} |';
+    my @foot = (
+        '+--------------+---------------------------------------------------------------+',
+    );
+    return table_form(
+        head => \@head, row => $row, foot => \@foot, 
+        data => \@tag_val_pairs);
+}
+### INTERNAL UTILITY
+# Subroutine: track_form
+# Usage: track_form( @pos_title_pairs )
+# Purpose:
+#   Create a form with two columns (track position, track title).
+# Returns: A new form (string).
+# Throws: Nothing
+sub track_form {
+    my (@pos_title_pairs) = @_;
+    #my @alt_form_head = (
+    #    '┌──────┬─────────────────────────────────────────────────────────────────────┐',
+    #    '│ POS. │ TITLE                                                               │',
+    #    '├──────┼─────────────────────────────────────────────────────────────────────┤',
+    #);
+    #my @alt_form_foot = ( 
+    #    '└──────┴─────────────────────────────────────────────────────────────────────┘',
+    #);
+    my @head = (
+        '+------+-----------------------------------------------------------------------+',
+        '│ POS. │ TITLE                                                                 │',
+        '+------+-----------------------------------------------------------------------+',
+    );
+    my $row = 
+        '| {>>} | {[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[} |';
+    my @foot = (
+        '+------+-----------------------------------------------------------------------+',
+    );
+    return table_form(
+        head => \@head, row => $row, foot => \@foot, 
+        data => \@pos_title_pairs);
 }
 
 ### INTERNAL UTILITY
