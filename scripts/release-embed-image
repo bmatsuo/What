@@ -96,8 +96,8 @@ sub main{
             $img; },
         default => 0,
         text    => "Which image is the cover?", );
-    my $i = $img_choose_p->prompt_user();
-    my $cover_art = $tiffs[$i];
+    $img_choose_p->prompt_user;
+    my $cover_art = $img_choose_p->chosen;
     my $small_file = scale_down( $cover_art );
     if (!defined $small_file) {
         die "Couldn't create a small enough version of $cover_art\n."
@@ -135,7 +135,7 @@ sub should_embed_images {
         my $overwrite_p = What::Prompt::YesNo->new(
             question => "Should existing images be replaced?",
             default => "yes",);
-        print img_block($flacs_with_images[0]),"\n";
+        #print img_block($flacs_with_images[0]),"\n";
         return if $overwrite_p->prompt_user() =~ m/\An/ixms;
         print "Removing existing album artwork...";
         for my $fpath (@flacs_with_images) {

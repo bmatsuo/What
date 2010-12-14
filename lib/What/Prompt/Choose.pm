@@ -36,6 +36,24 @@ has 'stringify'
         # By default, the stringify sub reference just returns its arguments.
         default => sub {return sub {return @_}});
 
+### INSTANCE METHOD
+# Subroutine: chosen
+# Usage: $cp->chosen(  )
+# Purpose:
+#   Return the object last chosen by the user during 
+#   $cp->prompt_user().
+#   This acts as a translation between choosen indices and objects.
+# Returns:
+#   An element of $cp->choices if $cp->response is defined;
+#   an undefined value otherwise.
+# Throws: Nothing
+sub chosen {
+    my $self = shift;
+    my $i = $self->response;
+    return if !defined $i;
+    return $self->choices->[$i];
+}
+
 sub _choices_set_ {
     my ($self, $c_ref, $old_ref) = @_;
     if (@{$c_ref} == 0) {
