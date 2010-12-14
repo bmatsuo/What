@@ -891,12 +891,12 @@ sub _conflict_choose_ {
 
         my $class_description 
             = $class eq 'NEARMISS' ? "nearly the same title"
-            : "identical titles and nearly the same info.";
+            : "identical titles and nearly the same info";
 
 
         my $pp = What::Prompt::Choose->new(
-            question => "Several releases found with $class_description" 
-                . "Do any of these releases look very similar to the rip?",
+            question => "Several releases found with $class_description." 
+                . "\nDo any of these releases look very similar to the rip?",
             choices => \@possibilities);
         my $choice = $pp->prompt_user();
 
