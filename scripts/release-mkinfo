@@ -14,6 +14,7 @@ use Carp;
 use POSIX;
 
 # Include CPAN modules.
+use Perl6::Form;
 use Data::Dumper;
 use Getopt::Euclid qw{ :vars<opt_> };
 use Audio::FLAC::Header;
@@ -946,18 +947,20 @@ sub choose_close_match {
 sub summarize_match {
     my ($dr, @probs) = @_;
     my $short_summ = summarize_perfect_match($dr);
-    my $conflict_string 
-        = join ("\n    ", 
-            q{}, $short_summ, 
-            (map {defined $_ ? '(' . $_ . ')' : ()} @probs));
+    my $conflict_format 
+        = '>> {[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[}';
+    my $conflicts 
+        = form 'conflicts: ', (map { defined $_ ? ($conflict_format, $_) : $_} @probs);
     my $title_string 
-        = join q{}, 
-            $dr->artist_string, " - ", 
-            $dr->title, 
-            " [", $dr->date || q{}, "]";
+        = sprintf "%s - %s [%s]\n",
+            $dr->artist_string, $dr->title, $dr->date || q{};
+    my $release_string 
+        = form 'release: {IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII}',
+            $title_string;
     my $summ = join q{}, 
-        $title_string, 
-        $conflict_string;
+        $release_string,
+        $short_summ,
+        $conflicts;
     return $summ;
 }
 
@@ -975,16 +978,12 @@ sub summarize_perfect_match {
     my $label_str = $dr->label_string();
     my $catno_str = $dr->catno_string();
     my $catno_cost = length $catno_str;
-    my $allowance =     47;
-    my $LC_format #     || THESE VALUES SHOULD BE EQUAL.
-        = "   labels: %-47s catnos: %s";
-    my $label_allowance = $allowance - $catno_cost;
-    if ($label_allowance < length $label_str) {
-        my $vis_length = $allowance - 3;
-        $label_str =~ s/\A (.{$vis_length}).+ \z/$1.../xms
-    }
+    my $LC_format 
+        = '{>>>>>} {[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[} {>>>>>} {IIIIIIIIIIIIIII}';
     my $label_and_catno
-        = sprintf $LC_format, $label_str, $catno_str;
+        = form $LC_format, 'labels:', $label_str, 'catnos:', $catno_str;
+    my $CF_format
+        = '{>>>>>>>>} {[[[[[[[[[[[[[[[[[[[[[[[[[[[} {>>>>>>} {IIIIIIIIIIIIIII}';
 
     # Describe country and formats;
     my @format_descs = map {join ", ", @{$_->descriptions}} @{$dr->formats};
@@ -1000,12 +999,14 @@ sub summarize_perfect_match {
         push @format_strs, $f_str;
     }
     my $formats_str = join " : ", @format_strs;
-    $formats_str = "[$formats_str]";
     my $country_and_format 
-        = sprintf "countries: %-46s formats: %s", 
-            ($dr->country || q{}) , ($formats_str || q{});
+        = form $CF_format, 
+            'countries:', $dr->country || q{}, 
+            'formats:', \@format_strs;# $formats_str || q{};
+    #    = sprintf "countries: %-46s formats: %s", 
+    #        ($dr->country || q{}) , ($formats_str || q{});
 
-    my $summ = "$label_and_catno\n    $country_and_format";
+    my $summ = "$label_and_catno$country_and_format";
     return $summ;
 }
 
