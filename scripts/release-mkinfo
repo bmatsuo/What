@@ -79,12 +79,12 @@ sub main{
     my $bbinfo_filename = "Info.txt";
     my $generate_info = !$opt{"--no-nfo"};
     my $generate_bbinfo = 1;
-    my $fetch_image = !has_images(whatrc->rip_dir);
+    my $fetch_image = !has_images(whatrc->rip_dir) && !$opt{'--no-search'};
     my $bbinfo_path = whatrc->rip_dir."/$bbinfo_filename";
     if ($generate_info && @nfos) {
         my $err = "Info file exists at @nfos.";
         if ($opt{'--skip-existing'}) {
-            print "$err\n" if $opt{'--verbose'};
+            print "Warning: $err\n" if $opt{'--verbose'};
             $generate_info = 0
         }
         else{
@@ -94,17 +94,26 @@ sub main{
     if ($generate_bbinfo && -e $bbinfo_path) {
         my $err = "BBCode Info.txt exists at $bbinfo_path.";
         if ($opt{'--skip-existing'}) {
-            print "$err\n" if $opt{'--verbose'};
+            print "Warning: $err\n" if $opt{'--verbose'};
             $generate_bbinfo = 0
         }
         else{
             die $err;
         }
     }
-    if ( !($generate_info || $generate_bbinfo || $fetch_image) ) {
-        print "Nothing to fetch from online databases.\n";
+
+    my $need_release_info = $generate_info || $generate_bbinfo;
+    if ( !( $need_release_info 
+            || $fetch_image 
+            || $opt{'--set-context'}) ) {
+        print "Nothing to fetch from online databases, ",
+            "and no context to set.\n";
         exit 0;
     }
+
+    my $should_search
+        = !$opt{'--no-search'}
+        && ($need_release_info || $fetch_image);
 
     #-------------------#
     # ANALYZE FILE TAGS #
@@ -118,7 +127,7 @@ sub main{
     my $release_year = $r->{year};
     my $release_date = $release_year;
 
-    print "Presumed release title: ";
+    print "Presumed release: ";
     my $print_year = $release_date || "?";
     print "$release_artist - $release_title [$print_year]\n";
 
@@ -134,7 +143,7 @@ sub main{
     #-------------------------#
     my $release; # A pointer to the release when we find it.
     my @artists_checked;
-    if (not $release_artist eq "Various Artists"){
+    if ($should_search && not $release_artist eq "Various Artists"){
         #---------------------#
         # ARTIST-BASED SEARCH #
         #---------------------#
@@ -180,7 +189,7 @@ sub main{
         }
     }
 
-    if (!defined $release) {
+    if ($should_search && !defined $release) {
         #------------------------#
         # GERENAL RELEASE SEARCH #
         #------------------------#
@@ -218,7 +227,7 @@ sub main{
     # TODO: When Discogs search fails, search Musicbrainz if possible.
 
     # When the all searches failed to find a release. 
-    if (!defined $release) {
+    if ($should_search && !defined $release) {
         # TODO: Ask the user for a musicbrainz release identifier.
         # Ask the user for a discogs release id 
         $prompt->text('Enter a discogs release ID (check format/edition):');
@@ -276,7 +285,7 @@ sub main{
         }
         $release_country = $release->country || q{};
     }
-    else {
+    elsif ($need_release_info) {
         # When the user can't find a release id, create info from tags.
         print "'Manual' info creation...\n";
         # Prompt user for label and catno.
@@ -308,11 +317,18 @@ sub main{
         year => $release_year,);
     if ($opt{'--set-context'}) {
         context->save();
+        if ($opt{'--verbose'}) {
+            printf "Context saved; %s\n", release->name;
+        }
+        else {
+            print "Context saved.\n"
+        }
     }
 
     #---------------#
     # GENERATE INFO #
     #---------------#
+    exit 0 if !$need_release_info;
 
     my $info =<<EOIHEAD;
 Title.........$release_title
@@ -1286,6 +1302,10 @@ release-mkinfo [options]
 =item --no-nfo
 
 Don't generate an nfo file.
+
+=item --no-search
+
+Do not perform a search.
 
 =item --skip-existing | -s
 
