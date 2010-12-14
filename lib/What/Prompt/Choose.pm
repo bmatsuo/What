@@ -91,6 +91,7 @@ sub preprompt_text {
                 "[$_]", $self->stringify->($choices[$_]), $choice_foot)
         } (0 .. $#choices);
     my $text = form (@choice_head, @choice_rows, );
+    chomp $text;
     return $text;
 }
 
@@ -99,7 +100,9 @@ sub preprompt_text {
 # Purpose: Get text for prompt choice.
 sub text {
     my $self = shift;
-    my $text = "Please enter a choice [" . $self->default() . "]:";
+    my $text = 
+        '|                                                                              |'
+        . "\r| Please enter a choice [" . $self->default() . "]:";
     return $text;
 }
 
