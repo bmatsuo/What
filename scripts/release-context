@@ -15,7 +15,8 @@ use Carp;
 use Getopt::Euclid qw{ :vars<opt_> };
 
 # Include private modules.
-# ...
+use What::Context;
+use What::Release;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -43,7 +44,7 @@ my $exitcode = 0;
 # main() - main program execution 
 sub main{
     load_context();
-    printf "%s\n", release->name;
+    printf "\n%s\n\n", release->name;
 
     exit($exitcode);
 }
