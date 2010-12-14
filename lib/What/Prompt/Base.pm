@@ -44,6 +44,8 @@ sub text { return "Please enter some text:" };
 sub validator { return sub {1} };
 sub default { return q{} };
 
+has 'response'
+    => (isa => 'Str', is => 'rw');
 has 'is_multiline'
     => (isa => 'Bool', is => 'rw', default => 0);
 has 'terminator'
@@ -61,7 +63,7 @@ has 'terminal'
 #   The reissued prompt's user response
 sub _retry_prompt_user {
     my $self = shift;
-    my $resp = shift;
+    my $resp = $self->response;
     print "I couldn't understand '$resp'.$/";
     return $self->prompt_user();
 }
@@ -126,10 +128,11 @@ sub prompt_user {
             error => "Unexpected EOF.\n", resp => $resp);
     }
 
+    $self->response($resp);
     return $resp if (&{$is_valid}($resp));
 
     # Retry if the response isn't valid
-    return $self->_retry_prompt_user($resp);
+    return $self->_retry_prompt_user();
 }
 
 1;
