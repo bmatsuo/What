@@ -66,16 +66,15 @@ sub main{
         my $artwork_dir_name = 'Artwork';
         my $artwork_dir = $rdir->make_subdir(name => $artwork_dir_name);
         # So at this point, the artwork directory will exist.
-        for my $img_ind (0 ... $#images) {
-            my $img = $images[$img_ind];
+        while (@images) {
+            my $img = shift @images;
             my $new_img = sprintf "%s/%s", $artwork_dir->path, basename($img);
             die "Destination image already exists." if -e $new_img;
             $subsystem->exec('mv', $img, $new_img) == 0
                 or die "Couldn't move $img to $new_img.";
-            @images[($img_ind)] = ();
             push @{$artwork_dir->images}, $new_img;
         }
-        $rdir->images(\@images);
+        $rdir->images(@images);
     }
 
     my @non_discs = $rdir->non_discs;
