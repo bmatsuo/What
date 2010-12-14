@@ -15,7 +15,7 @@ use Carp;
 
 # Include CPAN modules.
 use Getopt::Euclid qw{ :vars<opt_> };
-use Readonly;
+use Perl6::Form;
 
 # Include private modules.
 use What::Subsystem;
@@ -28,9 +28,9 @@ use What::Format::FLAC;
 ########################################################################
 
 # Basic program information.
-Readonly my $prog_incantation  => $0;
-Readonly my $prog_dir          => dirname($0);
-Readonly my $prog_name         => basename($0);
+my $prog_incantation  = $0;
+my $prog_dir          = dirname($0);
+my $prog_name         = basename($0);
 
 # Command-line option hash.
 my %opt = %ARGV;
@@ -213,13 +213,32 @@ sub check_tags {
 
     my %vals_of = What::Format::FLAC::tag_sets(@flacs);
     my %varying_vals_of;
+    my @tag_form_head = ( 
+            '┌──────────────┬───────────────────────────────────────────────────────┐',
+            '│          TAG │ VALUE                                                 │',
+            '├──────────────┼───────────────────────────────────────────────────────┤',
+    );
+    my @tag_form_line_format = (
+            '| {>>>>>>>>>>} | {<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<} |'
+    );
+    my @tag_form_foot = (
+            '└──────────────┴───────────────────────────────────────────────────────┘'
+    );
+    my @tag_form = (@tag_form_head);
+
 
     for my $tag (sort keys %vals_of) {
-        print sprintf ("%15s : ", "$tag");
+        my @tag_form_line = (@tag_form_line_format);
+        push @tag_form_line, $tag;
         my $val;
         if ( all_equal_strings( @{ $vals_of{$tag} } ) ) {
             $val = qq('$vals_of{$tag}->[0]');
             $val = q{} if !defined $val;
+            $val =~ s/\n/\\n/gxms;
+            $val =~ s/\t/\\t/gxms;
+            if (length $val >= 63 ) {
+                substr $val, 29, length ($val) - 20 - 1 - 29, q{...};
+            }
         }
         else {
             my @defined_vals = grep { defined $_ } @{$vals_of{$tag}};
@@ -231,10 +250,20 @@ sub check_tags {
             my $num_unique = scalar @unique_vals;
             my $num_tracks = scalar (@defined_vals);
 
-            $val = "<$num_unique values over $num_defined/$num_tracks tracks>";
+            $val = sprintf 
+                    "<%d values%s>",
+                    $num_unique, 
+                    ($num_defined == $num_tracks ? ""
+                        : sprintf (
+                            " (%d missing)", 
+                            $num_tracks - $num_defined) );
         }
-        print "$val\n";
+        push @tag_form_line, $val;
+        push @tag_form, @tag_form_line;
+
     }
+    push @tag_form, @tag_form_foot;
+    print form @tag_form;
 
     if ($varying_vals_of{'TITLE'}) {
         $prompt->text("Would you like to inspect track numbers & titles?[Y/n]");
@@ -248,9 +277,22 @@ sub check_tags {
                 = map { 
                     [ $vals_of{'TRACKNUMBER'}->[$_] || "" ,  $vals_of{'TITLE'}->[$_] || "" ] 
                 } (0 .. scalar (@{$vals_of{'TITLE'}}) - 1);
-
-            print join "\n", map {sprintf "%2s '%s'", @{$_}} @nts;
-            print "\n";
+            my @track_form_head = ( 
+                '┌─────┬────────────────────────────────────────────────────────────────┐',
+                '│ POS │ TITLE                                                          │',
+                '├─────┼────────────────────────────────────────────────────────────────┤',
+            );
+            my @track_form_line_format = (
+                '| {>} | {[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[} |'
+            );
+            my @track_form_foot = (
+                '└─────┴────────────────────────────────────────────────────────────────┘'
+            );
+            my @track_form 
+                = ( @track_form_head,
+                    (map {(@track_form_line_format, @{$_})} @nts),
+                    @track_form_foot,);
+            print form @track_form;
         }
     }
 

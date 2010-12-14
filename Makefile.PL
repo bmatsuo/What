@@ -15,6 +15,7 @@ WriteMakefile(
         Moose => 0,
         Audio::FLAC::Header => 0,
         XML::Twig => 0,
+        Perl6::Form => 0,
     }, # e.g., Module::Name => 1.1
     EXE_FILES   => [qw{
         scripts/snatch-inspect
