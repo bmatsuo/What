@@ -8,7 +8,7 @@ use strict;
 use warnings;
 
 # include CPAN modules
-use Readonly;
+use Perl6::Form;
 our $VERSION = '0.0_1';
 
 use Exception::Class (
@@ -30,6 +30,8 @@ has 'choices'
         is => 'rw',
         required => 1,
         trigger => \&_choices_set_,);
+has 'stringify' 
+    => (isa => 'CodeRef', is => 'rw', default => sub {return sub {return @_}});
 
 sub _choices_set_ {
     my ($self, $c_ref, $old_ref) = @_;
@@ -52,9 +54,22 @@ sub default {
 sub preprompt_text {
     my $self = shift;
     my @choices = @{$self->choices};
-    my $text = join q{}, "\n", $self->question, "\n\n";
-    $text .= join "\n", (map {"[$_] " . $choices[$_] . "\n"} (0 .. $#choices));
-    #$text .= "\n";
+    my @choice_head = (
+        '+------------------------------------------------------------------------------+',
+        '| {<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<} |',
+        $self->question,
+        '+-------+----------------------------------------------------------------------+',
+    );
+    my $choice_format =
+        '| {>>>} | {[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[} |';
+    my $choice_foot =
+        '+-------+----------------------------------------------------------------------+';
+    my @choice_rows 
+        = map {
+            ($choice_format, 
+                "[$_]", $self->stringify->($choices[$_]), $choice_foot)
+        } (0 .. $#choices);
+    my $text = form (@choice_head, @choice_rows, );
     return $text;
 }
 
