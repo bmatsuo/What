@@ -90,6 +90,10 @@ sub main{
     my $img_choose_p = What::Prompt::Choose->new(
         question => "Which image is the front cover?",
         choices => [@tiffs],
+        stringify => sub {
+            my $img = shift;
+            substr $img, 0, length (whatrc->rip_dir) + 1, q{};
+            $img; },
         default => 0,
         text    => "Which image is the cover?", );
     my $i = $img_choose_p->prompt_user();

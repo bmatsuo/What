@@ -31,7 +31,10 @@ has 'choices'
         required => 1,
         trigger => \&_choices_set_,);
 has 'stringify' 
-    => (isa => 'CodeRef', is => 'rw', default => sub {return sub {return @_}});
+    => (isa => 'CodeRef', 
+        is => 'rw', 
+        # By default, the stringify sub reference just returns its arguments.
+        default => sub {return sub {return @_}});
 
 sub _choices_set_ {
     my ($self, $c_ref, $old_ref) = @_;
