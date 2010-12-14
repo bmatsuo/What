@@ -27,6 +27,7 @@ use Exception::Class (
 # Include private modules.
 use What::Subsystem;
 use What::Context;
+use What::Release;
 use What::Discogs;
 use What::Utils;
 use What::WhatRC;
