@@ -26,6 +26,7 @@ use Exception::Class (
 
 # Include private modules.
 use What::Subsystem;
+use What::Context;
 use What::Discogs;
 use What::Utils;
 use What::WhatRC;
@@ -948,7 +949,7 @@ sub summarize_match {
     my ($dr, @probs) = @_;
     my $short_summ = summarize_perfect_match($dr);
     my $conflict_format 
-        = '>> {[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[}';
+        = '  {[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[}';
     my $conflicts 
         = form 'conflicts: ', (map { defined $_ ? ($conflict_format, $_) : $_} @probs);
     my $title_string 
@@ -1027,17 +1028,17 @@ sub release_conflicts {
 
     # Match up basic information.
     push @conflicts,
-        sprintf ("Release title mismatch; '%s' and '%s'", 
+        sprintf ("Release title mismatch; '%s' vs '%s'.", 
             $release->title, $arg{title})
         if !release_title_agrees($release, $arg{title});
 
     push @conflicts,
-        sprintf ("Release artist mismatch; '%s' and '%s'", 
+        sprintf ("Release artist mismatch; '%s' vs '%s'.", 
             $release->artist_string, $arg{artist})
         if !release_artist_agrees($release, $arg{artist});
 
     push @conflicts,
-        sprintf ("Release year mismatch; '%s' & '%s'", 
+        sprintf ("Release year mismatch; '%s' vs '%s'.", 
             $release->date, $arg{year})
         if !release_year_agrees($release, $arg{year});
 
