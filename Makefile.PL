@@ -25,6 +25,7 @@ WriteMakefile(
         scripts/release-art-convert
         scripts/release-delete
         scripts/release-flac-convert
+        scripts/release-context
         scripts/release-mktorrent
         scripts/release-add-to-library
         scripts/release-mkm3u

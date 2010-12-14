@@ -53,6 +53,7 @@ scripts/snatch-inspect
 scripts/release-import
 scripts/release-scaffold
 scripts/release-art-convert
+scripts/release-context
 scripts/release-delete
 scripts/release-flac-convert
 scripts/release-mktorrent
