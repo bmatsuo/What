@@ -31,7 +31,7 @@ CONTEXT="$WHAT/context"
 WHATRC=~/.whatrc
 DIST_WHATRC="whatrc"
 WHATRC_INSTALLED=<<EODIRECTIONS
-Before installing, please take time to costumise your configuration.  Edit the
+Before installing, please take time to customize your configuration. Edit the
 newly created file '~/.whatrc' and fill in any settings you want. You need to
 add a correct Discogs.com API key in order to run the install tests.
 

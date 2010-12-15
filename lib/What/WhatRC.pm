@@ -26,9 +26,7 @@ use AutoLoader qw(AUTOLOAD);
 push our @ISA, qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw() ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-our @EXPORT = qw(
-    whatrc
-);
+our @EXPORT = qw( whatrc );
 
 # Don't actually put your announce url in this file. Use ~/.whatrc.
 has passkey => (isa => 'Str', is => 'rw', default => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
@@ -49,7 +47,7 @@ has watch   => (isa => 'Str', is => 'rw', default => "~/Downloads",
         initializer => \&_init_path_attr_,);
 
 # Music library root folder.
-has library => (isa => 'Str', is => 'rw', default => "~/Music/Converted",
+has library => (isa => 'Str', is => 'rw', default => "~/Music/iTunes/iTunes Media/Music",
         initializer => \&_init_path_attr_,);
 
 # The format that you prefer to add to your library (e.g. ogg, 320, v0,...).
