@@ -16,7 +16,6 @@ use LWP::Simple;
 
 # Include CPAN modules.
 use Getopt::Euclid qw{ :vars<opt_> };
-use Readonly;
 
 # Include private modules.
 use What;
@@ -34,9 +33,9 @@ our $VERSION = "0.0_9";
 ########################################################################
 
 # Basic program information.
-Readonly my $prog_incantation  => $0;
-Readonly my $prog_dir          => dirname($0);
-Readonly my $prog_name         => basename($0);
+my $prog_incantation  = $0;
+my $prog_dir          = dirname($0);
+my $prog_name         = basename($0);
 
 # Command-line option hash.
 my %opt = %ARGV;
