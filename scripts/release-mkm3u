@@ -65,14 +65,14 @@ sub main{
         # Look for existing playlists.
         if ( $disc->has_m3u() ) {
             my $name = $disc->name;
-            $name = "release directory" if $name eq q{};
+            $name = "release directory" if defined ($name) && ($name eq q{});
             print "M3U found in $name. Skipping.\n" if $opt{'--verbose'};
             next;
         }
 
         # Generate a name for a disc playlist.
         my $m3u_name = $disc->name;
-        $m3u_name = $m3u_name =~ m/./xms ? "$m3u_base - $m3u_name.m3u"
+        $m3u_name = ($m3u_name && $m3u_name =~ m/./xms) ? "$m3u_base - $m3u_name.m3u"
             : "$m3u_base.m3u";
         my $m3u_path = sprintf "%s/%s", $disc->path, $m3u_name;
 

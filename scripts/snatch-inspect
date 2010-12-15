@@ -259,8 +259,10 @@ sub check_tags {
             my @nts 
                 = map { 
                     [ 
-                        ( sprintf "%s-", $vals_of{'DISCNUMBER'}->[$_] || q{})
-                            . ($vals_of{'TRACKNUMBER'}->[$_] || "") ,  
+                        ( $vals_of{'DISCNUMBER'}->[$_] 
+                                ? sprintf "%d-", $vals_of{'DISCNUMBER'}->[$_] 
+                                : q{} )
+                            . (sprintf '%d', $vals_of{'TRACKNUMBER'}->[$_] || "") ,  
                         $vals_of{'TITLE'}->[$_] || "" ] 
                 } (0 .. scalar (@{$vals_of{'TITLE'}}) - 1);
             print track_form(@nts);
