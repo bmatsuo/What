@@ -123,27 +123,6 @@ album-scaffold [options]
 
 =over
 
-=item --artist [=] <artist>
-
-Release artist
-
-for Euclid:
-    artist.type: string, length artist
-
-=item --title [=] <title>
-
-Release name
-
-for Euclid:
-    title.type: string, length title
-
-=item --year [=] <year>
-
-Release year
-
-=for Euclid:
-    year.type: /\d{4}/
-
 =item --num-discs [=] <discs>
 
 Number of discs in release.

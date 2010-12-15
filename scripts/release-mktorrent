@@ -182,27 +182,6 @@ mktorrent-release [options]
 
 =over
 
-=item --artist <artist>
-
-Release artist.
-
-=for Euclid:
-    artist.type: string, length artist
-
-=item --title <title>
-
-=for Euclid:
-    title.type: string, length title
-
-Release title.
-
-=item --year <year>
-
-Release year.
-
-=for Euclid:
-    year.type: /\d{4}/
-
 =item --v0 | --V0
 
 Create an MP3 V0 VBR torrent.
