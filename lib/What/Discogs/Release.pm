@@ -160,6 +160,17 @@ has 'discs'
 #         is => 'rw',
 #         default => sub { [] },);
 
+### INSTANCE METHOD
+# Subroutine: id
+# Usage: $release->id(  )
+# Purpose: Retrieve the release's id.
+# Returns: Nothing
+# Throws: Nothing
+sub id {
+    my $self = shift;
+    return $self->query->id;
+}
+
 # Subroutine: $release->artist_string()
 # Type: INTERFACE SUB
 # Purpose: Create a string from the artist list.

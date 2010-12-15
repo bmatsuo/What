@@ -25,6 +25,10 @@ push our @ISA, 'Exporter';
 #our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw{bbcode};
 
+
+my $discogs_logo_small = 'http://whatimg.com/images/74272052015178462344.jpg';
+
+
 ### INTERFACE SUB
 # Subroutine: bbcode
 # Usage: bbcode
@@ -32,6 +36,31 @@ our @EXPORT = qw{bbcode};
 # Returns: Nothing
 # Throws: Nothing
 sub bbcode() { return What::BBCode->instance; }
+
+### INSTANCE METHOD
+# Subroutine: discogs_logo_small
+# Usage: bbcoode->discogs_logo_small(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub discogs_logo_small {
+    my $self = shift;
+    return $self->image(url => $discogs_logo_small);
+}
+
+### INSTANCE METHOD
+# Subroutine: discogs_release_link
+# Usage: bbcoode->discogs_release_link( id => $release_id )
+# Purpose: Return a discogs logo image linked to a discogs release page.
+# Returns: BBCode.
+# Throws: Nothing
+sub discogs_release_link {
+    my $self = shift;
+    my ( %arg ) = @_;
+    return if !exists $arg{id};
+    my $url = sprintf "http://www.discogs.com/release/%s", $arg{id};
+    return $self->link(url => $url, text => $self->discogs_logo_small);
+}
 
 ### INSTANCE METHOD
 # Subroutine: size

@@ -349,33 +349,31 @@ Catno.........$release_catno
 
 EOIHEAD
 
-    my $bbrelease = bbcode->size( 
+    my $bbrelease_artist = bbcode->size( 
         scale => 3, 
-        text => bbcode->artist(name => $release_artist));
-    $bbrelease 
-        = join q{ }, 
-        $bbrelease, '-',
-        bbcode->size(
+        text => bbcode->artist( name => $release_artist ),);
+    my $bbrelease_title = bbcode->size(
             scale => 4,
-            text => $release_title),
-        "";
-    $bbrelease = bbcode->bold(text=>$bbrelease);
-    $bbrelease .= bbcode->size(
+            text => $release_title,);
+    my $bbrelease_year = bbcode->size(
             scale => 3,
-            text => "[$release_year]");
-    $bbrelease = bbcode->align(
-        justify => 'center',
-        text => $bbrelease);
+            text => "[$release_year]",);
+    my $bbrelease_name_format 
+        = bbcode->align(
+            justify => 'center',
+            text => sprintf ("%s - %%s", bbcode->bold( text => "%s - %s" )),);
+    my $bbrelease 
+        = sprintf $bbrelease_name_format, 
+            $bbrelease_artist, $bbrelease_title, $bbrelease_year;
 
     my $bbinfo = "$bbrelease\n";
 
     $bbinfo 
-        .= join q{ }, 
-            $release_label, 
-            "(", $release_country, $release_date,
-            '|', $release_media, 
-            '|', $release_catno,
-            "):\n";
+        .= sprintf "%s (%s %s | %s | %s):\n", 
+            $release_label,
+            $release_country, $release_date,
+            $release_media,
+            $release_catno;
     my $bbtrack_format # requires args %s, %s, %d, %02d
         = join q{ }, 
             bbcode->bold(text => "%d. "), 
@@ -409,6 +407,9 @@ EOIHEAD
             $info .= "\n";
             $bbinfo .= "\n";
         }
+
+        $bbinfo .= "\n" . bbcode->discogs_release_link(id => $release->id)
+            if (defined $release);
     }
 
     #-------------#
