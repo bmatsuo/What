@@ -18,6 +18,7 @@ use Perl6::Form;
 use Data::Dumper;
 use Getopt::Euclid qw{ :vars<opt_> };
 use Audio::FLAC::Header;
+use What::Format::FLAC;
 use Exception::Class (
     'TrackException',
     'TrackTotalException' => { isa => 'TrackException' },
@@ -64,10 +65,10 @@ my $subsystem = What::Subsystem->new(
     dry_run => $opt{'-dry_run'});
 
 my $known_miss_char = 'x';
-my $miss_char = '.';
-my $near_miss_char = '_';
-my $close_char = '-';
-my $hit_char = '*';
+my $miss_char       = '.';
+my $near_miss_char  = '_';
+my $close_char      = '-';
+my $hit_char        = '*';
 
 ########################################################################
 # MAIN FUNCTION
@@ -126,6 +127,7 @@ sub main{
     my $release_title = $r->{title};
     my $release_year = $r->{year};
     my $release_date = $release_year;
+    my $release_media = $opt{'--media'};
 
     print "Presumed release: ";
     my $print_year = $release_date || "?";
@@ -152,6 +154,7 @@ sub main{
         print "Trying default artist page ";
         $checked_artist{$release_artist} = 1;
         $release = find_release_in_artist_page(
+            media => $release_media,
             artist => $release_artist,
             title => $release_title,
             year => $release_year,
@@ -178,6 +181,7 @@ sub main{
                 for my $r (@{$matching_result_list->results()}) {
                     print "Searching discography of " . $r->title;
                     $release = find_release_in_artist_page(
+                        media => $release_media,
                         artist => $r->title,
                         title => $release_title,
                         year => $release_year,
@@ -202,6 +206,7 @@ sub main{
             type => 'release',
             api => whatrc->discogs_api_key,);
         $release = find_release_in_search_results(
+            media => $release_media,
             results => $release_search,
             artist => $release_artist,
             title => $release_title,
@@ -217,6 +222,7 @@ sub main{
                 type => 'release',
                 api => whatrc->discogs_api_key,);
             $release = find_release_in_search_results(
+                media => $release_media,
                 results => $release_search,
                 artist => $release_artist,
                 title => $release_title,
@@ -241,6 +247,7 @@ sub main{
 
         if (defined $release) {
             my @conflicts = release_conflicts(
+                    media => $release_media,
                     release => $release, 
                     title => $release_title,
                     artist => $release_artist,
@@ -366,12 +373,12 @@ EOIHEAD
         .= join q{ }, 
             $release_label, 
             "(", $release_country, $release_date,
-            '|', $release_format, 
+            '|', $release_media, 
             '|', $release_catno,
             "):\n";
     my $bbtrack_format # requires args %s, %s, %d, %02d
         = join q{ }, 
-            bbcode->bold(text => "%s. "), 
+            bbcode->bold(text => "%d. "), 
             "%s", "[%d:%02d]";
 
     for my $disc_d (@disc_dirs) {
@@ -407,7 +414,7 @@ EOIHEAD
     #-------------#
     # OUTPUT INFO #
     #-------------#
-    my $info_filename = sprintf "%s.nfo", release->name();
+    my $info_filename = sprintf "%s.nfo", release->short_name();
     $info_filename =~ s![/:]!_!gxms;
     my $info_path = whatrc->rip_dir."/$info_filename";
 
@@ -470,10 +477,10 @@ sub analyze_release {
             if (!@disc_files);
 
         # Help subroutine to parse track position from the filename.
-        my $get_position_from_file = sub {
-                my $file = basename(shift); 
-                $file =~ s/(\s | -) .* \z//xms; 
-                return $file; };
+        my $get_position_from_flac = sub {
+                my $flac = shift; 
+                return $flac->tag('tracknumber');
+        };
 
         my @tracks;
         my $disc_artist;
@@ -482,14 +489,15 @@ sub analyze_release {
         # Read the tags of each song.
         for my $song (@disc_files) {
             my $info = Audio::FLAC::Header->new($song);
+            my $flac = read_flac($song);
             my %tags = %{$info->{tags}};
 
             # Fetch the important tags.
-            my $pos = $get_position_from_file->($song);
-            my $title = $tags{TITLE} || $tags{title} || $tags{Title};
-            my $artist = $tags{ARTIST} || $tags{artist} || $tags{Artist};
-            my $album_artist = $tags{ALBUMARTIST} || $tags{albumartist} || $tags{Albumartist};
-            my $date = $tags{date} || $tags{DATE} || $tags{Date};
+            my $pos = $get_position_from_flac->($flac);
+            my $title = $flac->tag('TITLE');
+            my $artist = $flac->tag('ARTIST');
+            my $album_artist = $flac->tag('ALBUMARTIST');
+            my $date = $flac->tag('DATE');
             my $year;
             if ($date && $date =~ m/(\d{4})/xms) {
                 $year = $1;
@@ -498,7 +506,7 @@ sub analyze_release {
                 print {\*STDERR}
                     "Warning: Can't find year in release track '$title'.\n";
             }
-            my $release_title = $tags{ALBUM} || $tags{album} || $tags{Album};
+            my $release_title = $flac->tag('ALBUM');
             if (defined $album_artist) { 
                 $disc_artist = $album_artist if (!defined $disc_artist);
                 if (not $disc_artist eq $album_artist) {
@@ -509,7 +517,7 @@ sub analyze_release {
             }
 
             # find the track duration.
-            my $dur = $info->{trackTotalLengthSeconds};
+            my $dur = $flac->head->{trackTotalLengthSeconds};
 
             # Construct a 'track object'.
             my %track = (
@@ -653,7 +661,10 @@ sub find_release_in_search_results {
     my %r = @_;
 
     # Get all the release results, and only search those.
-    my $results = $all_results->grep(sub {my $r = shift; $r->type =~ /release/i});
+    my $results = $all_results->grep(
+        sub {
+            my $r = shift; 
+            $r->type =~ /release/i});
     my @releases =  @{$results->results};
 
     # Get information of necessity from rip arguments.
@@ -739,6 +750,7 @@ sub find_release_in_search_results {
 }
 
 # Subroutine: find_release_in_artist_page(
+#   media => $media,
 #   artist => $artist,
 #   title => $title,
 #   year => $edition_year,
@@ -1029,6 +1041,7 @@ sub summarize_perfect_match {
 }
 
 # Subroutine: release_conflicts(
+#   media => $media,
 #   release => $release, 
 #   artist => $artist,
 #   title => $title,
@@ -1044,6 +1057,11 @@ sub release_conflicts {
     my @conflicts;
 
     # Match up basic information.
+    push @conflicts,
+        sprintf ("Release media mismatch; '%s' vs '%s'.", 
+            join (q{, }, (map {$_->type} @{$release->formats})), $arg{media})
+        if !release_media_agrees($release, $arg{media});
+
     push @conflicts,
         sprintf ("Release title mismatch; '%s' vs '%s'.", 
             $release->title, $arg{title})
@@ -1074,6 +1092,23 @@ sub release_conflicts {
 #sub release_xxxx_agrees {
 #    return 0;
 #}
+
+# Release test template.
+# Subroutine: release_media_agrees($discogs_release, $release_media)
+# Type: INTERNAL UTILITY
+# Purpose: Compare the media of a discogs release to a given string.
+# Returns: 
+#   1 if the title of the discogs release is equal to $release_media.
+#   0 otherwise.
+sub release_media_agrees {
+    my ($release, $media) = @_;
+    $media = uc $media;
+    $media = 'FILE' if $media eq 'WEB';
+    for my $format (@{$release->formats}) {
+        return 1 if -1 != index uc $format->type, $media;
+    }
+    return 0;
+}
 
 # Subroutine: release_title_agrees($discogs_release, $release_title)
 # Type: INTERNAL UTILITY
@@ -1298,6 +1333,14 @@ release-mkinfo [options]
 =head1 OPTIONS
 
 =over
+
+=item --media [=] <media_type> | -m <media_type>
+
+The media type of the release (Default: CD).
+
+=for Euclid:
+    media_type.type: string, media_type =~ m/(CD | VINYL | WEB | CASS | CASSETTE)/ixms
+    media_type.default: 'CD'
 
 =item --no-nfo
 
