@@ -9,7 +9,6 @@ use Carp;
 use File::Basename;
 
 # include CPAN modules
-use Readonly;
 use Audio::FLAC::Header;
 
 # include any private modules

@@ -10,7 +10,6 @@ use XML::Twig;
 use Carp;
 
 # include CPAN modules
-use Readonly;
 
 # include any private modules
 # ...

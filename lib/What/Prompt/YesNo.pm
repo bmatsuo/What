@@ -8,7 +8,6 @@ use strict;
 use warnings;
 
 # include CPAN modules
-use Readonly;
 our $VERSION = '0.0_1';
 
 use Exception::Class (

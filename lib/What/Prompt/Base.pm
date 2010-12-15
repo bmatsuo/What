@@ -8,7 +8,6 @@ use strict;
 use warnings;
 
 # include CPAN modules
-use Readonly;
 use Term::ReadLine;
 use IO::Handle;
 
