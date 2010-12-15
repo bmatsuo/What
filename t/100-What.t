@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 BEGIN { use_ok('What') };
 
 #########################
@@ -40,4 +40,9 @@ if (!$ice_ok) {
     die "\n\n$setup_err_msg\n\n\n";
 }
 ok( $ice_ok );
+my $context_ok = -d What::context_dir();
+if (!$context_ok) {
+    die "\n\n$setup_err_msg\n\n\n";
+}
+ok( $context_ok );
 ok( tracker_url =~ m!\A http://.*:\d+\z !xms )
