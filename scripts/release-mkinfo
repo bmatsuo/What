@@ -859,7 +859,7 @@ sub choose_perfect_match {
 
     if (@hits) {
         if (scalar (@hits) == 1) {
-            print "Only one matching release found,\n\n    "
+            print "Only one matching release found,\n\n"
                 . summarize_perfect_match($hits[0]) . "\n\n";
             my $use_close_p = What::Prompt::YesNo->new(
                 question => "Should this release be used to make the info file?");
@@ -905,7 +905,7 @@ sub _conflict_choose_ {
     if (@releases) {
         if (scalar (@releases) == 1) {
             print "A $class_name was found,\n"
-                . summarize_match($releases[0], @{$conflicts[0]}) . "\n\n";
+            . summarize_match($releases[0], @{$conflicts[0]}) . "\n\n";
             my $use_close_p = What::Prompt::YesNo->new(
                 question => "Should this release be used to make the info file?");
             my $use_close_match = $use_close_p->prompt_user();
