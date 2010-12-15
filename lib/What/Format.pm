@@ -145,7 +145,7 @@ sub format_needs_wav {
     my $fformat = $file_format_of{$format};
     my $need_wav = $fformat eq 'MP3' ? What::Converter::MP3->new(bitrate => 320, id => 999)->needs_wav()
         : $fformat eq 'AAC' ? What::Converter::AAC->new(id => 998)->needs_wav()
-        : $fformat eq 'OGG' ? What::Converter::OGG->new(id => 997)->needs_wav()
+        : $fformat eq 'OGG' ? What::Converter::Ogg->new(id => 997)->needs_wav()
         : $fformat eq 'FLAC' ? FormatException->throw(error => "Can't convert to FLAC")
         : !defined $fformat ? FormatException->throw(error => "Unrecognized format")
         : FormatException->throw(error => "Unknown format $fformat.\n");
