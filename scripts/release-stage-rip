@@ -125,7 +125,7 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
-Stage a rip by copying a release to the rip directory.
+Stage a rip by copying the context-release to the rip directory.
 
 =head1 BUGS
 

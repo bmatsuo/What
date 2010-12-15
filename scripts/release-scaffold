@@ -155,7 +155,7 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
-Create a place in the upload hierarchy for a specified release.
+Create a place in the upload hierarchy for the context-release.
 
 If the release directory exists already, release-scaffold fails
 with a non-zero exitcode.

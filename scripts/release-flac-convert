@@ -622,7 +622,8 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
-Convert the FLAC release directory to a release directory of another format. 
+Transcode the FLAC files of the context-release directory and create
+releases of other formats.
 
 =head1 BUGS
 

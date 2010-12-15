@@ -285,7 +285,11 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
-Organize the rip directorys contents.
+Organize the rip directorys contents, 
+making release file names uniform (log, cue, m3u,...)
+and organizing images.
+
+Files are named based on the current What context.
 
 =head1 BUGS
 

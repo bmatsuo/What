@@ -96,6 +96,8 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
+Print the current What context.
+
 =head1 BUGS
 
 =over

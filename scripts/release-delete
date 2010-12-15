@@ -315,9 +315,10 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
-This program is used to delete releases of specific formats from the upload hierarchy.
-If all formats of a release have been deleted, then the release root directory is deleted.
-If the user asks for the program to delete a FLAC release, it will prompt the user for 
+This program deletes specified formats of the context-release from the upload hierarchy.
+If all formats of the context-release have been deleted, 
+then the context-release root directory is deleted.
+If the user asks for the program to delete the FLAC release, it will prompt the user for 
 confirmation (usless --force is used).
 
 =head1 BUGS
