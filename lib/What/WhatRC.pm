@@ -58,6 +58,9 @@ has preferred_format => (isa => 'Str', is => 'rw', default => 'v2');
 # Mac OS X users generally will want music to be explicitly added to iTunes.
 has should_add_to_itunes => (isa => 'Bool', is => 'rw', default => 0);
 
+# Add releases to a named iTunes playlist. If specified, the named playlist MUST exist.
+has add_to_itunes_playlist => (isa => 'Str', is => 'rw');
+
 # iTunes may make copies of your files and organize, or use music files in-place.
 has itunes_copies_music => (isa => 'Bool', is => 'rw', default => 0);
 

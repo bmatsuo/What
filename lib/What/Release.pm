@@ -427,11 +427,14 @@ sub _prep_music_copy_ {
     return;
 }
 
-# Subroutine: $release->copy_music_into_hierarchy(
-#   format => $format, 
-#   library_root => $new_root,
-#   [add_to_itunes => $should_add_to_itunes,]
-#   [itunes_will_copy => $itunes_copies_songs,])
+# Subroutine: 
+#   $release->copy_music_into_hierarchy(
+#       format => $format, 
+#       library_root => $new_root,
+#       [add_to_itunes => $should_add_to_itunes,]
+#       [itunes_playlist => $itunes_playlist_name,]
+#       [itunes_will_copy => $itunes_copies_songs,]
+#   )
 # Type: INSTANCE METHOD
 # Purpose: 
 #   Copy the music files of one format into another hierarchy.
@@ -441,8 +444,8 @@ sub _prep_music_copy_ {
 sub copy_music_into_hierarchy {
     my $self = shift;
     my %arg = @_;
-    my ($format, $new_root, $add_to_itunes, $itunes_copies) 
-        = map {$arg{$_}} qw{format library_root add_to_itunes itunes_will_copy};
+    my ($format, $new_root, $add_to_itunes, $itunes_playlist, $itunes_copies) 
+        = @arg{qw{format library_root add_to_itunes itunes_playlist itunes_will_copy}};
     my $root = $self->{rip_root};
 
     my $needs_prep = 1;
@@ -479,10 +482,15 @@ sub copy_music_into_hierarchy {
     # Add the files to iTunes.
     if ($add_to_itunes) {
         for my $track (@music_files) {
-            my $add_track_ascript = qq{tell application "iTunes" to add POSIX file "$track"};
+            my $tell_itunes = 'tell application "iTunes"';
+            my $_to_add_track = sprintf ' to add POSIX file "%s"', $track;
+            my $_to_playlist = q{};
+            $_to_playlist = qq{ to playlist "$itunes_playlist"} if $itunes_playlist;
+            my $add_track_ascript = qq{$tell_itunes$_to_add_track$_to_playlist};
             subsystem(
                 cmd => ['osascript', '-e', $add_track_ascript], 
                 redirect_to => '/dev/null',
+                #verbose => 1,
             ) == 0 or croak("Couldn't add $track to iTunes.\n");
         }
     }

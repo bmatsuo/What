@@ -206,8 +206,8 @@ sub main{
             type => 'release',
             api => whatrc->discogs_api_key,);
         $release = find_release_in_search_results(
-            media => $release_media,
             results => $release_search,
+            media => $release_media,
             artist => $release_artist,
             title => $release_title,
             year => $release_year,
@@ -222,8 +222,8 @@ sub main{
                 type => 'release',
                 api => whatrc->discogs_api_key,);
             $release = find_release_in_search_results(
-                media => $release_media,
                 results => $release_search,
+                media => $release_media,
                 artist => $release_artist,
                 title => $release_title,
                 year => $release_year,
@@ -793,7 +793,7 @@ sub find_release_in_artist_page {
         }
 
         # Test to see if the release title is the same.
-        my $release_matches = $title eq $artist_release->title;
+        my $release_matches = lc $title eq lc $artist_release->title;
         if ($release_matches) {
             my $ar = get_release(
                 id => $artist_release->id,
@@ -1079,7 +1079,8 @@ sub release_conflicts {
         if !release_year_agrees($release, $arg{year});
 
     # Attempt to match up the discs when there is justification to do so.
-    push @conflicts, release_disc_problems($release, $arg{discs});
+    my @release_disc_conflicts = release_disc_problems($release, $arg{discs});
+    push @conflicts, @release_disc_conflicts;
     return @conflicts;
 }
 
@@ -1182,9 +1183,9 @@ sub disc_track_problems {
 
     # Return false if the number of tracks differ.
     if ($disc->num_tracks != @tracks) {
-        my $track_total_msg = join q{},
-            "Disc with different numbers of tracks; ",
-            $disc->num_tracks, " and ", scalar @tracks;
+        my $track_total_msg = sprintf 
+            "Disc with different numbers of tracks; %d vs %d.",
+            $disc->num_tracks, scalar @tracks;
         push @problems, $track_total_msg;
         return @problems;
         #TrackTotalException->throw( error => $track_total_msg );

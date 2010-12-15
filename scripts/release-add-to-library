@@ -91,7 +91,8 @@ sub main{
         format => $format, 
         library_root => whatrc->library,
         add_to_itunes => whatrc->should_add_to_itunes,
-        itunes_will_copy => whatrc->itunes_copies_music,);
+        itunes_will_copy => whatrc->itunes_copies_music,
+        itunes_playlist => whatrc->add_to_itunes_playlist,);
     print "Done\n";
 
     if ($had_to_create_format) {

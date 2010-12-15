@@ -88,7 +88,6 @@ sub main{
     my $year = context->year;
 
     my $release = release();
-    my $release = What::Release->new( %release_info );
     my @existing_formats = $release->existing_formats();
 
     my @mp3_opts = map {uc $_} @{$opt{'--mp3'}};
