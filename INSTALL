@@ -42,7 +42,6 @@ PERL DEPENDENCIES
 
         Getopt::Euclid
         Exception::Class
-        Class::InsideOut
         LWP::UserAgent
         Moose
         MooseX::Singleton
