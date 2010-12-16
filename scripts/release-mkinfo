@@ -875,7 +875,8 @@ sub choose_perfect_match {
         my $pp = What::Prompt::Choose->new(
             question => "Multiple release with matching info found\n"
                 . "Which release has the most accurate info?",
-            choices => \@perfect_choices);
+            choices => \@perfect_choices,
+            should_page => 1,);
         my $choice = $pp->prompt_user();
         my $release_choice = $hits[$choice];
         return if !defined $release_choice;
@@ -928,7 +929,9 @@ sub _conflict_choose_ {
         my $pp = What::Prompt::Choose->new(
             question => "Several releases found with $class_description." 
                 . "\nDo any of these releases look very similar to the rip?",
-            choices => \@possibilities);
+            choices => \@possibilities,
+            should_page => 1,
+            results_per_page => 5,);
         my $choice = $pp->prompt_user();
 
         my $no_good_choices = $choice == scalar @possibilities;

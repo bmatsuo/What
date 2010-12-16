@@ -6,6 +6,8 @@ package What::Prompt::Choose;
 # include some core modules
 use strict;
 use warnings;
+use POSIX qw{ceil};
+use What::Exceptions::Common;
 
 # include CPAN modules
 use Perl6::Form;
@@ -35,6 +37,12 @@ has 'stringify'
         is => 'rw', 
         # By default, the stringify sub reference just returns its arguments.
         default => sub {return sub {return @_}});
+has 'should_page'
+    => (isa => 'Bool', is => 'rw', default => 0);
+has 'page_number'
+    => (isa => 'Int', is => 'rw', default => 0);
+has 'results_per_page'
+    => (isa => 'Int', is => 'rw', default => 10);
 
 ### INSTANCE METHOD
 # Subroutine: chosen
@@ -69,12 +77,34 @@ sub default {
     return 0;
 }
 
+sub num_pages {
+    my $self = shift;
+    ceil(scalar (@{$self->choices}) / $self->results_per_page);
+};
+
 # Subroutine: $choice_prompt->preprompt_text()
 # Type: INSTANCE METHOD
 # Purpose: Create a string of the list choices, and prompt text
 sub preprompt_text {
     my $self = shift;
     my @choices = @{$self->choices};
+    my $num_pages = $self->num_pages;
+
+    my ($page_start, $page_end) = (0, $#choices);
+    my $there_are_more_choices = $num_pages > $self->page_number + 1;
+    my $there_are_previous_choices = $self->page_number > 0;
+    my $page = $self->page_number;
+    my $rpp = $self->results_per_page;
+    if ($self->should_page) {
+        $page_start = $page * $rpp;
+        $page_end = $page_start + $rpp - 1
+            if $there_are_more_choices;
+    }
+
+    my @page_indices = ($page_start ... $page_end);
+    my @page_choices = @choices[@page_indices];
+    #print {\*STDERR} "CHOICES: @page_choices.\n";
+
     my @choice_head = (
         '+------------------------------------------------------------------------------+',
         '| {[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[} |',
@@ -85,13 +115,40 @@ sub preprompt_text {
         '| {>>>}   {""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""} |';
     my $choice_foot =
         '+------------------------------------------------------------------------------+';
-    my @choice_rows 
-        = map {
-            ($choice_format, 
-                "[$_]", $self->stringify->($choices[$_]), $choice_foot)
-        } (0 .. $#choices);
+
+    my @choice_rows = map {
+        ($choice_format, 
+            "[$page_indices[$_]]", $self->stringify->($page_choices[$_]), $choice_foot)
+    } (0 ... $#page_choices);
+
+    if ($there_are_previous_choices) {
+        if ($self->page_number > 1) {
+            my @first_page_row = ($choice_format, "[<<]", "First page.", $choice_foot);
+            #print {\*STDERR} form @first_page_row;
+            push @choice_rows, @first_page_row;
+        }
+
+        my $prev_page_str = sprintf ("Previous page; (%d/%d).", $page , $num_pages);
+        my @prev_page_row = ($choice_format, "[<]", $prev_page_str, $choice_foot);
+        #print {\*STDERR} form @prev_page_row;
+        push @choice_rows, @prev_page_row;
+    }
+    if ($there_are_more_choices) {
+        my $next_page_str = sprintf ("Next page; (%d/%d).", $page + 2, $num_pages);
+        my @next_page_row = ($choice_format, "[>]", $next_page_str, $choice_foot);
+        #print {\*STDERR} form @next_page_row;
+        push @choice_rows, @next_page_row;
+
+        if ($num_pages > $self->page_number + 2) {
+            my @last_page_row = ($choice_format, "[>>]", "Last page.", $choice_foot);
+            #print {\*STDERR} form @last_page_row;
+            push @choice_rows, @last_page_row;
+        }
+    }
+
     my $text = form (@choice_head, @choice_rows, );
     chomp $text;
+
     return $text;
 }
 
@@ -110,8 +167,36 @@ sub validator {
     my $self = shift;
     my @choices = @{$self->choices};
     return sub { 
-        my $c = shift; 
-        return (looks_like_number $c && 0 <= $c && $c < @choices)};
+        my $c = shift;
+        if ($self->should_page && $self->num_pages > 1) {
+            if ($self->page_number + 1 < $self->num_pages) {
+                return 1 if $c =~ m/\A [>]{1,2} \z/xms;
+            }
+            if ($self->page_number > 0) {
+                return 1 if $c =~ m/\A [<]{1,2} \z/xms;
+            }
+        }
+        return (looks_like_number $c && 0 <= $c && $c < @choices );
+    };
+}
+
+sub parser {
+    my $self = shift;
+    my $c = shift;
+    if ($c =~ m/\A (?: [>]{1,2} | [<]{1,2} ) \z/xms) {
+        my $new_page 
+            = $c eq '<<' ? 0
+            : $c eq '<' ? $self->page_number - 1
+            : $c eq '>' ? $self->page_number + 1
+            : $c eq '>>' ? $self->num_pages - 1
+            : undef;
+        if (!defined $new_page) {
+            UnknownError->throw(error => "Can't figure out new page number.");
+        }
+        $self->page_number($new_page);
+        return $self->prompt_user();
+    }
+    return $c;
 }
 
 1;

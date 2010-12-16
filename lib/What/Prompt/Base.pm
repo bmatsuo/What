@@ -40,7 +40,6 @@ my $prompt_count = 0;
 
 sub preprompt_text { return "" };
 sub text { return "Please enter some text:" };
-sub validator { return sub {1} };
 sub default { return q{} };
 
 has 'response'
@@ -53,6 +52,8 @@ has 'terminal'
     => (# isa => 'Term::ReadLine', 
         is => 'ro', 
         default => sub {Term::ReadLine->new(q{WhatPrompt } . $prompt_count++)});
+sub validator { return sub {1} };
+sub parser { return sub {shift;return @_} };
 
 # Subroutine: $prompt->_retry_prompt_user($previous_response)
 # Type: INTERNAL UTILITY
@@ -80,7 +81,6 @@ sub prompt_user {
     my $default = $self->default();
     my $input_is_multiline = $self->is_multiline;
     my $terminator = $self->terminator;
-    my $is_valid = $self->validator();
     my $term = $self->terminal;
     my $resp = "";
 
@@ -128,7 +128,7 @@ sub prompt_user {
     }
 
     $self->response($resp);
-    return $resp if (&{$is_valid}($resp));
+    return $self->parser($resp) if $self->validator($resp);
 
     # Retry if the response isn't valid
     return $self->_retry_prompt_user();
