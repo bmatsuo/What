@@ -269,6 +269,19 @@ sub has_cue {
     my $self = shift;
     return @{$self->cues} > 0;
 }
+### INSTANCE METHOD
+# Subroutine: all_discs_have_cue
+# Usage: $disc_directory->all_discs_have_cue(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub all_discs_have_cue {
+    my $self = shift;
+    for my $disc_dir ($self->discs) {
+        return 0 if !$disc_dir->has_cue;
+    }
+    return 1;
+}
 
 ### INSTANCE METHOD
 # Subroutine: has_log
@@ -279,6 +292,19 @@ sub has_cue {
 sub has_log {
     my $self = shift;
     return @{$self->logs} > 0;
+}
+### INSTANCE METHOD
+# Subroutine: all_discs_have_log
+# Usage: $disc_directory->all_discs_have_log(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub all_discs_have_log {
+    my $self = shift;
+    for my $disc_dir ($self->discs) {
+        return 0 if !$disc_dir->has_log;
+    }
+    return 1;
 }
 
 ### INSTANCE METHOD
