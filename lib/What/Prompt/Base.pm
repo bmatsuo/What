@@ -53,7 +53,11 @@ has 'terminal'
         is => 'ro', 
         default => sub {Term::ReadLine->new(q{WhatPrompt } . $prompt_count++)});
 sub validator { return sub {1} };
-sub parser { return sub {shift;return @_} };
+sub parser { 
+    return sub {
+        return $_[0];
+    }
+};
 
 # Subroutine: $prompt->_retry_prompt_user($previous_response)
 # Type: INTERNAL UTILITY
@@ -128,7 +132,7 @@ sub prompt_user {
     }
 
     $self->response($resp);
-    return $self->parser($resp) if $self->validator($resp);
+    return $self->parser->($resp) if $self->validator->($resp);
 
     # Retry if the response isn't valid
     return $self->_retry_prompt_user();

@@ -28,7 +28,7 @@ has 'question'
         is => 'rw',
         default => "Which one?");
 has 'choices' 
-    => (isa => 'ArrayRef[Str]',
+    => (isa => 'ArrayRef',
         is => 'rw',
         required => 1,
         trigger => \&_choices_set_,);
@@ -182,21 +182,23 @@ sub validator {
 
 sub parser {
     my $self = shift;
-    my $c = shift;
-    if ($c =~ m/\A (?: [>]{1,2} | [<]{1,2} ) \z/xms) {
-        my $new_page 
-            = $c eq '<<' ? 0
-            : $c eq '<' ? $self->page_number - 1
-            : $c eq '>' ? $self->page_number + 1
-            : $c eq '>>' ? $self->num_pages - 1
-            : undef;
-        if (!defined $new_page) {
-            UnknownError->throw(error => "Can't figure out new page number.");
+    return sub {
+        my $c = shift;
+        if ($c =~ m/\A (?: [>]{1,2} | [<]{1,2} ) \z/xms) {
+            my $new_page 
+                = $c eq '<<' ? 0
+                : $c eq '<' ? $self->page_number - 1
+                : $c eq '>' ? $self->page_number + 1
+                : $c eq '>>' ? $self->num_pages - 1
+                : undef;
+            if (!defined $new_page) {
+                UnknownError->throw(error => "Can't figure out new page number.");
+            }
+            $self->page_number($new_page);
+            return $self->prompt_user();
         }
-        $self->page_number($new_page);
-        return $self->prompt_user();
-    }
-    return $c;
+        return $c;
+    };
 }
 
 1;

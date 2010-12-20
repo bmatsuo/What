@@ -17,6 +17,9 @@ use Getopt::Euclid qw{ :vars<opt_> };
 # Include private modules.
 use What::Context;
 use What::Release;
+use What::Prompt;
+use What::Prompt::Choose;
+use What::Prompt::YesNo;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -43,8 +46,14 @@ my $exitcode = 0;
 
 # main() - main program execution 
 sub main{
-    load_context();
-    printf "\n%s\n\n", release->name;
+    my $setting_context = $opt{'--set'};
+    my $forgetting_context = $opt{'--forget'};
+    die "Options --set and --forget must be used exclusively."
+        if ($setting_context && $forgetting_context);
+
+    if ($setting_context)       { set_release_context(); }
+    elsif ($forgetting_context) { forget_release_context(); }
+    else                        { print_context(); }
 
     exit($exitcode);
 }
@@ -53,6 +62,152 @@ sub main{
 # SUPPORTING SUBROUTINES
 ########################################################################
 
+### INTERNAL UTILITY
+# Subroutine: get_context_from_options
+# Usage: get_context_from_options(  )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub get_context_from_options {
+    my ($a, $t, $y) = @opt{qw{--artist --title --year}};
+    my ($has_a, $has_t, $has_y) = map {defined $_} ($a, $t, $y);
+    my $all_given = $has_a && $has_t && $has_y;
+    my $not_enough = !$has_a && ($has_t || $has_y);
+
+    ($a, $t, $y) = map {defined $_ ? $_ : "????"} ($a, $t, $y);
+    my $r = What::Release->new(artist => $a, title => $t, year => $y);
+    if ($all_given) {
+        return $r;
+    }
+    elsif ($not_enough) {
+        printf {\*STDERR} 
+            "Incomplete release '%s'; ignoring options.\n", $r->name();
+    }
+    return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: set_release_context
+# Usage: set_release_context(  )
+# Purpose: Prompt user for information and set the context.
+# Returns: Nothing
+# Throws: Nothing
+sub set_release_context {
+    my $option_release = get_context_from_options();
+    if (defined $option_release) {
+        set_context(
+            artist => $option_release->{artist},
+            title => $option_release->{title},
+            year => $option_release->{year},);
+        context->save();
+        return;
+    }
+
+    # Get the artist name.
+    my ($artist, $title, $year);
+    if ($opt{'--artist'}) {
+        $artist = $opt{'--artist'};
+    }
+    else {
+        my $artist_prompt = What::Prompt->new(text => "Enter an artist name:");
+        $artist = $artist_prompt->prompt_user();
+        chomp $artist;
+    }
+
+    $title = $opt{'--title'} if $opt{'--title'};
+    $year = $opt{'--year'} if $opt{'--year'};
+
+    my $fake_artist_release = What::Release->new(
+        artist => $artist, title => '-', year => '0000');
+    my @releases = $fake_artist_release->artist_releases();
+
+    my $get_short_title = sub {
+        my $s = shift;;
+        $s = basename($s);
+        substr $s, 0, length ($artist) + 3, q{};
+        $s
+    };
+    my $get_release = sub {
+        my ($artist, $path) = @_;
+        my $s = $get_short_title->($path);
+        if ($s =~ m/(.*) \s [(] (\d{4}) [)]/xms) {
+            my ($title, $year) = ($1, $2);
+            return What::Release->new(
+                artist => $artist,
+                title => $title,
+                year => $year,);
+        }
+        else {
+            print {\*STDERR} "Couldn't parse release '$s'.\n";
+        }
+        return;
+    };
+    @releases = map {$get_release->($artist, $_)} @releases;
+    @releases = grep {$_->{year} eq $year} @releases if defined $year;
+    @releases = grep {$_->{title} eq $title} @releases if defined $title;
+
+    die "No releases for artist '$artist'"  if !@releases;
+    my $new_context_release;
+    if (@releases > 1) {
+        my $release_chooser 
+            = What::Prompt::Choose->new(
+                question => 
+                    "Which $artist release would you like to set the context to?",
+                choices => \@releases,
+                stringify => sub {$_[0]->short_name()});
+        $release_chooser->prompt_user();
+        $new_context_release = $release_chooser->chosen();
+    }
+    else {
+        $new_context_release = $releases[0];
+        my $short_name = $new_context_release->short_name();
+        my $release_confirmer = What::Prompt::YesNo->new(
+            question => 
+                "Only one '$artist' release found.\n"
+                . "Continue with '$short_name'?",);
+        $release_confirmer->prompt_user();
+        if ( $release_confirmer->yes() ) {
+            $new_context_release = $releases[0];
+        }
+        else {
+            print "Doing nothing.\n";
+            return;
+        }
+    }
+    ($title, $year) = ($new_context_release->{title}, $new_context_release->{year});
+    if ( defined ($artist) && defined ($title) && defined ($year) ) {
+        print "Artist: $artist\nTitle: $title\nYear: $year\n";
+        set_context( artist => $artist, title => $title, year => $year);
+        context->save();
+    }
+    else {
+        print {\*STDERR} "Couldn't parse release title\n";
+    }
+    return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: forget_release_context
+# Usage: forget_release_context(  )
+# Purpose: Delete the current release context.
+# Returns: Nothing
+# Throws: Nothing
+sub forget_release_context {
+    rm_contexts();
+    return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: print_context
+# Usage: print_context(  )
+# Purpose: Print the current release context if one exists.
+# Returns: Nothing
+# Throws: Nothing
+sub print_context {
+    load_context();
+    printf "\n%s\n\n", release->name;
+    return;
+}
 
 # Finally, kickstart the script
 main();
@@ -81,6 +236,32 @@ release-context [options]
 =head1 OPTIONS
 
 =over
+
+=item --set
+
+Set the release context.
+
+=item --forget
+
+Forget the release context.
+
+=item --artist <ContextArtist>
+
+Prespecify the artist for context release derived with the --set option.
+Must be given with --title and --year options.
+
+=item --title <ContextTitle>
+
+Prespecify the title for the context release derived with the --set option.
+Must be given with --artist and --year options.
+
+=item --year <ContextYear>
+
+Prespecify the year for the context release derived with the --set option.
+Must be given with --artist and --year options.
+
+=for Euclid:
+    ContextYear.type: /\d{4}/
 
 =item --version
 

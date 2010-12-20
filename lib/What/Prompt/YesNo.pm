@@ -51,6 +51,15 @@ sub validator {
     return $_v_sub_;
 }
 
+sub yes {
+    my $self = shift;
+    return $self->response =~ /\A y/ixms
+}
+sub no {
+    my $self = shift;
+    return $self->response =~ /\A n/ixms
+}
+
 1;
 __END__
 
