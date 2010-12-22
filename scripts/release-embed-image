@@ -10,7 +10,7 @@ use strict;
 use warnings;
 use File::Basename;
 use Carp;
-use POSIX qw(ceil);
+use POSIX qw(ceil floor);
 
 # Include CPAN modules.
 use Getopt::Euclid qw{ :vars<opt_> };
@@ -256,6 +256,61 @@ sub is_image {
     return;
 }
 
+### CLASS METHOD/INSTANCE METHOD/INTERFACE SUB/INTERNAL UTILITY
+# Subroutine: image_info
+# Usage: image_info( $img )
+# Purpose: Inspect image file $img and find key pieces of information.
+# Returns: Return a hash of information about $img.
+# Throws: Nothing
+sub image_info {
+    my ( $img ) = @_;
+    my $info_format = join "\t", qw{%f %C %w %h %b};
+    my $info_str = `identify -f "$info_format" "$img"`;
+    if ($? != 0) {
+        die "Couldn't identify $img; $?";
+    }
+    chomp $info_str;
+
+    my @data = split /\s+/, $info_str;
+
+    my ($name, $type, $width, $height, $size) = @data;
+
+    my $info = {
+        path => $img,
+        name => $name,
+        type => $type,
+        width => $width,
+        height => $height,
+        size => $size,
+    };
+
+    return $info;
+}
+
+### CLASS METHOD/INSTANCE METHOD/INTERFACE SUB/INTERNAL UTILITY
+# Subroutine: max_dim
+# Usage: max_dim( $img_info )
+# Returns: The value of the dimension with the most pixels.
+# Throws: Nothing
+sub max_dim {
+    my ( $img_info ) = @_;
+    my ($w, $h) = ($img_info->{width}, $img_info->{height});
+    return $w > $h ? $w : $h;
+}
+
+### CLASS METHOD/INSTANCE METHOD/INTERFACE SUB/INTERNAL UTILITY
+# Subroutine: max_resize
+# Usage: max_resize( $img_info, $upper_limit )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub max_resize {
+    my ( $img_info, $upper_limit ) = @_;
+    my $img_max = max_dim($img_info);
+    my $max = $upper_limit > $img_max ? $upper_limit : $img_max;
+    return $max;
+}
+
 ### INTERFACE SUB
 # Subroutine: scale_down
 # Usage: scale_down( $img )
@@ -314,6 +369,52 @@ sub size_in_KB {
 }
 
 ### INTERNAL UTILITY
+# Subroutine: scale_img
+# Usage:
+#   scale_img(
+#       image => $img,
+#       resize => $resize,
+#       quality => $img_quality)
+# Purpose: Scale $img to fix in a box of $resize pixels.
+# Returns: 
+#   The path to the scaled image in the What image working directory.
+# Throws: Nothing
+sub scale_img {
+    my (%arg) = @_;
+    my ($img, $size, $qual)
+        = @arg{qw{image    resize  quality}};
+    my $geometry = sprintf '%dx%d', $size, $size;
+    my $quality = "$qual%";
+    my $image = image_info($img);
+    my $name = $image->{name};
+
+    my $format;
+    if ( $name =~ m/\. ($ok_img_format) \z /ixms) {
+        $format = uc $1;
+        if ($format eq 'TIFF') {
+            substr $name, length ($name) - 4, 4, 'jpg';
+        }
+    }
+    else {
+        die "Can't determine format of $img.";
+    }
+
+    my $tmp_img = "$temp_img_dir/$name";
+
+    my @img_scale = (
+        'convert',
+        $img,
+        '-resize', $geometry,
+        '-quality', $quality,
+        $tmp_img,
+    );
+    $subsystem->exec(@img_scale) == 0
+        or die "Failed converting image $img to $tmp_img";
+
+    return image_info($tmp_img);
+}
+
+### INTERNAL UTILITY
 # Subroutine: scale_img_to_size
 # Usage: scale_img_to_size( $img, $max_dim )
 # Purpose: Scale $img to fix in a box of $max_dim pixels.
@@ -347,6 +448,121 @@ sub scale_img_to_size {
         or die "Failed converting image $img to $tmp_img";
 
     return $tmp_img;
+}
+
+# Purpose:
+#   attempt to scale the image and set the quality to a given value.
+sub attempt_to_scale{
+    my %arg = @_;
+    my ($img, $pix, $q) = @arg{qw{img size qual}};
+    my $info = scale_image(
+        image => $img,
+        resize => $pix,
+        quality => $q);
+    # Convert the image size to KB
+    my $size_in_KB = $info->{size};
+    $size_in_KB /= 1 << 10;
+    if ($size_in_KB < $max_img_size) {
+        return $info->{path};
+    }
+    else {
+        $subsystem->exec('rm', $info->{path}) == 0
+            or die "Couldn't remove temporary image $info->{path}";
+    }
+    return;
+};
+
+### CLASS METHOD/INSTANCE METHOD/INTERFACE SUB/INTERNAL UTILITY
+# Subroutine: find_good_quality
+# Usage: find_good_quality( $img, $scaled_pixels )
+# Purpose:
+#   Convert an image $img to $scaled_pixels by $scaled_pixels in size,
+#   with a suitably high image quality and reasonable size.
+# Returns: Nothing
+# Throws: Nothing
+sub find_good_quality {
+    my ( $img, $pixels ) = @_;
+
+    return _binary_search(
+        min => 80,
+        max => 100,
+        ret => sub {
+            attempt_to_scale(img => $img, size => $pixels, qual => $_[0])
+        },
+        round => 1);
+}
+
+### CLASS METHOD/INSTANCE METHOD/INTERFACE SUB/INTERNAL UTILITY
+# Subroutine: _proper_scale_down
+# Usage: _proper_scale_down( $img )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub _proper_scale_down {
+    my ( $img ) = @_;
+    return _binary_search(
+        min => 350,
+        max => max_resize($img, 700),
+        ret => sub { find_good_quality($img, $_[0]) },
+        round => 1);
+}
+
+### CLASS METHOD/INSTANCE METHOD/INTERFACE SUB/INTERNAL UTILITY
+# Subroutine: _binary_search
+# Usage: 
+#   _binary_search(
+#       min => $min_val,
+#       max => $max_val,
+#       ret => $generator_sub,
+#       round => $direction, )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub _binary_search {
+    my ( %arg ) = @_;
+    my (    $min,   $max,   $check_sub, $direction)
+        = @arg{qw{
+            min     max     ret         round}};
+    $direction = 0 if !defined $direction;
+    die "_binary_search(): No 'check' subroutine supplied." 
+        if !defined $check_sub;
+    die "_binary_search(): No minimum value." if !defined $min;
+    die "_binary_search(): No maximum value." if !defined $max;
+
+    my $gap = $max-$min;
+    my $threshold = 1.0e-7;
+    return if ($gap < $threshold);
+
+    my $mid = ($min + $max) / 2;
+    $mid = $direction > 0 ? ceil($mid)
+        : $direction < 0 ? floor($mid)
+        : $mid;
+    my $mid_is_good = $check_sub->($mid);
+
+    my ($new_max,$new_min);
+    my $opt;
+    if ($mid_is_good) {
+        $new_max = $max;
+        $new_min = $mid;
+        $opt = _binary_search(
+            max => $new_max,
+            min => $new_min,
+            check => $check_sub,
+            round => $direction,);
+    }
+    else {
+        $new_max = $mid;
+        $new_min = $min;
+        $opt = _binary_search(
+            max => $new_max,
+            min => $new_min,
+            check => $check_sub,
+            round => $direction,);
+    }
+
+    return $opt if defined $opt;
+    return $mid_is_good if defined $mid_is_good;
+    return;
 }
 
 # Finally, kickstart the script
