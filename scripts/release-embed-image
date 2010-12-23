@@ -59,6 +59,7 @@ my $ok_img_format
 my $kilo = 2<<9;
 
 # Image size (in KB) can be at most (<What.CD constraint> - $size_buffer).
+my $image_counter = 0;
 my $size_buffer = 5;
 my $max_img_size = What::embedded_art_size_limit - $size_buffer;
 my $subsystem = What::Subsystem->new(
@@ -98,7 +99,7 @@ sub main{
         text    => "Which image is the cover?", );
     $img_choose_p->prompt_user;
     my $cover_art = $img_choose_p->chosen;
-    my $small_file = scale_down( $cover_art );
+    my $small_file = scale_down( image_info($cover_art) );
     if (!defined $small_file) {
         die "Couldn't create a small enough version of $cover_art\n."
     }
@@ -265,7 +266,7 @@ sub is_image {
 sub image_info {
     my ( $img ) = @_;
     my $info_format = join "\t", qw{%f %C %w %h %b};
-    my $info_str = `identify -f "$info_format" "$img"`;
+    my $info_str = `identify -format "$info_format" "$img"`;
     if ($? != 0) {
         die "Couldn't identify $img; $?";
     }
@@ -307,45 +308,9 @@ sub max_dim {
 sub max_resize {
     my ( $img_info, $upper_limit ) = @_;
     my $img_max = max_dim($img_info);
-    my $max = $upper_limit > $img_max ? $upper_limit : $img_max;
+    # Do a minimax.
+    my $max = $upper_limit > $img_max ? $img_max : $upper_limit;
     return $max;
-}
-
-### INTERFACE SUB
-# Subroutine: scale_down
-# Usage: scale_down( $img )
-# Purpose: Scale an image until it fits the What.CD size constraints.
-# Returns: 
-#   The path to the scaled image, 
-#   which must be moved or deleted 'manually' later.
-# Throws: Nothing
-sub scale_down {
-    my ($img) = @_;
-    my $init_size = size_in_KB($img);
-
-    return $img if $init_size <= $max_img_size;
-
-    # Make a square $square_pixels wide.
-    my $scale_pixels=600;
-    my $scale_delta =10;
-    my $min_scale   =350;
-    my $scaled = scale_img_to_size($img, $scale_pixels);
-    while (size_in_KB($scaled) > $max_img_size) {
-        $scale_pixels -= $scale_delta;
-        $scaled = scale_img_to_size($img, $scale_pixels);
-        if ($scale_pixels < $min_scale) {
-            if ($opt{'--verbose'}) {
-                my $size = size_in_KB($scaled).'KB';
-                my $geometry = sprintf "%dx%d", $min_scale, $min_scale;
-                print {\*STDERR} "Giving up on scaling."
-                    . "Picture is smaller than $geometry."
-                    . "Picture size is $size.";
-            }
-            return;
-        }
-    }
-
-    return $scaled;
 }
 
 ### INTERNAL UTILITY
@@ -387,6 +352,7 @@ sub scale_img {
     my $quality = "$qual%";
     my $image = image_info($img);
     my $name = $image->{name};
+    ++$image_counter;
 
     my $format;
     if ( $name =~ m/\. ($ok_img_format) \z /ixms) {
@@ -399,7 +365,7 @@ sub scale_img {
         die "Can't determine format of $img.";
     }
 
-    my $tmp_img = "$temp_img_dir/$name";
+    my $tmp_img = "$temp_img_dir/$image_counter $name";
 
     my @img_scale = (
         'convert',
@@ -414,58 +380,24 @@ sub scale_img {
     return image_info($tmp_img);
 }
 
-### INTERNAL UTILITY
-# Subroutine: scale_img_to_size
-# Usage: scale_img_to_size( $img, $max_dim )
-# Purpose: Scale $img to fix in a box of $max_dim pixels.
-# Returns: Nothing
-# Throws: Nothing
-sub scale_img_to_size {
-    my ($img, $max_dim) = @_;
-    my $geometry = sprintf '%dx%d', $max_dim, $max_dim;
-    my $name = basename($img);
-
-    my $format;
-    if ( $name =~ m/\. ($ok_img_format) \z /ixms) {
-        $format = uc $1;
-        if ($format eq 'TIFF') {
-            substr $name, length ($name) - 4, 4, 'jpg';
-        }
-    }
-    else {
-        die "Can't determine format of $img.";
-    }
-
-    my $tmp_img = "$temp_img_dir/$name";
-
-    my @img_scale = (
-        'convert',
-        $img,
-        '-resize', $geometry,
-        $tmp_img,
-    );
-    $subsystem->exec(@img_scale) == 0
-        or die "Failed converting image $img to $tmp_img";
-
-    return $tmp_img;
-}
-
 # Purpose:
 #   attempt to scale the image and set the quality to a given value.
 sub attempt_to_scale{
     my %arg = @_;
     my ($img, $pix, $q) = @arg{qw{img size qual}};
-    my $info = scale_image(
+    my $info = scale_img(
         image => $img,
         resize => $pix,
         quality => $q);
     # Convert the image size to KB
-    my $size_in_KB = $info->{size};
-    $size_in_KB /= 1 << 10;
+    my $size_in_KB = size_in_KB($info->{path});
     if ($size_in_KB < $max_img_size) {
         return $info->{path};
     }
     else {
+        print {\*STDERR} "Removing large image of size $size_in_KB KiB.\n"
+            if $opt{'--verbose'};
+
         $subsystem->exec('rm', $info->{path}) == 0
             or die "Couldn't remove temporary image $info->{path}";
     }
@@ -486,24 +418,41 @@ sub find_good_quality {
     return _binary_search(
         min => 80,
         max => 100,
+        threshold => 4,
         ret => sub {
             attempt_to_scale(img => $img, size => $pixels, qual => $_[0])
         },
+        clear => sub { 
+                if ($opt{'--verbose'}) {
+                    my $size = size_in_KB($_[0]);
+                    print {\*STDERR} "Removing small image of size $size KiB.\n";
+                }
+                $subsystem->exec('rm', $_[0]) == 0
+                    or die "Couldn't remove temp image $_[0]."},
         round => 1);
 }
 
 ### CLASS METHOD/INSTANCE METHOD/INTERFACE SUB/INTERNAL UTILITY
-# Subroutine: _proper_scale_down
-# Usage: _proper_scale_down( $img )
+# Subroutine: scale_down
+# Usage: scale_down( $img )
 # Purpose: 
-# Returns: Nothing
+# Returns: The path to a adequate scaled image if one could be made.
 # Throws: Nothing
-sub _proper_scale_down {
+sub scale_down {
     my ( $img ) = @_;
     return _binary_search(
         min => 350,
         max => max_resize($img, 700),
-        ret => sub { find_good_quality($img, $_[0]) },
+        threshold => 4,
+        ret => sub { find_good_quality($img->{path}, $_[0]) },
+        clear => sub { 
+                if ($opt{'--verbose'}) {
+                    my $size = size_in_KB($_[0]);
+                    print {\*STDERR} "Removing small image of size $size KiB.\n";
+                }
+                $subsystem->exec('rm', $_[0]) == 0
+                    or die "Couldn't remove temp image $_[0]."
+        },
         round => 1);
 }
 
@@ -514,55 +463,77 @@ sub _proper_scale_down {
 #       min => $min_val,
 #       max => $max_val,
 #       ret => $generator_sub,
+#       clear => $destroyer_sub,
+#       threshold => $smallest_distance
 #       round => $direction, )
 # Purpose: 
 # Returns: Nothing
 # Throws: Nothing
 sub _binary_search {
     my ( %arg ) = @_;
-    my (    $min,   $max,   $check_sub, $direction)
+    my ($min, $max, $check_sub, $destroy, $threshold, $direction)
         = @arg{qw{
-            min     max     ret         round}};
+            min max ret clear threshold round}};
     $direction = 0 if !defined $direction;
+    $threshold = ($direction ? 1.01 : 1.0e-7) if !defined $threshold;
     die "_binary_search(): No 'check' subroutine supplied." 
         if !defined $check_sub;
     die "_binary_search(): No minimum value." if !defined $min;
     die "_binary_search(): No maximum value." if !defined $max;
 
-    my $gap = $max-$min;
-    my $threshold = 1.0e-7;
-    return if ($gap < $threshold);
-
     my $mid = ($min + $max) / 2;
     $mid = $direction > 0 ? ceil($mid)
         : $direction < 0 ? floor($mid)
         : $mid;
+    my $hi_gap = $max-$mid;
+    my $lo_gap = $mid-$min;
     my $mid_is_good = $check_sub->($mid);
 
-    my ($new_max,$new_min);
+    my $recurse = sub { 
+        my ($new_max, $new_min, $is_upper) = @_;
+        my $new_gap = $new_max-$new_min;
+        my $opt;
+        if ($new_max == $new_min) {
+            $opt = undef;
+        }
+        elsif ($new_gap <= $threshold) {
+            $opt = $check_sub->($is_upper ? $new_max : $new_min);
+        }
+        else {
+            $opt = _binary_search(
+                max => $new_max,
+                min => $new_min,
+                ret => $check_sub,
+                clear => $destroy,
+                threshold => $threshold,
+                round => $direction,);
+        }
+        return $opt;
+    };
+
+    my ($new_max,$new_min,$new_gap);
     my $opt;
-    if ($mid_is_good) {
-        $new_max = $max;
-        $new_min = $mid;
-        $opt = _binary_search(
-            max => $new_max,
-            min => $new_min,
-            check => $check_sub,
-            round => $direction,);
+    if (defined $mid_is_good) {
+        $opt = $recurse->($max,$mid,1);
+        if (defined $opt) {
+            if (defined $mid_is_good) {
+                $destroy->($mid_is_good);
+            }
+            return $opt;
+        }
+        return $mid_is_good;
     }
     else {
-        $new_max = $mid;
-        $new_min = $min;
-        $opt = _binary_search(
-            max => $new_max,
-            min => $new_min,
-            check => $check_sub,
-            round => $direction,);
+        $opt = $recurse->($mid, $min);
+        if (defined $opt) {
+            if (defined $mid_is_good) {
+                $destroy->($opt);
+                return $mid_is_good;
+            }
+            return $opt;
+        }
+        return $mid_is_good
     }
-
-    return $opt if defined $opt;
-    return $mid_is_good if defined $mid_is_good;
-    return;
 }
 
 # Finally, kickstart the script

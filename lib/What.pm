@@ -36,9 +36,9 @@ my $temp_img = "$sandbox_base/img";
 my $ice_dir = "$whome/ice";
 my $context_dir = "$whome/context";
 
-my $img_limit_in_KB = '250';
+#my $img_limit_in_KB = '256';
 # LAME requires images to be at most 128K (How fucking lame is that? ^_^ )
-#my $img_limit_in_KB = '128';
+my $img_limit_in_KB = '128';
 
 ### CLASS SUB
 # Subroutine: embedded_art_size_limit
