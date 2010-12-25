@@ -417,10 +417,10 @@ sub bad_chars {
     my $illegal = qr{(?: [?:/] )}xms;
     my $legal = qr{(?: [^?:/] )}xms;
     my %char_set;
-    while ($filename =~ /\G (?:$legal)* ($illegal)/gcxms) {
+    while ($filename && $filename =~ m/\G (?:$legal)* ($illegal)/gcxms) {
         $char_set{$1} = 1;
     }
-    return join q{}, keys %char_set;
+    return join q{}, keys (%char_set);
 }
 
 

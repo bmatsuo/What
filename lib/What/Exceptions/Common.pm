@@ -14,7 +14,11 @@ use Exception::Class (
     'FileDoesNotExistError', 
     'FileExistsError',
     'FilePerissionError',
-    'FileFormatException',);
+    'FileFormatException',
+    'IllegalCharacterError' => {
+        fields => [qw{characters}],
+    },
+);
 
 return 1;
 __END__

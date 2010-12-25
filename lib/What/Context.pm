@@ -7,6 +7,7 @@ use Data::Dumper;
 use What::Utils;
 use What::Prompt::Choose;
 use What::Subsystem;
+use What::Utils qw{:files};
 use What;
 
 our $VERSION = "00.00_01";
@@ -38,9 +39,31 @@ use Exception::Class (
 
 use MooseX::Singleton;
 
-has 'artist' => (isa => 'Str', is => 'rw', required => 1);
-has 'title' => (isa => 'Str', is => 'rw', required => 1);
-has 'year' => (isa => 'Str', is => 'rw', required => 1);
+has 'artist' => (
+    isa => 'Str', is => 'rw', required => 1,
+    trigger => \&_validate_characters);
+has 'title' => (
+    isa => 'Str', is => 'rw', required => 1,
+    trigger => \&_validate_characters);
+has 'year' => (
+    isa => 'Str', is => 'rw', required => 1,
+    trigger => \&_validate_characters);
+
+### INTERNAL UTILITY
+# Purpose: Trigger subroutine.
+#   Ensure that context attributes do not have any illegal characters.
+# Returns: Nothing
+# Throws: Nothing
+sub _validate_characters {
+    my ($self, $attr, $old) = @_;
+    return $attr if !defined $attr;
+    my $illegal = bad_chars($attr);
+    IllegalCharacterError->throw(
+        characters => $illegal,
+        error => "Found illegal characters '$illegal'.\n",)
+        if length $illegal > 0;
+    return $attr;
+}
 
 my $context_is_loaded = 0;
 ### INTERFACE SUB

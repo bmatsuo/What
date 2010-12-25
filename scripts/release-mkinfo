@@ -318,13 +318,9 @@ sub main{
     #}
   
 
-    my $context_artist = $release_artist;
-    $context_artist =~ s![:/?]!_!gxms;
-    my $context_title = $release_title;
-    $context_title =~ s![:/?]!_!gxms;
     set_context(
-        artist => $context_artist,
-        title => $context_title,
+        artist => replace_bad_chars($release_artist),
+        title => replace_bad_chars($release_title),
         year => $release_year,);
     if ($opt{'--set-context'}) {
         context->save();
