@@ -21,6 +21,7 @@ our @ISA = qw(Exporter);
 # will save memory.
 my @INTERFACE_SUBS = qw{
     all_equal
+    uniq
     common_prefix
     suffixes
     common_prefix_pair
@@ -47,8 +48,8 @@ our %EXPORT_TAGS = (
     'all' => [ @INTERFACE_SUBS ], 
     'http' => [ qw( format_args ) ],
     'flac' => [qw(  get_flac_tag    get_flac_tags )], 
-    'strings' => [qw(   all_equal   common_prefix
-                        suffixes    common_prefix_pair  )],
+    'strings' => [qw(   all_equal       uniq
+                        common_prefix   suffixes    common_prefix_pair  )],
     'files' => [ qw(find_file_pattern               search_hierarchy 
                     glob_safe       safe_path       what_glob       expand_home
                     has_bad_chars   bad_chars       replace_bad_chars )],
@@ -92,6 +93,22 @@ sub all_equal {
         }
     }
     return 1;
+}
+
+### INTERFACE SUB
+# Subroutine: uniq
+# Usage: uniq( @strings )
+# Purpose: Return all the unique strings in a given list.
+#   Can be called w/o parens.
+# Examples:
+#   my @commentors = uniq(map {$_->user} @comments);
+#   my @lookup_vals = uniq $input1, $input2, $input3;
+# Returns: A list of strings.
+# Throws: Nothing
+sub uniq(@) {
+    my ( @strings ) = @_;
+    my %h = (map {($_ => 1)} @strings);
+    return keys %h;
 }
 
 # Subroutine: common_prefix(@strings)
