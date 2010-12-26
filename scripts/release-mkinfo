@@ -126,6 +126,8 @@ sub main{
     my $release_artist = $r->{artist};
     my $release_title = $r->{title};
     my $release_year = $r->{year};
+    my $release_encoder = $r->{encoder};
+    my $release_ripper = $r->{ripper};
     my $release_date = $release_year;
     my $release_media = $opt{'--media'};
 
@@ -338,14 +340,17 @@ sub main{
     exit 0 if !$need_release_info;
 
     my $info =<<EOIHEAD;
-Title.........$release_title
-Artist........$release_artist
-Type..........$release_type
-Edition info..$release_edition
-Released......$release_date 
-Countries.....$release_country
-Label.........$release_label
-Catno.........$release_catno
+Title ............. $release_title
+Artist ............ $release_artist
+Type .............. $release_type
+Edition info ...... $release_edition
+Released .......... $release_date 
+Countries ......... $release_country
+Label ............. $release_label
+Catno ............. $release_catno
+
+Original Encoder .. $release_encoder
+Ripped With ....... $release_ripper
 
 EOIHEAD
 
@@ -443,6 +448,22 @@ EOIHEAD
 ########################################################################
 
 ### INTERNAL UTILITY
+# Subroutine: read_ripper_from_log
+# Usage: read_ripper_from_log( $log_path )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub read_ripper_from_log {
+    my ( $log_path ) = @_;
+    open my $log, "<", $log_path
+        or croak("Couldn't open log file; $log_path");
+    my $ripper = <$log>;
+    chomp $ripper;
+    close $log;
+    return $ripper;
+}
+
+### INTERNAL UTILITY
 # Subroutine: analyze_release
 # Usage: analyze_release( $release_path )
 # Purpose: 
@@ -468,9 +489,14 @@ sub analyze_release {
     my $release_artist;
     my $release_title;
     my $release_year;
+    my $release_encoder;
     for my $disc_dir (keys %disc) {
         #print {\*STDERR} $disc_dir, "\n";
         next if !defined $disc_dir || !-d $disc_dir;
+        my @log_files = find_file_pattern('*.log', $disc_dir);
+        my @disc_rippers = map {read_ripper_from_log($_)} @log_files;
+        my $disc_ripper = join q{; }, uniq (@disc_rippers);
+
         # Get the song files.
         my @disc_files = find_file_pattern('*.flac', $disc_dir);
         @disc_files = sort @disc_files;
@@ -487,6 +513,7 @@ sub analyze_release {
         my $disc_artist;
         my $disc_title;
         my $disc_year;
+        my $disc_encoder;
         # Read the tags of each song.
         for my $song (@disc_files) {
             my $info = Audio::FLAC::Header->new($song);
@@ -499,6 +526,7 @@ sub analyze_release {
             my $artist = $flac->tag('ARTIST');
             my $album_artist = $flac->tag('ALBUMARTIST');
             my $date = $flac->tag('DATE');
+            my $encoder = $flac->tag('VENDOR');
             my $year;
             if ($date && $date =~ m/(\d{4})/xms) {
                 $year = $1;
@@ -524,6 +552,7 @@ sub analyze_release {
             my %track = (
                 artist => $artist,
                 (defined $album_artist ? (album_artist => $album_artist) : ()),
+                (defined $encoder ? (encoder => $encoder) : ()),
                 release => $release_title,
                 position => $pos,
                 duration => $dur,
@@ -565,10 +594,16 @@ sub analyze_release {
         }
         $disc_year = $years[0];
 
+        my @encoders = grep {defined $_} (map {$_->{encoder}} @tracks);
+        $disc_encoder = join q{; }, uniq(@encoders)
+            if @encoders;
+
         # Create a 'disc' object.
         my %disc_info = (
             title => $disc_title,
             artist => $disc_artist,
+            ($disc_encoder ? (encoder => $disc_encoder) : ()),
+            ($disc_ripper ? (ripper => $disc_ripper) : ()),
             year => $disc_year,
             tracks => \@tracks,);
         $disc{$disc_dir} = \%disc_info;
@@ -636,10 +671,21 @@ sub analyze_release {
         $release_artist = $disc_artists[0];
     }
 
+    my @encs = grep {defined $_} (map {$_->{encoder}} (values %disc));
+    my $renc;
+    $renc = join q{; }, uniq(@encs)
+        if @encs;
+
+    my @rippers = grep {defined $_} (map {$_->{ripper}} (values %disc));
+    my $release_ripper;
+    $release_ripper = join q{; }, uniq (@rippers) if @rippers;
+
     my %release_info = (
         artist => $release_artist,
         title => $release_title,
         year => $release_year,
+        (defined $renc ? (encoder => $renc) : ()),
+        (defined $release_ripper ? (ripper => $release_ripper) : ()),
         discs => [@disc_dirs],
         disc_info => \%disc,
     );
