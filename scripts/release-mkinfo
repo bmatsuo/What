@@ -9,6 +9,7 @@
 # Include core modules.
 use strict;
 use warnings;
+use List::Util qw{sum};
 use File::Basename;
 use Carp;
 use POSIX;
@@ -128,6 +129,9 @@ sub main{
     my $release_year = $r->{year};
     my $release_encoder = $r->{encoder};
     my $release_ripper = $r->{ripper};
+    my $release_duration = decompose_seconds($r->{duration});
+    my $num_discs = scalar (keys %disc);
+    my $num_tracks = sum (map { scalar ( @{$_->{tracks}} ) } (values %disc));
     my $release_date = $release_year;
     my $release_media = $opt{'--media'};
 
@@ -349,8 +353,12 @@ Countries ......... $release_country
 Label ............. $release_label
 Catno ............. $release_catno
 
-Original Encoder .. $release_encoder
+# of discs ........ $num_discs
+# of tracks ....... $num_tracks
+Total playtime .... $release_duration
+
 Ripped With ....... $release_ripper
+Original Encoder .. $release_encoder
 
 EOIHEAD
 
@@ -382,24 +390,26 @@ EOIHEAD
     my $bbtrack_format # requires args %s, %s, %d, %02d
         = join q{ }, 
             bbcode->bold(text => "%d. "), 
-            "%s", "[%d:%02d]";
+            "%s", "[%s]";
 
     for my $disc_d (@disc_dirs) {
+        my $disc = $disc{$disc_d};
         if (@disc_dirs > 1) {
             my $disc_name = basename($disc_d);
-            $info .= "$disc_name\n";
-            $bbinfo .= bbcode->bold(text=>$disc_name)."\n";
+            my $disc_dur = $disc->{duration};
+            $info .= "$disc_name [$disc_dur]\n";
+            $bbinfo .= sprintf "%s [%s]\n",
+                bbcode->bold(text=>$disc_name),
+                $disc_dur;
         }
 
-        my $disc = $disc{$disc_d};
         my @tracks = @{$disc->{tracks}};
         for my $track (@tracks) {
-            my $dur = $track->{duration};
-            my ($min, $sec) = (floor($dur / 60), floor($dur % 60));
-            $info .= sprintf "%s %s [%d:%02d]",
-                $track->{position}, $track->{title}, $min, $sec;
+            my $dur = decompose_seconds($track->{duration});
+            $info .= sprintf "%s %s [%s]",
+                $track->{position}, $track->{title}, $dur;
             $bbinfo .= sprintf $bbtrack_format, 
-                $track->{position}, $track->{title}, $min, $sec;
+                $track->{position}, $track->{title}, $dur;
             if ($release_artist eq 'Various Artists') {
                 $info .= " ($track->{artist})";
                 $bbinfo .= " (" . bbcode->artist(name => $track->{artist}) . ")";
@@ -446,6 +456,28 @@ EOIHEAD
 ########################################################################
 # SUPPORTING SUBROUTINES
 ########################################################################
+
+### INTERNAL UTILITY
+# Subroutine: decompose_seconds
+# Usage: decompose_seconds( $time_in_sec )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub decompose_seconds {
+    my ( $dur ) = @_;
+    return if !defined $dur;
+
+    my ($min, $sec) = (floor($dur / 60), floor($dur % 60));
+    return sprintf "00:%02d", $sec if $min == 0;
+
+    (my $hr, $min) = (floor($min / 60), floor($min % 60));
+    return sprintf "%02d:%02d", $min, $sec if $hr == 0;
+
+    (my $day, $hr) = (floor($hr / 60), floor($hr % 60));
+    return sprintf "%02d%02d:%02d", $hr, $min, $sec if $day == 0;
+
+    return sprintf "%d:%02d%02d:%02d", $day, $hr, $min, $sec;
+}
 
 ### INTERNAL UTILITY
 # Subroutine: read_ripper_from_log
@@ -604,6 +636,7 @@ sub analyze_release {
             artist => $disc_artist,
             ($disc_encoder ? (encoder => $disc_encoder) : ()),
             ($disc_ripper ? (ripper => $disc_ripper) : ()),
+            duration => sum (map {$_->{duration}} @tracks),
             year => $disc_year,
             tracks => \@tracks,);
         $disc{$disc_dir} = \%disc_info;
@@ -686,6 +719,7 @@ sub analyze_release {
         year => $release_year,
         (defined $renc ? (encoder => $renc) : ()),
         (defined $release_ripper ? (ripper => $release_ripper) : ()),
+        duration => sum (map {$_->{duration}} (values %disc)),
         discs => [@disc_dirs],
         disc_info => \%disc,
     );
