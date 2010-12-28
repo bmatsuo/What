@@ -220,7 +220,7 @@ sub main{
             discs => [values %disc]);
         if (!$release 
                 && $release_artist eq "Various Artists" 
-                && $release_title =~ m/\A(.+):.*\z/xms) {
+                && $release_title =~ m!\A(.*\S)\s*[:/].*\z!xms) {
             my $main_title = $1;
             print "Attempting even more general search";
             $release_search = search (
@@ -873,7 +873,9 @@ sub find_release_in_artist_page {
         }
 
         # Test to see if the release title is the same.
-        my $release_matches = lc $title eq lc $artist_release->title;
+        my $title_closeness = align(lc $title, lc $artist_release->title);
+        #my $release_matches = lc $title eq lc $artist_release->title;
+        my $release_matches = $title_closeness > 0.55;
         if ($release_matches) {
             my $ar = get_release(
                 id => $artist_release->id,
