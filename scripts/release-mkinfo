@@ -1287,10 +1287,10 @@ sub disc_track_problems {
             $rel_dur = 60 * $1 + $2;
         }
         # Return false if discogs duration is more than the possed duration.
-        if ($rel_dur > $ti->{'duration'} + 10) {
+        if ($rel_dur > $ti->{'duration'} + 20) {
             my $track_dur_msg = join q{},
                 "Track ", $ti->{'position'} , " has disagreeing length; ", 
-                $rel_dur, " <= ", $ti->{'duration'} + 10;
+                $rel_dur, " > ", $ti->{'duration'} + 20;
             push @problems, $track_dur_msg;
             #TrackDurException->throw( error => $track_dur_msg );
         }
