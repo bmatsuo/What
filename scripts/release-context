@@ -20,6 +20,7 @@ use What::Release;
 use What::Prompt;
 use What::Prompt::Choose;
 use What::Prompt::YesNo;
+use What::Utils qw{:files};
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES

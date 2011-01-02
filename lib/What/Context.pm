@@ -4,7 +4,7 @@ package What::Context;
 use strict;
 use warnings;
 use Data::Dumper;
-use What::Utils;
+use What::Utils qw{:all};
 use What::Prompt::Choose;
 use What::Subsystem;
 use What::Utils qw{:files};
@@ -72,7 +72,8 @@ my $context_is_loaded = 0;
 #   set_context( 
 #       artist => $artist, 
 #       title => $title, 
-#       year => $year )
+#       year => $year,
+#       [rm_badchar => $should_rm_badchar],)
 # Purpose: 
 #   Ininitialize the context instance to a given release,
 #       if it has not been initialized already.
@@ -80,10 +81,17 @@ my $context_is_loaded = 0;
 # Throws: ContextLoadedError - Thrown if the context been set/loaded prior.
 sub set_context {
     my ( %arg ) = @_;
+
     if ($context_is_loaded) {
         ContextLoadedError->throw(
             error => 'A context has already been set for this program.');
     }
+    
+    if ($arg{rm_badchar}) {
+        delete $arg{rm_badchar};
+        for (values %arg) { $_ = rm_bad_char($_) };
+    }
+
     What::Context->initialize(%arg);
     $context_is_loaded = 1;
     return;
