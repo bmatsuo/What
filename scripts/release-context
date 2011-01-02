@@ -99,7 +99,8 @@ sub set_release_context {
         set_context(
             artist => $option_release->{artist},
             title => $option_release->{title},
-            year => $option_release->{year},);
+            year => $option_release->{year},
+        );
         context->save();
         return;
     }
@@ -263,6 +264,18 @@ Must be given with --artist and --year options.
 
 =for Euclid:
     ContextYear.type: /\d{4}/
+
+=item --format [=] <format> | -f <format>
+
+Release media format (CD [default], VINYL, or CASS).
+
+=for Euclid:
+    format.default: 'CD'
+    format.type: string, format =~ /CD|VINYL|CASS/i;
+
+item --edition [=] <edition> | -e <edition>
+
+A short description string (e.g. '20th Anniv RP') if necessary.
 
 =item --version
 

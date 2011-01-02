@@ -31,7 +31,8 @@ my %def_arg = (
     year    => "",
     discs   => 1,
     label   => "",
-    desc    => "",);
+    edition => "",
+    media   => 'CD');
 
 # Subroutine: 
 #   What::Release->new(
@@ -40,7 +41,8 @@ my %def_arg = (
 #       title   => $title,
 #       year    => $year,
 #       label   => $label,
-#       desc    => $description,);
+#       edition    => $description,
+#       media   => $media_format);
 # Type: CLASS METHOD
 # Purpose: Create a What::Release object.
 #   The constructor requires arguments 'artist', 'title', and 'year'.
