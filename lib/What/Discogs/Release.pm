@@ -132,7 +132,7 @@ has 'artist_joins'
 has 'formats' 
     => (isa => 'ArrayRef[What::Discogs::Release::Format]', 
         is => 'rw', 
-        required => 0);
+        default => sub {[]},);
 has 'labels' 
     => (isa => 'ArrayRef[What::Discogs::Release::Label]', 
         is => 'rw',

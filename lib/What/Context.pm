@@ -42,19 +42,19 @@ use MooseX::Singleton;
 
 has 'artist' => (
     isa => 'Str', is => 'rw', required => 1,
-    trigger => \&_validate_characters);
+    trigger => \&_validate_characters,);
 has 'title' => (
     isa => 'Str', is => 'rw', required => 1,
-    trigger => \&_validate_characters);
+    trigger => \&_validate_characters,);
 has 'year' => (
     isa => 'Str', is => 'rw', required => 1,
-    trigger => \&_validate_characters);
+    trigger => \&_validate_characters,);
 has 'format' 
     => (isa => 'Str', is => 'rw', required => 0,
-        trigger => \&_validate_format);
+        trigger => \&_validate_format,);
 has 'edition' 
-    => (isa => 'Str', is => 'rw', required => 0
-        trigger => \&_validate_characters);
+    => (isa => 'Str', is => 'rw', required => 0,
+        trigger => \&_validate_characters,);
 
 my %_ok_media_format = (
     CD => 1,
