@@ -15,6 +15,9 @@ use Exception::Class (
     'FileExistsError',
     'FilePerissionError',
     'FileFormatException',
+    'UnknownFormatError' => {
+        fields => [qw{name}],
+    },
     'IllegalCharacterError' => {
         fields => [qw{characters}],
     },

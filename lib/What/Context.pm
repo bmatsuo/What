@@ -8,6 +8,7 @@ use What::Utils qw{:all};
 use What::Prompt::Choose;
 use What::Subsystem;
 use What::Utils qw{:files};
+use What::Exceptions::Common;
 use What;
 
 our $VERSION = "00.00_01";
@@ -48,8 +49,35 @@ has 'title' => (
 has 'year' => (
     isa => 'Str', is => 'rw', required => 1,
     trigger => \&_validate_characters);
+has 'format' 
+    => (isa => 'Str', is => 'rw', required => 0,
+        trigger => \&_validate_format);
+has 'edition' 
+    => (isa => 'Str', is => 'rw', required => 0
+        trigger => \&_validate_characters);
+
+my %_ok_media_format = (
+    CD => 1,
+    CASS => 1,
+    VINYL => 1,
+);
 
 ### INTERNAL UTILITY
+# Subroutine: _validate_format
+# Purpose: Trigger subroutine.
+# Returns: Nothing
+# Throws: Nothing
+sub _validate_format {
+    my ($self, $attr, $old) = @_;
+    UnknownFormatError->throw(
+        name => $attr,
+        error => "Unrecognized media format '$attr'.",
+    ) if !$_ok_media_format{uc $attr};
+    return $attr;
+}
+
+### INTERNAL UTILITY
+# Name: _validate_characters
 # Purpose: Trigger subroutine.
 #   Ensure that context attributes do not have any illegal characters.
 # Returns: Nothing
@@ -73,6 +101,8 @@ my $context_is_loaded = 0;
 #       artist => $artist, 
 #       title => $title, 
 #       year => $year,
+#       format => $format,
+#       edition => $edition,
 #       [rm_badchar => $should_rm_badchar],)
 # Purpose: 
 #   Ininitialize the context instance to a given release,
