@@ -21,6 +21,8 @@ use What::Release;
 use What::WhatRC;
 use What::Utils;
 use What::Release::Directory;
+use What::Prompt::YesNo;
+use What::Subsystem;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -42,6 +44,10 @@ my $exitcode = 0;
 ########################################################################
 
 my $illegal_chars = qr{([/?:])}xms;
+my $subsys = What::Subsystem->new(
+    verbose => $opt{'--verbose'},
+    dry_run => $opt{'--dry-run'},
+);
 
 ########################################################################
 # MAIN FUNCTION
@@ -142,11 +148,50 @@ sub main{
 
 sub validate_dir {
     my $dir = shift;
+
+    # Look for hidden files.
     if (@{$dir->hidden_files} > 0) {
         print {\*STDERR} 
             sprintf "Hidden files found in directory '%s'\n", $dir->path;
-        $exitcode = 1;
+        my $rm_prompt
+            = What::Prompt::YesNo->new(
+                question => "dummy text.",
+                default => 1);
+        my $action_is_known = $opt{'--delete-hidden'} || $opt{'--keep-hidden'};
+        my $should_delete_by_default = 0;
+        my $cleared_hidden = 1;
+
+        # Deal with hidden files individually.
+        RMHIDDEN:
+        for my $h ( @{$dir->hidden_files} ) {
+            my $should_delete;
+            if ( !$action_is_known ) {
+                $rm_prompt->question("Delete hidden file '$h'?");
+                $rm_prompt->prompt_user();
+                $should_delete = $rm_prompt->response();
+            }
+            else {
+                $should_delete 
+                    = $opt{'--delete-hidden'} ? 1
+                    : $opt{'--keep-hidden'} ? 0
+                    : $should_delete_by_default;
+            }
+            if ($should_delete) {
+                $subsys->exec('rm', $h) == 0
+                    or die "Couldn't delete '$h'";
+            }
+            else {
+                print {\*STDERR} "Hidden files can not be included in torrents."
+                $cleared_hidden = 0;
+                $exitcode = 1;
+                last RMHIDDEN;
+            }
+        }
+
+        $dir->hidden_files([]) if $cleared_hidden;
     }
+
+    # Check for illegal filenames.
     for my $f ($dir->files()) {
         my $filename = basename($f);
         # Check the file name for illegal characters.
@@ -273,6 +318,17 @@ Do not require the release to have a cue file. This is not recommended.
 
 Do not require the release to have a log file. 
 This is not recommended for CD rips.
+
+=item --delete-hidden | -h
+
+Remove any hidden files from the rip directory.
+Any hidden files not deleted will cause an error.
+If not provided, the user will be prompted for hidden file deletion.
+
+=item --keep-hidden | -H
+
+Decide to keep any hidden files found in the rip directory (default).
+If hidden files are found, an error will occur and a non-zero exitcode returned.
 
 =item --verbose
 

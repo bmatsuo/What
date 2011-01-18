@@ -132,7 +132,7 @@ sub main{
     @release_files = grep {!$file_is_info->($_)} @release_files;
 
     # Check the release and make any necessary M3U files.
-    if (!$opt{'--bandcamp'}) {
+    if ( !$opt{'--bandcamp'} ) {
         # The release must be in the rip_dir. So check it.
         print {\*STDERR} "Checking release.\n";
         my @check_release = ('release-ok', 
