@@ -156,7 +156,7 @@ sub validate_dir {
         my $rm_prompt
             = What::Prompt::YesNo->new(
                 question => "dummy text.",
-                default => 1);
+                default => 'yes');
         my $action_is_known = $opt{'--delete-hidden'} || $opt{'--keep-hidden'};
         my $should_delete_by_default = 0;
         my $cleared_hidden = 1;
@@ -181,7 +181,7 @@ sub validate_dir {
                     or die "Couldn't delete '$h'";
             }
             else {
-                print {\*STDERR} "Hidden files can not be included in torrents."
+                print {\*STDERR} "Hidden files can not be included in torrents.";
                 $cleared_hidden = 0;
                 $exitcode = 1;
                 last RMHIDDEN;
