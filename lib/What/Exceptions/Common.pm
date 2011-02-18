@@ -11,9 +11,16 @@ use Exception::Class (
     'Error',
     'UnknownError',
     'ValueError', 'TypeError',
-    'FileDoesNotExistError', 
-    'FileExistsError',
-    'FilePerissionError',
+    'IOError',
+    'FileDoesNotExistError' => {
+        isa => 'IOError'
+    }, 
+    'FileExistsError' => {
+        isa => 'IOError'
+    },
+    'FilePerissionError' => {
+        isa => 'IOError'
+    },
     'FileFormatException',
     'UnknownFormatError' => {
         fields => [qw{name}],

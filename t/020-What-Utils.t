@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 9;
+use Test::More tests => 12;
 BEGIN { use_ok('What::Utils', qw{ :all }) };
 
 #########################
@@ -35,3 +35,8 @@ ok(has_bad_chars($illegal_name));
 ok('AC_DC_' eq replace_bad_chars($illegal_name));
 my $bad_chars = bad_chars($illegal_name);
 ok($bad_chars eq '/?' || $bad_chars eq '?/');
+
+ok(reroot('/usr/bin', '/usr/local/bin', '/usr/bin/env') eq '/usr/local/bin/env');
+my @testreroot=reroot('/A/', '/B', '/A/bin/env', '/A/more');
+ok($testreroot[1] eq '/B/more');
+ok(reroot('abc','def','abc') eq 'def');

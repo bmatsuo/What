@@ -35,6 +35,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
     formats
     all_formats
+    arg_formats
     file_format_of
     format_needs_wav
     format_normalized
@@ -81,15 +82,10 @@ my %is_possible = ( %is_accepted );
 my @mp3_cbr_bitrates = qw{32 40 48 56 64 80 96 112 128 160 192 224 256 320};
 my @mp3_vbr_qualities = qw{V0 V1 V2 V3 V4 V5 V6 V7 V8 V9};
 
-for my $cbr (@mp3_cbr_bitrates) {
-    $is_possible{$cbr} = 1;
-    $ext_of{$cbr} = 'mp3';
-    $file_format_of{$cbr} = 'MP3';
-}
-for my $vbr (@mp3_vbr_qualities) {
-    $is_possible{$vbr} = 1;
-    $ext_of{$vbr} = 'mp3';
-    $file_format_of{$vbr} = 'MP3';
+for my $b (@mp3_cbr_bitrates, @mp3_vbr_qualities) {
+    $is_possible{$b} = 1;
+    $ext_of{$b} = 'mp3';
+    $file_format_of{$b} = 'MP3';
 }
 
 # Subroutine: formats()
@@ -115,13 +111,13 @@ sub all_formats {
 # Throws: Nothing
 sub file_format_of {
     my ( $name ) = @_;
-    return $file_format_of{uc $name};
+    return $file_format_of{format_normalized($name)};
 }
 
 # INTERFACE METHOD (no class arg);
 sub format_normalized {
     my $format = shift;
-    uc $format;
+    return uc $format;
 }
 
 # INTERFACE METHOD (no class arg);
@@ -168,6 +164,33 @@ sub format_is_possible {
 sub format_extension {
     my $format = shift;
     return $ext_of{format_normalized($format)};
+}
+
+### INTERFACE SUB
+# Subroutine: arg_formats
+# Usage: format_args( %opt )
+# Purpose: Parse the command-line format options (e.g. '--flac').
+# Returns: A list of normalized format names
+# Throws: Nothing
+sub arg_formats {
+    my ( %opt ) = @_;
+
+    # This is a combined grep, map, union, and ranking over the given options.
+    my %format_p = ( 
+        map { 
+            $_ =~ /^(?:--)?(.*)$/ ?
+                (   format_is_accepted($1)          ? (format_normalized($1) => 1)
+                    : format_is_possible($1)        ? (format_normalized($1) => 2)
+                    : ())
+            : ()
+        } (
+            (keys %opt),
+            (exists $opt{'--mp3'} ? (@{$opt{'--mp3'}}) : ()),
+        )
+    );
+
+    # Sort the formats based on their priorities and return.
+    return (sort {$format_p{$a} <=> $format_p{$b}} (keys %format_p));
 }
 
 # Subroutine: transcode_path($file, $dest, $format)

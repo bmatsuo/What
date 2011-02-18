@@ -78,9 +78,9 @@ sub dirs {
     my $self = shift;
     my ($filter) = @_;
     $filter = $filter || sub { 1 };
-    my @all_dirs;
-    push @all_dirs, $self if $filter->( $self );
-    push @all_dirs, $self->subdirs_rec( $filter );
+    my @all_dirs = (
+        ($filter->($self) ? $self : ()),
+        (map {$_->dirs($filter)} @{$self->subdirs}));
     return @all_dirs;
 }
 
@@ -175,6 +175,42 @@ sub audio_files {
     return @{$self->songs}if $self->is_disc();
     return (map {($_->audio_files())} @{$self->subdirs});
 }
+### INSTANCE METHOD
+# Subroutine: nonaudio_files
+# Usage: $release_directory->nonaudio_files(  )
+# Purpose: Create a list of all non-audio files in the release.
+# Returns: A list of file paths.
+# Throws: Nothing
+sub nonaudio_files {
+    my $self = shift;
+    return (
+        ($self->nfo ? ($self->nfo) : ()),
+        @{$self->m3us},
+        @{$self->logs},
+        @{$self->cues},
+        @{$self->images},
+        @{$self->other_files},
+        (map {$_->nonaudio_files()} @{$self->subdirs}));
+}
+
+### INSTANCE METHOD
+# Subroutine: dir_files
+# Usage: $release_directory->files(  )
+# Purpose: 
+#   Create a list of all the files in the directory (excluding subdirectories).
+# Returns: A list of file paths.
+# Throws: Nothing
+sub dir_files {
+    my $self = shift;
+    return (
+        ($self->nfo ? ($self->nfo) : ()),
+        @{$self->songs},
+        @{$self->m3us},
+        @{$self->logs},
+        @{$self->cues},
+        @{$self->images},
+        @{$self->other_files});
+}
 
 ### INSTANCE METHOD
 # Subroutine: files
@@ -184,26 +220,7 @@ sub audio_files {
 # Throws: Nothing
 sub files {
     my $self = shift;
-    return (
-        ($self->nfo ? ($self->nfo) : ()),
-        @{$self->songs},
-        @{$self->m3us},
-        @{$self->logs},
-        @{$self->cues},
-        @{$self->images},
-        @{$self->other_files},
-        (map {$_->path()} @{$self->subdirs}));
-}
-
-### INSTANCE METHOD
-# Subroutine: all_files
-# Usage: $release_directory->all_files(  )
-# Purpose: Create a list of all the files in the release.
-# Returns: A list of file paths.
-# Throws: Nothing
-sub all_files {
-    my $self = shift;
-    return ($self->files(), (map {$_->all_files()} @{$self->subdirs}));
+    return ($self->dir_files(), (map {$_->files()} @{$self->subdirs}));
 }
 
 ### INSTANCE METHOD

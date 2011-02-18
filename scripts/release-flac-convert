@@ -33,7 +33,8 @@ use Exception::Class (
     'SystemCallError' => {alias=>'syserr'},);
 
 # Include private modules.
-use What::Utils;
+use What;
+use What::Utils qw{:all};
 use What::WhatRC;
 use What::Release;
 use What::Format;
@@ -73,6 +74,7 @@ my $exitcode = 0;
 my $subsystem = What::Subsystem->new(
     verbose => $opt{'--verbose'},
     dry_run => $opt{'--dry-run'},);
+my $upload_root = whatrc->upload_root;
 
 ########################################################################
 # MAIN FUNCTION
@@ -87,103 +89,62 @@ sub main{
     my $year = context->year;
 
     my $release = release();
-    my @existing_formats = $release->existing_formats();
-
-    my @mp3_opts = map {uc $_} @{$opt{'--mp3'}};
-    my @allowed_format_opts = map {$opt{"--$_"} ? $_ : () } (formats());
-    my @format_opts = (@allowed_format_opts, @mp3_opts);
-    my @desired_formats;
-    for my $f (@format_opts) {
-        my $format_exists = $release->exists($f);
-        if ($format_exists) {
-            my $fnorm = format_normalized($f);
-            print {\*STDERR} 
-                "Warning: $fnorm release already exists."
-                . " Not transcoding to $fnorm.\n";
-        }
-        else {
-            push @desired_formats, $f;
-        }
+    my $directory = eval { $release->directory('FLAC') };
+    my $e;
+    if ($e = Exception::Class->caught('IOError')) {
+        die "Can't open the FLAC directory; $e->error\n";
     }
 
+    my @desired_formats
+        = grep {not $_ eq format_normalized('flac')} (arg_formats(%opt));
     if (!@desired_formats) {
         print {\*STDERR} "No formats to create. Exiting.\n";
         exit 0;
     }
+    for my $f (@desired_formats) {
+        if ($release->exists($f)) {
+            print {\*STDERR}
+                "Warning: Format $f release already exists."
+                . " Not transcoding to $f.\n";
+        }
+    }
 
-    my %format_needs_wav = (
-        v0 => 1,
-        v2 => 1,
-        320 => 1,
-        aac => 1,
-        ogg => 0,);
-    my $should_create_wav
-        = scalar 
-            (map {format_needs_wav($_) ? ($_) : ()} @desired_formats);
-
-
-    my %converted_to;
-    for my $format (@desired_formats) { $converted_to{$format} = {} }
-    my %dest_for;
-
-    my $upload_root = whatrc->upload_root;
-    my $subsystem = What::Subsystem->new();
-
+    my $should_create_wav = scalar grep {format_needs_wav($_)} @desired_formats;
     my $release_root_name = $release->name();
-
-    my $release_path = $release->dir();
-
-    PrerequisiteError->throw(
-        error=>"Release root does not exist; $release_path")
-            if (!-d $release_path or !-w $release_path);
-    
-    $release_path =~ s/\A ~/$ENV{'HOME'}/xms;
-
-    my @flac_dirs 
-        = $release->format_disc_dirs('FLAC');
-
-    my $release_is_multidisc = @flac_dirs > 1 ? 1 : 0;
-
-    my $flac_source_dir = $release->format_dir('flac');
-
-    #my %flac_info = flac_files_in($flac_source_dir);
-    #my %flac_info 
+    my $release_path = $directory->path();
+    my @flac_dirs = $release->format_disc_dirs('FLAC');
+    my @flac_music_dirs = $directory->discs();
+    my $release_is_multidisc = $#flac_music_dirs;
+    my $flac_source_dir = $directory->path;
+    my @flac_files = $directory->audio_files();
     #    = grep {$_ =~ m/ \. flac \z/xms} find_hierarchy($flac_source_dir);
-    #= (map {flac_files_in($_)} @flac_dirs);
-    my @flac_files 
-        = grep {$_ =~ m/ \. flac \z/xms} find_hierarchy($flac_source_dir);
 
+    # Create directories for new format releases.
+    my %dest_for;
     for my $format (@desired_formats) {
-        print "Finding $format directories..." if $opt{'--verbose'};
-        my $format_dest_dir 
-            = $release->format_dir($format);
+        print "Creating $format directory..." if $opt{'--verbose'};
+        my $format_dest_dir = $release->format_dir($format);
         if (!-d $format_dest_dir) {
             $subsystem->exec('mkdir', $format_dest_dir) == 0
-                or syserr(
-                    error=>
-                        "Couldn't create directory $format_dest_dir\n$?");
+                or syserr(error=> "Couldn't create directory $format_dest_dir");
         }
-
-        print "Found\n" if $opt{'--verbose'};
+        print "Done\n" if $opt{'--verbose'};
 
         $dest_for{$format} = $format_dest_dir;
 
         # Create multiple disc directories if necessary.
         if ($release_is_multidisc) {
-            print "\nFinding disc directories for $format...";
-
-            for my $disc_dir (@flac_dirs) {
-                my $disc_name = basename($disc_dir);
-                my $format_disc_dir = "$format_dest_dir/$disc_name";
-                if (!-d $format_disc_dir) {
-                    $subsystem->exec('mkdir', $format_disc_dir) == 0
+            print "\nCreating disc directories for $format..." if $opt{'--verbose'};
+            for my $flac_d (@flac_dirs) {
+                my $dest_d 
+                    = reroot($directory->path(), $format_dest_dir, $flac_d);
+                if (!-d $dest_d) {
+                    $subsystem->exec('mkdir', $dest_d) == 0
                         or syserr(
-                            error=> "Couldn't create disc directory"
-                                ."$format_disc_dir\n$?");
+                            error => "Couldn't create disc directory $dest_d");
                  }
             }
-
-            print "DONE\n";
+            print "Done\n" if $opt{'--verbose'};
         }
     }
 
@@ -194,6 +155,7 @@ sub main{
 
     print sprintf ("%14s", "Preparing jobs"), ($opt{'--verbose'} ? '...' : q{});
     my $converter_id = 0;
+    my $temp_wav_dest_dir = What::temp_wav_dir();
     # Convert each flac file into all desired formats.
     for my $flac_path (
         sort 
@@ -204,20 +166,14 @@ sub main{
     ) {
         my $flac_obj = read_flac($flac_path);
 
-        my $temp_wav_dest_dir = safe_path('~/.what/work/wav'); #dirname($flac_path);
-
         my $wav_path;
-
-        # Create temporary file for WAVE output.
-        # my $wav_path = wav_output($flac_path, $temp_wav_dest_dir);
 
         # Create a name for reencoded MP3 files.
         my $flac = basename($flac_path);
 
         if ($opt{'--verbose'}) {
-            print sprintf (
-                "[ %02d %s:", 
-                (map {$flac_obj->tag($_)} qw{TRACKNUMBER TITLE}));
+            printf "[ %02d %s:", 
+                (map {$flac_obj->tag($_)} qw{TRACKNUMBER TITLE});
         }
 
         if ($should_create_wav) {
@@ -235,9 +191,6 @@ sub main{
             }
             $conv_q->enqueue([$new_wav_c,]);
             ++$num_conv;
-            #$wav_c->flac($flac_obj);
-            #$wav_c->dest_dir($temp_wav_dest_dir);
-            #$wav_c->convert();
             $wav_path = $new_wav_c->output_path;
             $dependent_convs{$wav_path} = [];
             $num_dependent{$wav_path} = 0;
@@ -438,72 +391,60 @@ sub main{
     }
 
     print "Copying accompanying files..." if $opt{'--verbose'};
+    for my $dir ($directory->dirs()) {
+        my @other_files = $dir->dir_files();
+        @other_files 
+            = grep {$_ !~ m/\.(?: flac|m3u|cue|log )\z/xms} @other_files;
 
-    # This just makes the files in the root directory get copied.
-    push @flac_dirs, $flac_source_dir 
-        if !(grep {$_ eq $flac_source_dir} @flac_dirs);
-
-    # Copy other files in each disc directory, and reformat m3u.
-    for my $disc_dir (@flac_dirs) {
-        # Find the non-audio files in the disc directory.
-        my @other_disc_files = find_file_pattern("*", $disc_dir);
-        @other_disc_files = grep {$_ !~ m/\A \./xms} @other_disc_files;
-        @other_disc_files 
-            = grep {$_ !~ m/\.(flac | cue | log)\z/xms} @other_disc_files;
-
-        # Find an M3U for the disc, and remove for special treatment.
-        my @flac_m3us = grep {$_ =~ m/\.m3u\z/xms} @other_disc_files;
+        # Find an M3U for the directory, and remove for special treatment.
+        my @flac_m3us = @{$dir->m3us};
         my $flac_m3u = shift @flac_m3us;
         if (@flac_m3us > 0) {
             print {\*STDERR} 
                 "wtf?! multiple M3Us found; $flac_m3u and @flac_m3us\n";
             print {\*STDERR} "skipping @flac_m3us\n";
         }
-        if (!defined $flac_m3u) {
-            die "No m3u found in FLAC disc directory; $disc_dir\n";
+        if (!defined $flac_m3u && $dir->is_disc) {
+            die "No m3u found in FLAC disc directory; $dir->path\n";
         }
-        @other_disc_files = grep {$_ !~ m/\.m3u\z/xms} @other_disc_files;
 
-        # Copy the files to each of the created format directories.
-        my $disc_name = basename($disc_dir);
+        # Copy the other files into the new format directories.
+        my $flac_root = $directory->path;
         for my $format (@desired_formats) {
             my $format_ext = format_extension($format);
-            my $format_dir = $release->format_dir($format);
-            my $flac_root = $release->format_dir('flac');
-            my $flac_root_name = basename($flac_root);
+            my $format_root = $release->format_dir($format);
+            my $f_dest
+                = $dir->is_root ? $format_root
+                : dirname( reroot( $flac_root, $format_root, $dir->path ) );
+            if (@other_files > 0) {
 
-            # Name the disc directory for the given format.
-            my $format_disc_dir 
-                = $disc_name eq $flac_root_name ? $format_dir 
-                : "$format_dir/$disc_name";
-
-            # Attempt to copy the non-flac, non-playlist files.
-            if (@other_disc_files > 0) {
-                my @cp_other_disc_files 
-                    = ('cp', '-r',  @other_disc_files, $format_disc_dir);
-                if ($subsystem->exec(@cp_other_disc_files) != 0) {
-                    my @files = map {basename($_)} @other_disc_files;
-                    my @err 
-                        = ("Couldn't copy files to $format_disc_dir", 
-                            @files);
+                my @cp_others = ('cp', @other_files, $f_dest);
+                my $cp_err = $subsystem->exec(@cp_others);
+                if ($cp_err) {
+                    my @files = map {basename($_)} @other_files;
+                    my @err = ("Couldn't copy files to $f_dest", @files);
                     syserr( error => join ("\n", @err, ""), );
                 }
             }
 
-            # Write a reformated M3U to the disc directory as well.
-            open my $m3u_in, "<", $flac_m3u
-                or die "Couldn't open playlist $flac_m3u.";
-            my $m3u = do {local $/; <$m3u_in>};
-            close $m3u_in;
-            $m3u =~ s/\.flac ( \n | \z )/\.$format_ext$1/gxms;
-            my $format_m3u = "$format_disc_dir/".basename($flac_m3u);
-            open my $m3u_out, ">", $format_m3u
-                or die "Can't write to playlist $format_m3u.";
-            print {$m3u_out} $m3u;
-            close $m3u_out;
+            # Write a 'reformated' M3U playlist to the corresponding directory.
+            if ($flac_m3u) {
+                open my $m3u_in, "<", $flac_m3u
+                    or die "Couldn't open playlist $flac_m3u.";
+                my $m3u = do {local $/; <$m3u_in>};
+                close $m3u_in;
+
+                # Replace '.flac' extensions with the proper extension.
+                $m3u =~ s/\.flac ( \r?\n | \z )/\.$format_ext$1/gxms;
+
+                my $format_m3u = reroot($flac_root, $format_root, $flac_m3u);
+                open my $m3u_out, ">", $format_m3u
+                    or die "Can't write to playlist $format_m3u.";
+                print {$m3u_out} $m3u;
+                close $m3u_out;
+            }
         }
     }
-
     print "Done\n" if $opt{'--verbose'};
 
     exit($exitcode);

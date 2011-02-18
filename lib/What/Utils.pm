@@ -35,6 +35,7 @@ my @INTERFACE_SUBS = qw{
     safe_path
     glob_safe
     expand_home
+    reroot
     find_file_pattern
     search_hierarchy
     find_hierarchy
@@ -52,7 +53,8 @@ our %EXPORT_TAGS = (
                         common_prefix   suffixes    common_prefix_pair  )],
     'files' => [ qw(find_file_pattern               search_hierarchy 
                     glob_safe       safe_path       what_glob       expand_home
-                    has_bad_chars   bad_chars       replace_bad_chars )],
+                    has_bad_chars   bad_chars       replace_bad_chars
+                    reroot)],
     'dirs' => [ qw( find_subdirs    find_hierarchy  merge_structure
                     create_directory ) ],
     'align' => [ qw(    align   words_fit ) ], );
@@ -362,6 +364,28 @@ sub find_hierarchy {
 ################
 # FILE METHODS #
 ################
+
+### INTERFACE SUB
+# Subroutine: reroot
+# Usage: reroot( $root, $new_root, @files )
+# Purpose: Replace the root directory  of each path in @files with the directory .
+# Returns: A rerooted path for each string in @files.
+# Throws: 
+sub reroot {
+    my ( $root, $new_root, @files ) = @_;
+    $root =~ s! / \z!!xms;
+    $new_root =~ s! / \z!!xms;
+    my @rerooted;
+    for my $f (@files) {
+        my $sliced = substr $f, 0, length $root, $new_root;
+        if (!$sliced eq $root) {
+            ValueError->throw(
+                error => "File '$f' is not in a directory at or below '$root'.");
+        }
+        push @rerooted, $f;
+    }
+    return @rerooted == 1 ? $rerooted[0] : @rerooted;
+}
 
 ### INTERFACE SUB
 # Subroutine: what_glob
