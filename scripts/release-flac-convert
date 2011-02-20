@@ -65,12 +65,6 @@ my $exitcode = 0;
 # PROGRAM SPECIFIC GLOBALS
 ########################################################################
 
-#my $wav_c = What::Converter::WAVE->new(verbose => $opt{'--verbose'});
-#my $mp3_320_c = What::Converter::MP3->new(bitrate => '320', verbose => $opt{'--verbose'});
-#my $mp3_v0_c = What::Converter::MP3->new(bitrate => 'v0', verbose => $opt{'--verbose'});
-#my $mp3_v2_c = What::Converter::MP3->new(bitrate => 'v2', verbose => $opt{'--verbose'});
-#my $ogg_c = What::Converter::Ogg->new(verbose => $opt{'--verbose'});
-#my $aac_c = What::Converter::AAC->new(verbose => $opt{'--verbose'});
 my $subsystem = What::Subsystem->new(
     verbose => $opt{'--verbose'},
     dry_run => $opt{'--dry-run'},);
@@ -82,12 +76,10 @@ my $upload_root = whatrc->upload_root;
 
 # main() - main program execution 
 sub main{
-    load_context();
     local $| = 1;
-    my $artist = context->artist;
-    my $title = context->title;
-    my $year = context->year;
 
+    # Load the What context and find the FLAC release directory.
+    load_context();
     my $release = release();
     my $directory = eval { $release->directory('FLAC') };
     my $e;
@@ -95,303 +87,94 @@ sub main{
         die "Can't open the FLAC directory; $e->error\n";
     }
 
+    # Formulate the list of formats for transcoding to.
     my @desired_formats
         = grep {not $_ eq format_normalized('flac')} (arg_formats(%opt));
     if (!@desired_formats) {
         print {\*STDERR} "No formats to create. Exiting.\n";
         exit 0;
     }
-    for my $f (@desired_formats) {
-        if ($release->exists($f)) {
-            print {\*STDERR}
-                "Warning: Format $f release already exists."
-                . " Not transcoding to $f.\n";
-        }
-    }
+    my $format_filter = sub {
+        my $f = shift;
+        return 1 if !$release->exists($f);
+        print {\*STDERR}
+            "Warning: Format $f release already exists... Skipping.\n";
+        return 0;
+    };
+    @desired_formats = grep {$format_filter->($_)} @desired_formats;
 
     my $should_create_wav = scalar grep {format_needs_wav($_)} @desired_formats;
-    my $release_root_name = $release->name();
-    my $release_path = $directory->path();
-    my @flac_dirs = $release->format_disc_dirs('FLAC');
-    my @flac_music_dirs = $directory->discs();
-    my $release_is_multidisc = $#flac_music_dirs;
-    my $flac_source_dir = $directory->path;
-    my @flac_files = $directory->audio_files();
-    #    = grep {$_ =~ m/ \. flac \z/xms} find_hierarchy($flac_source_dir);
 
-    # Create directories for new format releases.
-    my %dest_for;
+    # Create directory structures for formats.
     for my $format (@desired_formats) {
-        print "Creating $format directory..." if $opt{'--verbose'};
-        my $format_dest_dir = $release->format_dir($format);
-        if (!-d $format_dest_dir) {
-            $subsystem->exec('mkdir', $format_dest_dir) == 0
-                or syserr(error=> "Couldn't create directory $format_dest_dir");
-        }
-        print "Done\n" if $opt{'--verbose'};
-
-        $dest_for{$format} = $format_dest_dir;
-
-        # Create multiple disc directories if necessary.
-        if ($release_is_multidisc) {
-            print "\nCreating disc directories for $format..." if $opt{'--verbose'};
-            for my $flac_d (@flac_dirs) {
-                my $dest_d 
-                    = reroot($directory->path(), $format_dest_dir, $flac_d);
-                if (!-d $dest_d) {
-                    $subsystem->exec('mkdir', $dest_d) == 0
-                        or syserr(
-                            error => "Couldn't create disc directory $dest_d");
-                 }
-            }
-            print "Done\n" if $opt{'--verbose'};
-        }
+        scaffold_format(
+            release => $release,
+            directory => $directory,
+            format => $format);
     }
 
-    my $conv_q = Thread::Queue->new();
-    my $num_conv = 0;
-    my %dependent_convs;
-    my %num_dependent;
-
-    print sprintf ("%14s", "Preparing jobs"), ($opt{'--verbose'} ? '...' : q{});
-    my $converter_id = 0;
-    my $temp_wav_dest_dir = What::temp_wav_dir();
-    # Convert each flac file into all desired formats.
-    for my $flac_path (
-        sort 
-            {
-                do {basename($a) =~ m/\A (\d+)/xms ? $1 : 0} 
-                    <=> do {basename($b) =~ m/\A (\d+)/xms ? $1 : 0} }
-            @flac_files
-    ) {
-        my $flac_obj = read_flac($flac_path);
-
-        my $wav_path;
-
-        # Create a name for reencoded MP3 files.
-        my $flac = basename($flac_path);
-
-        if ($opt{'--verbose'}) {
-            printf "[ %02d %s:", 
-                (map {$flac_obj->tag($_)} qw{TRACKNUMBER TITLE});
-        }
-
-        if ($should_create_wav) {
-            my $new_wav_c = What::Converter::WAVE->new(
-                flac => $flac_obj,
-                dest_dir => $temp_wav_dest_dir,
-                append_id => 1,
-                id => $converter_id++,
-            );
-            if ($opt{'--verbose'}) {
-                print q{ }.$new_wav_c->format_descriptor;
-            }
-            else {
-                print '.';
-            }
-            $conv_q->enqueue([$new_wav_c,]);
-            ++$num_conv;
-            $wav_path = $new_wav_c->output_path;
-            $dependent_convs{$wav_path} = [];
-            $num_dependent{$wav_path} = 0;
-            
-        }
-
-        # Convert the decoded WAVE into all desired formats.
-        for my $format (@desired_formats) {
-            my $uc_format = uc $format;
-
-            my $disc_subdir 
-                = $release_is_multidisc 
-                    ? "/".basename(dirname($flac_path)) : "";
-            my $dest_dir = $dest_for{$format};
-            $dest_dir .= $disc_subdir;
-            my $file_format = file_format_of($uc_format);
-
-            # Select the converter to use.
-            my $conv 
-                = $file_format eq 'MP3'   ? What::Converter::MP3->new (
-                                            bitrate => $uc_format,
-                                            id => $converter_id++, )
-                : $file_format eq 'OGG'   ? What::Converter::Ogg->new (
-                                            id => $converter_id++, )
-                : $file_format eq 'AAC'   ? What::Converter::AAC->new (
-                                            id => $converter_id++,)
-                : undef;
-
-            if (!defined $conv) {
-                croak("Didn't recognize format $uc_format.");
-            }
-
-            if ($opt{'--verbose'}) {
-                print q{ }.$conv->format_descriptor;
-            }
-            else {
-                print '.';
-            }
-
-            # Create the transcode.
-            ++$num_conv;
-            $conv->flac($flac_obj);
-            $conv->dest_dir($dest_dir);
-            if ($conv->needs_wav()) {
-                push @{$dependent_convs{$wav_path}}, $conv;
-                ++$num_dependent{$wav_path};
-            }
-            else {
-                $conv_q->enqueue([$conv,]);
-            }
-        }
-
-        print ' ]' if $opt{'--verbose'};
-
-        if ($should_create_wav) { # Then we should destroy the wav.
-
-        }
-    }
-    print "Done\n";
-    print sprintf ("%14s", "Converting"), ($opt{'--verbose'} ? '...' : q{});
-
-    my $num_threads = 0;
-    my $thread_action = sub {
-        ++$num_threads;
-        threads->exit() if $USER_HAS_THREADS && !$conv_q->pending();
-        my $conv_job = $conv_q->dequeue();
-        my ($c, $wav) = @{$conv_job};
-        my %arg;
-        $arg{wav} = $wav if defined $wav;
-        my $c_res = eval { $c->convert(%arg) };
-        if ($@) {
-            print {\*STDERR} "Error converting: $@\n";
-            return "FAIL";
-        }
-        my $out = $c->output_path;
-
-        if (!$opt{'--verbose'}) {
-            print '.';
-        }
-        elsif ($c->flac->tag('discnumber')) {
-            print sprintf (
-                "[ [%s] %02d-%02d ]",
-                $c->format_descriptor,
-                $c->flac->tag('discnumber'),
-                $c->flac->tag('tracknumber') 
-            );
-        }
-        else {
-            print sprintf (
-                "[ [%s] %02d ]",
-                $c->format_descriptor,
-                $c->flac->tag('tracknumber')
-            );
-        }
-
-
-        my $now_ok = $dependent_convs{$out};
-        if (defined $now_ok) {
-            my @new_convs = map {[$_, $out]} @{$now_ok};
-            if (@new_convs) {
-                $conv_q->insert(1, @new_convs);
-            }
-        }
-
-        return [$c, $wav];
-    };
-
-    my $max_threads = whatrc->max_threads;
-    my $thread_error = 0;
-
-    my $thread_completion_action = sub {
-        return if $thread_error;
-        if (!defined $_[0] || $_[0] eq 'FAIL') {
-            print {\*STDERR} 
-                "Error detected in conversion thread."
-                . " Clearing conversion queue, finishing active jobs,"
-                . " and halting.\n";
-            $conv_q->extract(0, $num_conv);
-            $thread_error = 1;
-            return;
-        }
-        my ($converter, $used_wav) = @{$_[0]};
-        if (defined $used_wav) {
-            --$num_dependent{$used_wav} if $num_dependent{$used_wav};
-            if ($num_dependent{$used_wav} == 0) {
-                # Remove the WAVE path.
-                if (!$opt{verbose}) {
-                    # Print nothing.
-                }
-                elsif ($converter->flac->tag('discnumber')) {
-                    print sprintf (
-                        "! RM [WAVE] %02d-%02d !",
-                        $converter->flac->tag('discnumber'),
-                        $converter->flac->tag('tracknumber') 
-                    );
-                }
-                else {
-                    print sprintf (
-                        "! RM [WAVE] %02d !",
-                        $converter->flac->tag('tracknumber')
-                    );
-                }
-                $subsystem->exec('rm', $used_wav) == 0
-                    or syserr( error => join "\n", 
-                                        "Couldn't remove temporary file;",
-                                        , basename($used_wav) , $?);
-                ;
-            }
-        }
-    };
-
-    while ( $conv_q->pending() 
-            || ($USER_HAS_THREADS && threads->list(threads::running) > 0)
-            || ($USER_HAS_THREADS && threads->list(threads::joinable) > 0)) {
-        if (!$USER_HAS_THREADS) {
-            $thread_completion_action->($thread_action->());
-            next;
-        }
-        my $thread_buffer_size = scalar threads->list(threads::running);
-        if ( $conv_q->pending() && $thread_buffer_size < $max_threads ) {
-            for (0 .. $max_threads - $thread_buffer_size) {
-                my $thready = threads->create($thread_action);
-            }
-        }
-        else {
-            sleep 1;
-        }
-        for my $fin_thread (threads->list(threads::joinable)) {
-            my $ressy = $fin_thread->join();
-            $thread_completion_action->($ressy) if defined $ressy;
-        }
-    }
-
-    my @remaining_wavs = find_file_pattern('*.wav', '~/.what/work/wav');
-    if (@remaining_wavs) {
-        if ($opt{'--verbose'}) {
-            print map {sprintf ("! RM [WAVE] %s !", $_)} @remaining_wavs;
-        }
-        $subsystem->exec('rm', @remaining_wavs) == 0
-            or syserr( error => "Couldn't remove temporary files;\n"
-                                . "@remaining_wavs\n$?");
-    }
-
-    print "Done\n";
-
-    # Remove partial releases and quit if a converter thread crashed.
-    if ($thread_error) {
-        my @rm_partials = 
-            ('release-delete', 
-                map {
-                    file_format_of($_) eq 'MP3' ? "--mp3 $_" : "--$_"
-                } @desired_formats );
-        print {\*STDERR} "Removing partially transcoded releases.\n";
-        $subsystem->exec(@rm_partials) == 0
-            or croak("Couldn't remove partially transcoded releases"
-                . "@desired_formats.\n");
+    # Perform all conversions.
+    my $thread_err 
+        = process_convs( 
+            prep_jobs(
+                release => $release,
+                directory => $directory,
+                wav => $should_create_wav,
+                formats => \@desired_formats, ) );
+    if ($thread_err) {
+        clean_failed_conversions(@desired_formats);
         exit 1;
     }
 
+    # Copy any non-music files in the release.
+    copy_rest(
+        release => $release,
+        directory => $directory,
+        formats => \@desired_formats);
+
+    exit($exitcode);
+}
+
+########################################################################
+# SUPPORTING SUBROUTINES
+########################################################################
+
+### INTERNAL UTILITY
+# Subroutine: clean_failed_conversions
+# Usage: clean_failed_conversions( @formats )
+# Purpose: Remove incomplete format releases for which a converter thread died.
+# Returns: Nothing
+# Throws: Nothing
+sub clean_failed_conversions {
+    my @formats = @_;
+    print {\*STDERR} "Removing partially transcoded releases.\n";
+
+    my @fargs = map {
+        file_format_of($_) eq 'MP3' ? "--mp3 $_" : "--$_"
+    } @formats;
+    my @rm_partials = ('release-delete', @fargs);
+    $subsystem->exec(@rm_partials) == 0
+        or croak("Couldn't remove partially transcoded releases @formats.");
+    return;
+}
+
+### INTERNAL UTILITY
+# Subroutine: copy_rest
+# Usage:
+#   copy_rest(
+#       release=>$r,
+#       directory=>$flac_dir,
+#       formats=>\@formats )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub copy_rest {
+    my ( %arg ) = @_;
+    my ($release, $flac_dir) = @arg{qw{release directory}};
+    my @formats = @{$arg{formats}};
+
     print "Copying accompanying files..." if $opt{'--verbose'};
-    for my $dir ($directory->dirs()) {
+    for my $dir ($flac_dir->dirs()) {
         my @other_files = $dir->dir_files();
         @other_files 
             = grep {$_ !~ m/\.(?: flac|m3u|cue|log )\z/xms} @other_files;
@@ -409,8 +192,8 @@ sub main{
         }
 
         # Copy the other files into the new format directories.
-        my $flac_root = $directory->path;
-        for my $format (@desired_formats) {
+        my $flac_root = $flac_dir->path;
+        for my $format (@formats) {
             my $format_ext = format_extension($format);
             my $format_root = $release->format_dir($format);
             my $f_dest
@@ -446,13 +229,305 @@ sub main{
         }
     }
     print "Done\n" if $opt{'--verbose'};
-
-    exit($exitcode);
+    return;
 }
 
-########################################################################
-# SUPPORTING SUBROUTINES
-########################################################################
+### INTERNAL UTILITY
+# Subroutine: process_convs
+# Usage:
+#   process_convs(
+#       queue => $cq,
+#       num_convs => $nconv,
+#       dependents_of => \%dependents_of,
+#       ndependents => \%ndependents )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub process_convs {
+    my ( %arg ) = @_;
+    my ($cq, $num_conv) = @arg{qw{queue num_convs}};
+    my %dependents_of = %{$arg{dependents_of}};
+    my %ndependents = %{$arg{ndependents}};
+
+    print sprintf ("%14s", "Converting"), ($opt{'--verbose'} ? '...' : q{});
+    my $num_threads = 0;
+    my $thread_action = sub {
+        ++$num_threads;
+        threads->exit() if $USER_HAS_THREADS && !$cq->pending();
+        my $conv_job = $cq->dequeue();
+        my ($c, $wav) = @{$conv_job};
+        my %carg;
+        $carg{wav} = $wav if defined $wav;
+        my $c_res = eval { $c->convert(%carg) };
+        if ($@) {
+            print {\*STDERR} "Error converting: $@\n";
+            return "FAIL";
+        }
+        my $out = $c->output_path;
+
+        if (!$opt{'--verbose'}) {
+            print '.';
+        }
+        elsif ($c->flac->tag('discnumber')) {
+            print sprintf (
+                "[ [%s] %02d-%02d ]",
+                $c->format_descriptor,
+                $c->flac->tag('discnumber'),
+                $c->flac->tag('tracknumber') 
+            );
+        }
+        else {
+            print sprintf (
+                "[ [%s] %02d ]",
+                $c->format_descriptor,
+                $c->flac->tag('tracknumber')
+            );
+        }
+
+        my $now_ok = $dependents_of{$out};
+        if (defined $now_ok) {
+            my @new_convs = map {[$_, $out]} @{$now_ok};
+            $cq->insert(1, @new_convs)
+                if @new_convs;
+        }
+
+        return [$c, $wav];
+    };
+
+    my $max_threads = whatrc->max_threads;
+    my $thread_error = 0;
+    my $handle_failure = sub {
+        my $err = join "\n\t", 
+            q{}, "Error detected in conversion thread!",
+            "Clearing queue, finishing active jobs, and halting.", q{};
+        print {\*STDERR} "$err\n";
+        $cq->extract(0, $num_conv);
+        $thread_error = 1;
+    };
+
+    my $thread_completion_action = sub {
+        return if $thread_error;
+
+        if (!defined $_[0] || $_[0] eq 'FAIL') { $handle_failure->(); return; }
+
+        my ($converter, $used_wav) = @{$_[0]};
+        if (defined $used_wav) {
+            --$ndependents{$used_wav} if $ndependents{$used_wav};
+            if ($ndependents{$used_wav} == 0) {
+                # Remove the WAVE path.
+                if (!$opt{verbose}) {
+                    # Print nothing.
+                }
+                elsif ($converter->flac->tag('discnumber')) {
+                    print sprintf (
+                        "! RM [WAVE] %02d-%02d !",
+                        $converter->flac->tag('discnumber'),
+                        $converter->flac->tag('tracknumber') 
+                    );
+                }
+                else {
+                    print sprintf (
+                        "! RM [WAVE] %02d !",
+                        $converter->flac->tag('tracknumber')
+                    );
+                }
+                $subsystem->exec('rm', $used_wav) == 0
+                    or syserr( 
+                        error => sprintf(
+                            "Couldn't remove temporary file %s", basename($used_wav)));
+                ;
+            }
+        }
+    };
+
+    my $some_running = sub {
+        $USER_HAS_THREADS && threads->list(threads::running) > 0
+    };
+    my $some_joinable = sub {
+        $USER_HAS_THREADS && threads->list(threads::joinable) > 0
+    };
+
+    while ( $cq->pending() || $some_running->() || $some_joinable->() ) {
+        if (!$USER_HAS_THREADS) {
+            $thread_completion_action->($thread_action->());
+            next;
+        }
+
+        my $thread_buffer_size = scalar threads->list(threads::running);
+        if ( $cq->pending() && $thread_buffer_size < $max_threads ) {
+            for (0 .. $max_threads - $thread_buffer_size) {
+                my $thready = threads->create($thread_action);
+            }
+        }
+        else {
+            sleep 1;
+        }
+        for my $fin_thread (threads->list(threads::joinable)) {
+            my $ressy = $fin_thread->join();
+            $thread_completion_action->($ressy) if defined $ressy;
+        }
+    }
+
+    my @remaining_wavs = find_file_pattern('*.wav', '~/.what/work/wav');
+    if (@remaining_wavs) {
+        print map {sprintf ("! RM [WAVE] %s !", $_)} @remaining_wavs
+            if $opt{'--verbose'};
+
+        $subsystem->exec('rm', @remaining_wavs) == 0
+            or syserr( error => "Couldn't remove temporary files;\n@remaining_wavs\n");
+    }
+
+    print "Done\n";
+    return $thread_error;
+}
+
+### INTERNAL UTILITY
+# Subroutine: prep_jobs
+# Usage: 
+#   prep_jobs(
+#       release => $r,
+#       directory => $flac_d,
+#       wav => $should_make_mav,
+#       formats => \@formats, )
+# Purpose: Create all the What::Converter jobs for.
+# Returns:
+#   A Thread::Queue objects filled with What::Converter::XXXX job objects.
+# Throws: Nothing
+sub prep_jobs {
+    my ( %arg ) = @_;
+    my ($r, $flac_d, $should_make_wav) = @arg{qw{release directory wav}};
+    my @formats = @{$arg{formats}};
+    my @flac_files = $flac_d->audio_files();
+    my %tracknum_of = (map {($_ => basename($_) =~ /^(\d+)/ ? $1 : 0)} @flac_files);
+    @flac_files = sort { $tracknum_of{$a} <=> $tracknum_of{$b} } @flac_files;
+
+    my $cq = Thread::Queue->new();
+    my $nconv = 0;
+    my %dependents_of;
+    my %ndependent;
+
+    my $print_status = sub {
+        # Print progress indicator
+        print $opt{'--verbose'} ? q{ }.$_[0]->format_descriptor : '.';
+    };
+
+    print sprintf ("%14s", "Preparing jobs"), ($opt{'--verbose'} ? '...' : q{});
+    my $cid = 0;
+    my $temp_wav_dest_dir = What::temp_wav_dir();
+    # Convert each flac file into all desired formats.
+    for my $flac_path ( @flac_files) {
+        my $flac_obj = read_flac($flac_path);
+
+        # Create a name for reencoded MP3 files.
+        my $flac = basename($flac_path);
+
+        printf "[ %02d %s:", (map {$flac_obj->tag($_)} qw{TRACKNUMBER TITLE})
+            if $opt{'--verbose'};
+
+        my $wav_path;
+        if ($should_make_wav) {
+            my $new_wav_c = What::Converter::WAVE->new(
+                flac => $flac_obj,
+                dest_dir => $temp_wav_dest_dir,
+                append_id => 1,
+                id => $cid++,
+            );
+
+            $print_status->($new_wav_c);
+
+            $cq->enqueue([$new_wav_c,]);
+            ++$nconv;
+
+            $wav_path = $new_wav_c->output_path;
+            $dependents_of{$wav_path} = [];
+            $ndependent{$wav_path} = 0;
+        }
+
+        # Convert the decoded WAVE into all desired formats.
+        for my $f (@formats) {
+            my $format_root = $r->format_dir($f);
+            my $dest_dir 
+                = dirname( reroot($flac_d->path, $format_root, $flac_path) );
+            my $file_format = file_format_of($f);
+
+            # Select the converter to use.
+            my $conv 
+                = $file_format eq 'MP3'
+                    ?  What::Converter::MP3->new(bitrate => $f, id => $cid++)
+                : $file_format eq 'OGG'
+                    ?  What::Converter::Ogg->new(id => $cid++)
+                : $file_format eq 'AAC'
+                    ?  What::Converter::AAC->new(id => $cid++)
+                : undef;
+
+            croak("Didn't recognize format $f.") if !defined $conv;
+
+            $print_status->($conv);
+            ++$nconv;
+            $conv->flac($flac_obj);
+            $conv->dest_dir($dest_dir);
+            if ( $conv->needs_wav() ) {
+                push @{$dependents_of{$wav_path}}, $conv;
+                ++$ndependent{$wav_path};
+            }
+            else {
+                $cq->enqueue([$conv,]);
+            }
+        }
+
+        print ' ]' if $opt{'--verbose'};
+    }
+    print "Done\n";
+
+    return (
+        queue => $cq,
+        dependents_of => \%dependents_of,
+        ndependents => \%ndependent,
+        num_convs => $nconv);
+}
+
+### INTERNAL UTILITY
+# Subroutine: scaffold_format
+# Usage:
+#   scaffold_format(
+#       release   => $r,
+#       directory => $flac_dir,
+#       format => $new_format )
+# Purpose: 
+# Returns: Nothing
+# Throws: Nothing
+sub scaffold_format {
+    my %arg = @_;
+    my ($release, $flac_dir, $format) = @arg{qw{release directory format}};
+    $format = format_normalized($format);
+    print "Creating $format directory..." if $opt{'--verbose'};
+    my $format_path = $release->format_dir($format);
+    if (!-d $format_path) {
+        $subsystem->exec('mkdir', $format_path) == 0
+            or syserr(error=> "Couldn't create directory $format_path");
+    }
+    print "Done\n" if $opt{'--verbose'};
+
+    my @dirs = $flac_dir->dirs();
+    if (scalar (@dirs) > 1) {
+        print "\nCreating internal directories for $format..." if $opt{'--verbose'};
+
+        for my $d (@dirs) {
+            my $format_d = reroot($flac_dir->path, $format_path, $d->path);
+            if (!-d $format_d) {
+                $subsystem->exec('mkdir', $format_d) == 0
+                    or syserr(error => "Couldn't create disc directory $format_d");
+            }
+            else {
+                print {\*STDERR} "$format_d exists.\n"
+            }
+        }
+
+        print "Done\n" if $opt{'--verbose'};
+    }
+
+    return $format_path;
+}
 
 # Subroutine: wav_output($flac_file, $wav_dest_dir)
 # Type: INTERFACE SUB
@@ -562,14 +637,28 @@ Print the usual program information
 
 =head1 DESCRIPTION
 
-Transcode the FLAC files of the context-release directory and create
-releases of other formats.
+Transcode the context FLAC release to create releases of other formats.
+This creates new format release directories in the upload hierarchy.
+
+After running this program, run release-mktorrent to create torrents for
+produced format releases. Torrent creation is not automatic when running
+release-flac-convert by itself.
+
+This program is capable of making MP3 releases of qualities which have
+bitrate too low to be accepted on What.CD. These releases can be used for
+adding to your music library. See `perldoc release-add-to-library` for 
+more information.
+
+=head1 IMPORTANT WHATRC VARIABLES
+
+upload_root
+max_threads
 
 =head1 BUGS
 
 =over
 
-Known to not properly transfer foreign language characters in song tags.
+Known to not properly transfer foreign language characters in MP3 tags.
 
 =back
 
@@ -593,4 +682,3 @@ You should have received a copy of the GNU General Public License
 along with What.  If not, see <http://www.gnu.org/licenses/>.
 
 =cut
-
