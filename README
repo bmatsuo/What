@@ -1,4 +1,4 @@
-what version 0.00_85
+what version 0.00_90
 ====================
 
 PREAMBLE
@@ -7,14 +7,13 @@ PREAMBLE
     far easier to understand what you are doing if you are familiar with
     the various rules for uploads.
 
-    It is a good general rule of thumb to, before you do anything on What.CD 
-    or another site, become aware of the rules for that site that pertain to 
+    It's a good general rule of thumb to, before you do anything on What.CD 
+    or another site, become aware of the rules on that site pertaining to 
     that activity. 
 
     Before you upload anything, you should have some knowledge about different 
     audio formats, trumping qualifications, naming, etc. It's probably best 
-    to read this one of the following wiki article urls before you upload 
-    anything:
+    to read one of the following wiki article links before you upload anything:
 
         https://ssl.what.cd/wiki.php?action=article&id=446
         http://what.cd/wiki.php?action=article&id=446
@@ -67,33 +66,33 @@ PACKAGE DEFECIENCIES
         Rip CDs to FLAC.
         Upload torrents.
 
-    To read about requested features, features needing improvement, and bugs, 
-    see the github issues page
+    Otherwise, to read about requested features, features needing improvement,
+    and bugs, see the github issues page
 
         https://github.com/bmatsuo/What/issues
 
-    Registered github users can also create new issues about something they 
-    think the package needs.
+    Registered github users can (and are encouraged to) create new issues
+    for things they think the package needs, or any bugs the find.
 
 DOCUMENTATION
 
-    The best documentation currently is the What wiki on github 
+    For information about specific programs (e.g. 'mkrelease') the best
+    documentation can be found by reading the perldoc for that program:
+
+        perldoc mkrelease
+
+    If you are looking for general documentation about how to use What,
+    in general the best documentation currently is in the What wiki on github
 
         http://github.com/bmatsuo/What/wiki
 
-    Otherwise, you can refer to the documentation in the package.
-
-    For help installing, read 'INSTALL'.  
-
-    For general information about what a release is and the upload hierarchy,
-    read 'docs/RELEASE'.  
-
-    For help uploading/releasing, re-releasing/importing, and converting to
-    other formats, read 'docs/UPLOADING'.
+    If you don't want to use the wiki documentation (NOT RECOMMENDED),
+    you can refer to the file INSTALL, and to the files in the directory
+    docs/.
 
 COPYRIGHT AND LICENCE
 
-    Copyright (C) 2010 by Bryan Matsuo <bryan.matsuo@gmail.com>
+    Copyright (C) 2010 by the What team.
 
     This file is part of What.
 
