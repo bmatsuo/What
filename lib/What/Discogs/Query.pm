@@ -6,6 +6,13 @@ package What::Discogs::Query::Utils;
 use What::XMLLib;
 use What::Discogs::Artist;
 
+sub replace_specials {
+    # Replace special characters in a string with "%<hexcode>"
+    my ($str) = @_;
+    $str =~ s/([?&=])/sprintf '%%%x', ord($1)/gexms;
+    return $str;
+}
+
 sub get_urls {
     my ($node) = @_;
     return get_text_list('urls','url', $node);
@@ -151,17 +158,17 @@ around BUILDARGS => sub {
     my $orig = shift;
     my $class = shift;
 
-    my $rep_spaces = sub {$_[0] =~ s/\s+/+/xms};
-
     if ( @_ == 1 && !ref $_[0] ) {
         $_[0]->{name} =~ s/\AThe\s+(.*)\z/$1, The/xms;
-        $rep_spaces->($_[0]->{name});
+        $_[0]->{name}
+            = join '+', map {What::Discogs::Query::Utils::replace_specials($_)} split (/\s+/,$_[0]->{name});
         return $class->$orig(@_);
     }
     elsif ( @_ % 2 == 0 ) {
         my %arg = @_;
         $arg{name} =~ s/\AThe\s+(.*)\z/$1, The/xms;
-        $rep_spaces->($arg{name});
+        $arg{name}
+            = join '+', map {What::Discogs::Query::Utils::replace_specials($_)} split (/\s+/,$arg{name});
         return $class->$orig(%arg);
     }
     else {
@@ -568,15 +575,17 @@ around BUILDARGS => sub {
     my $orig = shift;
     my $class = shift;
 
-    my $rep_spaces = sub {$_[0] =~ s/\s+/+/xms if $_[0]};
-
     if ( @_ == 1 && !ref $_[0] ) {
-        $rep_spaces->($_[0]->{name});
+        $_[0]->{name} =~ s/\AThe\s+(.*)\z/$1, The/xms;
+        $_[0]->{name}
+            = join '+', map {What::Discogs::Query::Utils::replace_specials($_)} split (/\s+/,$_[0]->{name});
         return $class->$orig(@_);
     }
     elsif ( @_ % 2 == 0 ) {
         my %arg = @_;
-        $rep_spaces->($arg{name});
+        $arg{name} =~ s/\AThe\s+(.*)\z/$1, The/xms;
+        $arg{name}
+            = join '+', map {What::Discogs::Query::Utils::replace_specials($_)} split (/\s+/,$arg{name});
         return $class->$orig(%arg);
     }
     else {
@@ -707,7 +716,7 @@ sub args {
     my $self = shift;
     my $qstr = $self->qstr;
     $qstr =~ s/(?: \A \s+) | (?: \s+ \z)//gxms;
-    $qstr =~ s/\s+/+/xms;
+    $qstr = join '+', map {What::Discogs::Query::Utils::replace_specials($_)} split (/\s+/, $qstr);
     my %arg = ( 'f' => 'xml',
         'api_key' => $self->api,
         'q' => $qstr,
