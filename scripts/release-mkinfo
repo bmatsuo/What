@@ -37,6 +37,7 @@ use What::BBCode;
 use What::Prompt;
 use What::Prompt::Choose;
 use What::Prompt::YesNo;
+use What::Exceptions::Common;
 
 ########################################################################
 # GENERAL GLOBAL VARIABLES
@@ -168,32 +169,39 @@ sub main{
 
         if (!defined $release) {
             print "Searching by artist name ... ";
-            my $artist_search_results = search(
-                qstr => $release_artist, 
-                type => 'artist', 
-                api => whatrc->discogs_api_key);
-            my $matching_result_list 
-                = $artist_search_results->grep(
-                    sub {my $a = shift;  
-                        my $no_copy_num = $a->title;
-                        $no_copy_num =~ s/\s+[(]\d+[)]\z//xms;
-                        $a->type eq 'artist'
-                        && !$checked_artist{$a->title} 
-                        && align($no_copy_num, $release_artist) > 0.83});
-            my $num_matches = $matching_result_list->num_results;
-            print "Found $num_matches (new) matching artists.\n";
-            if ( $num_matches > 0) {
-                SEARCHARTISTRESULTS:
-                for my $r (@{$matching_result_list->results()}) {
-                    print "Searching discography of " . $r->title;
-                    $release = find_release_in_artist_page(
-                        media => $release_media,
-                        artist => $r->title,
-                        title => $release_title,
-                        year => $release_year,
-                        discs => [values %disc]);
-                    $checked_artist{$r->title} = 1;
-                    last SEARCHARTISTRESULTS if defined $release;
+            my $artist_search_results 
+                = eval { search(
+                    qstr => $release_artist, 
+                    type => 'artist', 
+                    api => whatrc->discogs_api_key) };
+            my $e;
+            if ($e = ServerResponseError->caught()) {
+                print $e->error,"\n";
+            }
+            else {
+                my $matching_result_list 
+                    = $artist_search_results->grep(
+                        sub {my $a = shift;  
+                            my $no_copy_num = $a->title;
+                            $no_copy_num =~ s/\s+[(]\d+[)]\z//xms;
+                            $a->type eq 'artist'
+                            && !$checked_artist{$a->title} 
+                            && align($no_copy_num, $release_artist) > 0.83});
+                my $num_matches = $matching_result_list->num_results;
+                print "Found $num_matches (new) matching artists.\n";
+                if ( $num_matches > 0) {
+                    SEARCHARTISTRESULTS:
+                    for my $r (@{$matching_result_list->results()}) {
+                        print "Searching discography of " . $r->title;
+                        $release = find_release_in_artist_page(
+                            media => $release_media,
+                            artist => $r->title,
+                            title => $release_title,
+                            year => $release_year,
+                            discs => [values %disc]);
+                        $checked_artist{$r->title} = 1;
+                        last SEARCHARTISTRESULTS if defined $release;
+                    }
                 }
             }
         }
@@ -206,27 +214,17 @@ sub main{
 
         # Either artist search failed or artist is "Various Artists"
         print {\*STDERR} "Attempting general search ";
-        my $release_search = search (
-            qstr => $release_artist eq "Various Artists" ? $release_title 
-                : "$release_artist - $release_title",
-            type => 'release',
-            api => whatrc->discogs_api_key,);
-        $release = find_release_in_search_results(
-            results => $release_search,
-            media => $release_media,
-            artist => $release_artist,
-            title => $release_title,
-            year => $release_year,
-            discs => [values %disc]);
-        if (!$release 
-                && $release_artist eq "Various Artists" 
-                && $release_title =~ m!\A(.*\S)\s*[:/].*\z!xms) {
-            my $main_title = $1;
-            print "Attempting even more general search";
-            $release_search = search (
-                qstr => $main_title,
+        my $release_search 
+            = eval { search (
+                qstr => $release_artist eq "Various Artists" ? $release_title 
+                    : "$release_artist - $release_title",
                 type => 'release',
-                api => whatrc->discogs_api_key,);
+                api => whatrc->discogs_api_key,) };
+        my $e;
+        if ($e = ServerResponseError->caught()) {
+            print $e->error,"\n";
+        }
+        else {
             $release = find_release_in_search_results(
                 results => $release_search,
                 media => $release_media,
@@ -234,6 +232,29 @@ sub main{
                 title => $release_title,
                 year => $release_year,
                 discs => [values %disc]);
+            if (!$release 
+                    && $release_artist eq "Various Artists" 
+                    && $release_title =~ m!\A(.*\S)\s*[:/].*\z!xms) {
+                my $main_title = $1;
+                print "Attempting even more general search";
+                $release_search 
+                    = eval { search (
+                        qstr => $main_title,
+                        type => 'release',
+                        api => whatrc->discogs_api_key,) };
+                if ($e = ServerResponseError->caught()) {
+                    print $e->error,"\n";
+                }
+                else {
+                    $release = find_release_in_search_results(
+                        results => $release_search,
+                        media => $release_media,
+                        artist => $release_artist,
+                        title => $release_title,
+                        year => $release_year,
+                        discs => [values %disc]);
+                }
+            }
         }
     }
     # TODO: When Discogs search fails, search Musicbrainz if possible.
@@ -341,9 +362,8 @@ sub main{
     #---------------#
     # GENERATE INFO #
     #---------------#
-    exit 0 if !$need_release_info;
-
-    my $info =<<EOIHEAD;
+    if ($need_release_info) {
+        my $info =<<EOIHEAD;
 Title ............. $release_title
 Artist ............ $release_artist
 Type .............. $release_type
@@ -362,93 +382,94 @@ Original Encoder .. $release_encoder
 
 EOIHEAD
 
-    my $bbrelease_artist = bbcode->size( 
-        scale => 3, 
-        text => bbcode->artist( name => $release_artist ),);
-    my $bbrelease_title = bbcode->size(
-            scale => 4,
-            text => $release_title,);
-    my $bbrelease_year = bbcode->size(
-            scale => 3,
-            text => "[$release_year]",);
-    my $bbrelease_name_format 
-        = bbcode->align(
-            justify => 'center',
-            text => sprintf ("%s - %%s", bbcode->bold( text => "%s - %s" )),);
-    my $bbrelease 
-        = sprintf $bbrelease_name_format, 
-            $bbrelease_artist, $bbrelease_title, $bbrelease_year;
-
-    my $bbinfo = "$bbrelease\n";
-
-    $bbinfo 
-        .= sprintf "%s (%s %s | %s | %s):\n", 
-            $release_label,
-            $release_country, $release_date,
-            $release_media,
-            $release_catno;
-    my $bbtrack_format # requires args %s, %s, %d, %02d
-        = join q{ }, 
-            bbcode->bold(text => "%d. "), 
-            "%s", "[%s]";
-
-    for my $disc_d (@disc_dirs) {
-        my $disc = $disc{$disc_d};
-        if (@disc_dirs > 1) {
-            my $disc_name = basename($disc_d);
-            my $disc_dur = $disc->{duration};
-            $info .= "$disc_name [$disc_dur]\n";
-            $bbinfo .= sprintf "%s [%s]\n",
-                bbcode->bold(text=>$disc_name),
-                $disc_dur;
-        }
-
-        my @tracks = @{$disc->{tracks}};
-        for my $track (@tracks) {
-            my $dur = decompose_seconds($track->{duration});
-            $info .= sprintf "%s %s [%s]",
-                $track->{position}, $track->{title}, $dur;
-            $bbinfo .= sprintf $bbtrack_format, 
-                $track->{position}, $track->{title}, $dur;
-            if ($release_artist eq 'Various Artists') {
-                $info .= " ($track->{artist})";
-                $bbinfo .= " (" . bbcode->artist(name => $track->{artist}) . ")";
+        my $bbrelease_artist = bbcode->size( 
+            scale => 3, 
+            text => bbcode->artist( name => $release_artist ),);
+        my $bbrelease_title = bbcode->size(
+                scale => 4,
+                text => $release_title,);
+        my $bbrelease_year = bbcode->size(
+                scale => 3,
+                text => "[$release_year]",);
+        my $bbrelease_name_format 
+            = bbcode->align(
+                justify => 'center',
+                text => sprintf ("%s - %%s", bbcode->bold( text => "%s - %s" )),);
+        my $bbrelease 
+            = sprintf $bbrelease_name_format, 
+                $bbrelease_artist, $bbrelease_title, $bbrelease_year;
+    
+        my $bbinfo = "$bbrelease\n";
+    
+        $bbinfo 
+            .= sprintf "%s (%s %s | %s | %s):\n", 
+                $release_label,
+                $release_country, $release_date,
+                $release_media,
+                $release_catno;
+        my $bbtrack_format # requires args %s, %s, %d, %02d
+            = join q{ }, 
+                bbcode->bold(text => "%d. "), 
+                "%s", "[%s]";
+    
+        for my $disc_d (@disc_dirs) {
+            my $disc = $disc{$disc_d};
+            if (@disc_dirs > 1) {
+                my $disc_name = basename($disc_d);
+                my $disc_dur = $disc->{duration};
+                $info .= "$disc_name [$disc_dur]\n";
+                $bbinfo .= sprintf "%s [%s]\n",
+                    bbcode->bold(text=>$disc_name),
+                    $disc_dur;
             }
-            $info .= "\n";
-            $bbinfo .= "\n"
+    
+            my @tracks = @{$disc->{tracks}};
+            for my $track (@tracks) {
+                my $dur = decompose_seconds($track->{duration});
+                $info .= sprintf "%s %s [%s]",
+                    $track->{position}, $track->{title}, $dur;
+                $bbinfo .= sprintf $bbtrack_format, 
+                    $track->{position}, $track->{title}, $dur;
+                if ($release_artist eq 'Various Artists') {
+                    $info .= " ($track->{artist})";
+                    $bbinfo .= " (" . bbcode->artist(name => $track->{artist}) . ")";
+                }
+                $info .= "\n";
+                $bbinfo .= "\n"
+            }
+    
+            if (@disc_dirs > 1) {
+                $info .= "\n";
+                $bbinfo .= "\n";
+            }
+    
+            $bbinfo .= "\n" . bbcode->discogs_release_link(id => $release->id)
+                if (defined $release);
         }
+    
+        #-------------#
+        # OUTPUT INFO #
+        #-------------#
+        my $info_filename = sprintf "%s.nfo", release->short_name();
+        $info_filename =~ s![/:]!_!gxms;
+        my $info_path = whatrc->rip_dir."/$info_filename";
 
-        if (@disc_dirs > 1) {
-            $info .= "\n";
-            $bbinfo .= "\n";
+        if ($generate_info) {
+            open my $ifh, ">", $info_path
+                or die "couldn't open $info_path.";
+            print {$ifh} $info;
+            close $ifh;
         }
-
-        $bbinfo .= "\n" . bbcode->discogs_release_link(id => $release->id)
-            if (defined $release);
+    
+        if ($generate_bbinfo) {
+            open my $bbfh, ">", $bbinfo_path
+                or die "couldn't open $bbinfo_path.";
+            print {$bbfh} $bbinfo;
+            close $bbfh;
+        }
     }
 
-    #-------------#
-    # OUTPUT INFO #
-    #-------------#
-    my $info_filename = sprintf "%s.nfo", release->short_name();
-    $info_filename =~ s![/:]!_!gxms;
-    my $info_path = whatrc->rip_dir."/$info_filename";
-
-    if ($generate_info) {
-        open my $ifh, ">", $info_path
-            or die "couldn't open $info_path.";
-        print {$ifh} $info;
-        close $ifh;
-    }
-
-    if ($generate_bbinfo) {
-        open my $bbfh, ">", $bbinfo_path
-            or die "couldn't open $bbinfo_path.";
-        print {$bbfh} $bbinfo;
-        close $bbfh;
-    }
-
-    fetch_cover_art($release) if defined $release;
+    fetch_cover_art($release);
 
     exit $exitcode;
 }
@@ -848,9 +869,13 @@ sub find_release_in_artist_page {
     my %r = @_;
     my $artist = $r{artist};
     my $title = $r{title};
-    my $artist_discog;
-    eval { $artist_discog = get_artist(
-            name => $artist, api => whatrc->discogs_api_key); };
+    my $artist_discog
+        = eval { get_artist(name => $artist, api => whatrc->discogs_api_key); };
+    my $e;
+    if ($e = ServerResponseError->caught()) {
+        print "! DEAD END.\n";
+        return;
+    }
     if (!defined $artist_discog) {
         print "! DEAD END.\n";
         return;
@@ -1359,13 +1384,25 @@ sub fetch_cover_art {
     #my $rd = Dumper $discogs_release;
     #print {\*STDERR} $rd,"\n";
     return if has_images(whatrc->rip_dir);
-    if (!$discogs_release->has_images()) {
-        print "No images could be found for the discogs release.\n";
-        return;
+    my $img_uri;
+    if (defined $discogs_release) {
+        if (!$discogs_release->has_images()) {
+            print "No images could be found for the discogs release.\n";
+            return;
+        }
+        else {
+            # Get the image uri, and its filetype (extension).
+            $img_uri = $discogs_release->image(0);
+        }
     }
-
-    # Get the image uri, and its filetype (extension).
-    my $img_uri = $discogs_release->image(0);
+    else {
+        $prompt->text('Enter an image URL:');
+        $prompt->validator( sub {
+                my $s = shift;
+                $s =~ m{\A https?://.*\.(?:png|jpg|jpeg) \z}ixms; } );
+        $prompt->prompt_user();
+        $img_uri = $prompt->response();
+    }
     if ($img_uri !~ m/\.(\w+)\z/xms) {
         die "Couldn't can't determine image extension; '$img_uri'";
     }

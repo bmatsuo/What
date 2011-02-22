@@ -28,6 +28,7 @@ use Exception::Class (
     'IllegalCharacterError' => {
         fields => [qw{characters}],
     },
+    'ServerResponseError',
 );
 
 return 1;

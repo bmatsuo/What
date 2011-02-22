@@ -83,6 +83,7 @@ use LWP::UserAgent;
 use XML::Twig;
 use What::XMLLib;
 use What::Utils;
+use What::Exceptions::Common;
 use Moose;
 use Carp;
 
@@ -126,7 +127,8 @@ sub fetch {
         return $gzipped;
     }
     else {
-        die $response->status_line."; ".$self->uri;
+        ServerResponseError->throw(
+            error => sprintf ("%s (%s)", $response->status_line, $self->uri));
     }
 }
 
